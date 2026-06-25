@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#100b0c",
+      "#c059a0",
+      "#cd6a9e",
+      "#cf7796",
+      "#cf686a",
+      "#d6998f",
+      "#cd896a",
+      "#ded3d5",
+      "#846268",
+      "#d982be",
+      "#dd7eaf",
+      "#e9b9ca",
+      "#de7c7f",
+      "#f0d5d1",
+      "#dd9c7e",
+      "#f4f1f1"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/HGpPqBTXAAA04xx.jpeg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1778454058543,
+  "name": "eyy"
+}

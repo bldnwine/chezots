@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#050604",
+      "#bb9d6d",
+      "#94ab8c",
+      "#cbcc7a",
+      "#a6ba9b",
+      "#c9bb9c",
+      "#b7caaa",
+      "#D7C7AE",
+      "#78846c",
+      "#dac8a9",
+      "#c5d3c0",
+      "#e7e7ba",
+      "#d6e0d1",
+      "#eae4d7",
+      "#e7eee2",
+      "#f6f2eb"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-d6lmzo.png",
+    "wallpaperUrl": "https://wallhaven.cc/w/d6lmzo",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1771865116129,
+  "name": "greenerygang"
+}

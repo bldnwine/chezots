@@ -1,0 +1,72 @@
+{
+  "palette": {
+    "colors": [
+      "#141210",
+      "#201c18",
+      "#2d2621",
+      "#b3a495",
+      "#453b32",
+      "#52453a",
+      "#5e4f43",
+      "#6a594b",
+      "#e1dbd4",
+      "#836e5c",
+      "#8f7865",
+      "#9c826d",
+      "#a88c76",
+      "#b4977e",
+      "#c1a187",
+      "#cdab8f"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/BG1.jpeg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {
+      "accent": "#15120f"
+    }
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1778967790979,
+  "name": "realbrowntest"
+}

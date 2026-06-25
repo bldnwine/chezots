@@ -1,0 +1,46 @@
+{
+  "name": "mkw",
+  "palette": {
+    "colors": [
+      "#151520",
+      "#abae8a",
+      "#acc7a9",
+      "#c9cba6",
+      "#a9aacd",
+      "#b2b0d3",
+      "#9ccbcc",
+      "#cdd1b4",
+      "#636369",
+      "#cdd2a3",
+      "#aadb9f",
+      "#d7db90",
+      "#cac9f6",
+      "#cfcbf8",
+      "#82e0e3",
+      "#d9e2a1"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-yqv2wx.jpg",
+    "extendedColors": {
+      "accent": "#a9aacd",
+      "cursor": "#cdd1b4",
+      "selection_background": "#cdd1b4",
+      "selection_foreground": "#151520"
+    }
+  },
+  "adjustments": {
+    "blackPoint": 0,
+    "brightness": 0,
+    "contrast": 0,
+    "gamma": 1,
+    "highlights": 0,
+    "hueShift": 0,
+    "saturation": 0,
+    "shadows": 0,
+    "temperature": 0,
+    "tint": 0,
+    "vibrance": 0,
+    "whitePoint": 0
+  },
+  "settings": {},
+  "timestamp": 1780941206709
+}

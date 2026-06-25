@@ -1,0 +1,14 @@
+[Unit]
+Description=Eclair Popup Handler
+After=graphical-session.target
+PartOf=eclair.target
+
+[Service]
+Type=simple
+ExecStart=/home/bldnwine/owlcat/eclair/scripts/popup.sh
+Restart=always
+RestartSec=5
+KillMode=mixed
+
+[Install]
+WantedBy=eclair.target

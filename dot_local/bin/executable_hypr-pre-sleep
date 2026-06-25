@@ -1,0 +1,8 @@
+#!/bin/bash
+STATE_DIR="$HOME/.local/state/hypr/monitors"
+NOTED="$STATE_DIR/.noted-before-suspend"
+: > "$NOTED"
+for f in "$STATE_DIR"/disable-*.lua; do
+    [ -f "$f" ] && echo "$(basename "$f")" >> "$NOTED"
+done
+rm -f "$STATE_DIR"/disable-*.lua

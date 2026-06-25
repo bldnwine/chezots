@@ -1,0 +1,4 @@
+{
+  "template": "manifest.json",
+  "destination": "~/.local/share/chromium-theme/manifest.json"
+}

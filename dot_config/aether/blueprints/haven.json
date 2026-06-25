@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#090F1F",
+      "#ad7b7f",
+      "#FFF373",
+      "#FFF373",
+      "#9d9abc",
+      "#c0a5b4",
+      "#a2aad2",
+      "#FDF181",
+      "#6678a8",
+      "#d2b2b5",
+      "#fffbcf",
+      "#fffbcf",
+      "#d2d0e1",
+      "#e6dae1",
+      "#dfe2f1",
+      "#fffbdb"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-og1lrm.png",
+    "wallpaperUrl": "https://wallhaven.cc/w/og1lrm",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1771863091509,
+  "name": "haven"
+}

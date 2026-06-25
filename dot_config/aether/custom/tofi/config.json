@@ -1,0 +1,4 @@
+{
+  "template": "config",
+  "destination": "~/.config/tofi/config"
+}

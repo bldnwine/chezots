@@ -1,0 +1,15 @@
+[Unit]
+Description=Eclair GTK4 Notification UI
+After=graphical-session.target
+PartOf=eclair.target
+
+[Service]
+Type=simple
+ExecStart=/home/bldnwine/owlcat/eclair/ui-rs/target/release/eclair-ui daemon
+Restart=on-failure
+RestartSec=5
+Environment=WAYLAND_DISPLAY=wayland-1
+KillMode=mixed
+
+[Install]
+WantedBy=eclair.target

@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#2d1f26",
+      "#af7979",
+      "#b59380",
+      "#ba9b8c",
+      "#967cb1",
+      "#c69fb8",
+      "#bda9cc",
+      "#e0d4d2",
+      "#946b81",
+      "#d2b2b2",
+      "#bfa08d",
+      "#deccc4",
+      "#a68fbc",
+      "#e8d8e3",
+      "#e9e3ee",
+      "#e0d4d2"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/vincent-bisschop-hollow-knight-fantasy-art-video-games-wallpaper-dc425103943cadc74f86ffc53d8f7622.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 10,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1778705290470,
+  "name": "actualsilk"
+}

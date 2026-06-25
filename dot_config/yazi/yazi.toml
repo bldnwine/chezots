@@ -1,0 +1,30 @@
+[[opener.web-screenshot]]
+run = '''
+url=$(exiftool -s3 -URL "$1" 2>/dev/null)
+if [ -n "$url" ]; then
+    brave "$url"
+else
+    xdg-open "$1"
+fi
+'''
+block = true
+desc = "Open URL in Brave if present"
+
+[[opener.video_playlist]]
+run = 'mpv --force-window=immediate %s'
+orphan = true
+desc = "Play video (Autoload directory)"
+
+[[opener.image_playlist]]
+run = 'imv -n %s %d'
+orphan = true
+desc = "Open directory with imv"
+
+[open]
+prepend_rules = [
+    { mime = "image/png", use = "web-screenshot" },
+    { mime = "image/*", use = "image_playlist" },
+    { mime = "video/*", use = "video_playlist" },
+    { mime = "audio/*", use = "video_playlist" },
+    { url = "*.{mp4,mkv,webm,flv,avi,mov,mp3,m4a,flac,wav,opus}", use = "video_playlist" }
+]

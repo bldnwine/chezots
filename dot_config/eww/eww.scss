@@ -1,0 +1,80 @@
+* {
+  all: unset;
+  font-family: "Inter", "Roboto", sans-serif;
+}
+
+.notification-center-layout {
+  background-color: rgba(20, 20, 25, 0.9);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  margin: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.header {
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 15px;
+}
+
+.title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.clear-btn {
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 5px 15px;
+  border-radius: 8px;
+  color: #eeeeee;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: rgba(255, 70, 70, 0.2);
+    color: #ff4444;
+  }
+}
+
+.notification-list-scroll {
+  margin-top: 5px;
+}
+
+.notification-list {
+  padding-right: 5px;
+}
+
+.notification-card {
+  background-color: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.notification-icon {
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.notification-summary {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.notification-body {
+  color: #bbbbbb;
+  font-size: 0.9rem;
+  margin-top: 4px;
+}

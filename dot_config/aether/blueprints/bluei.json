@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#000000",
+      "#030509",
+      "#cad2eb",
+      "#304886",
+      "#a0aecd",
+      "#4468bb",
+      "#607cc3",
+      "#7a93ce",
+      "#ffffff",
+      "#1f2e54",
+      "#23335d",
+      "#263867",
+      "#2a3e70",
+      "#2d4379",
+      "#314883",
+      "#344d8c"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/wallhaven-7p867o.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": true,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": true,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1779853664955,
+  "name": "bluei"
+}

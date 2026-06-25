@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#232829",
+      "#b39b98",
+      "#79b5be",
+      "#c59787",
+      "#98a0b3",
+      "#bb9991",
+      "#a2cbd2",
+      "#dcd8d6",
+      "#788487",
+      "#b39b98",
+      "#b5d9de",
+      "#b39898",
+      "#98a1b3",
+      "#c49788",
+      "#dfeef1",
+      "#dcd6d6"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-8ogod1.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/8ogod1",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1771913748001,
+  "name": "breaketh"
+}

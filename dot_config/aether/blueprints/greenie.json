@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#1c2330",
+      "#cd805b",
+      "#85c285",
+      "#d4d172",
+      "#8ea2c8",
+      "#d3a792",
+      "#87bbc4",
+      "#cfdce3",
+      "#60759f",
+      "#e5b69f",
+      "#87c487",
+      "#ece9b6",
+      "#cbd5e6",
+      "#efdcd2",
+      "#c48787",
+      "#e3cfcf"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-mdyvvm.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/mdyvvm",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 18.888888888888886,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772723710042,
+  "name": "greenie"
+}

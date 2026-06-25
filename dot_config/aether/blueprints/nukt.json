@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#1c2030",
+      "#b77174",
+      "#96b874",
+      "#d4b378",
+      "#8f92c7",
+      "#cb9aba",
+      "#a4c0d1",
+      "#e3d9cf",
+      "#626a9d",
+      "#d7adad",
+      "#a7c388",
+      "#d4a678",
+      "#cbcde6",
+      "#ead6e4",
+      "#e1eaf0",
+      "#e3cfcf"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-47z1vn.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/47z1vn",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 17.407407407407405,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1775918737846,
+  "name": "nukt"
+}

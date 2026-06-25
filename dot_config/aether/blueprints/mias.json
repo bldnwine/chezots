@@ -1,0 +1,46 @@
+{
+  "name": "mias",
+  "palette": {
+    "colors": [
+      "#121212",
+      "#b96564",
+      "#9f7f4c",
+      "#aa8852",
+      "#4faa50",
+      "#9b7b4b",
+      "#9b9b4b",
+      "#ffffff",
+      "#9e9e9e",
+      "#e78684",
+      "#bd9657",
+      "#c19d64",
+      "#95ff9b",
+      "#bb9254",
+      "#bbbb54",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/1920x1080_abstract_a_painting_of_a_man_with_a_face_on_his_head.jpg",
+    "extendedColors": {
+      "accent": "#75d2a4",
+      "cursor": "#ffffff",
+      "selection_background": "#ffffff",
+      "selection_foreground": "#121212"
+    }
+  },
+  "adjustments": {
+    "blackPoint": 0,
+    "brightness": 0,
+    "contrast": 0,
+    "gamma": 1,
+    "highlights": 0,
+    "hueShift": 0,
+    "saturation": 0,
+    "shadows": 0,
+    "temperature": 0,
+    "tint": 0,
+    "vibrance": 0,
+    "whitePoint": 0
+  },
+  "settings": {},
+  "timestamp": 1780836315680
+}

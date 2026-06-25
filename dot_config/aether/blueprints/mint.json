@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#181f23",
+      "#59c0b5",
+      "#6ac7cd",
+      "#77bbcf",
+      "#6895cf",
+      "#8fa2d6",
+      "#6a74cd",
+      "#d3dade",
+      "#627684",
+      "#82d9d0",
+      "#7ed7dd",
+      "#b9dee9",
+      "#7ca7de",
+      "#d1d9f0",
+      "#7e88dd",
+      "#f1f3f4"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/DeWatermark.ai_1761746588740_1.jpeg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772379262337,
+  "name": "mint"
+}

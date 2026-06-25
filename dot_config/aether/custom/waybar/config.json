@@ -1,0 +1,4 @@
+{
+  "template": "waybar.css",
+  "destination": "~/.config/waybar/style.css"
+}

@@ -1,0 +1,59 @@
+(deflisten notifications_data :initial "[]"
+  "/home/bldnwine/owlcat/eclair/launch-end.sh")
+
+(defwindow notifications
+  :geometry (geometry :x "20px"
+                     :y "20px"
+                     :width "350px"
+                     :height "95%"
+                     :anchor "top right")
+  :stacking "overlay"
+  :exclusive true
+  :focusable false
+  :namespace "eww-notifications"
+  (notification_center))
+
+(defwidget notification_center []
+  (box :class "notification-center-layout"
+       :orientation "vertical"
+       :space-evenly false
+    (box :class "header"
+         :orientation "horizontal"
+         :space-evenly false
+      (label :class "title" :text "Notifications" :hexpand true :halign "start")
+      (button :class "clear-btn"
+              :onclick "end-rs/target/debug/end-rs clear"
+              "Clear All"))
+    (scroll :class "notification-list-scroll"
+            :vscroll true
+            :hexpand true
+            :vexpand true
+      (box :class "notification-list"
+           :orientation "vertical"
+           :space-evenly false
+           :spacing 10
+        (for notification in notifications_data
+          (notification_card :notification notification))))))
+
+(defwidget notification_card [notification]
+  (box :class "notification-card"
+       :orientation "horizontal"
+       :space-evenly false
+       :spacing 10
+    (box :class "notification-icon"
+         :visible {notification.app_icon != ""}
+         :width 48
+         :height 48
+         :style "background-color: #555555; border-radius: 10px;")
+    (box :orientation "vertical"
+         :space-evenly false
+         :hexpand true
+      (label :class "notification-summary"
+             :text {notification.summary}
+             :halign "start"
+             :limit-width 30)
+      (label :class "notification-body"
+             :text {notification.body}
+             :halign "start"
+             :wrap true
+             :limit-width 100))))

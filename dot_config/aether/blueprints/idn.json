@@ -1,0 +1,46 @@
+{
+  "name": "idn",
+  "palette": {
+    "colors": [
+      "#010207",
+      "#8bb890",
+      "#a7ca9b",
+      "#add4a7",
+      "#9faecf",
+      "#a1b6d5",
+      "#8bcfce",
+      "#c5d4b8",
+      "#606369",
+      "#a8dda9",
+      "#a6dd8b",
+      "#aae899",
+      "#becdf8",
+      "#bcd2f9",
+      "#6be4e3",
+      "#c9e7aa"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/wallhaven-z8oe8g.jpg",
+    "extendedColors": {
+      "accent": "#9faecf",
+      "cursor": "#c5d4b8",
+      "selection_background": "#c5d4b8",
+      "selection_foreground": "#101620"
+    }
+  },
+  "adjustments": {
+    "blackPoint": 0,
+    "brightness": 0,
+    "contrast": 0,
+    "gamma": 1,
+    "highlights": 0,
+    "hueShift": 0,
+    "saturation": 0,
+    "shadows": 0,
+    "temperature": 0,
+    "tint": 0,
+    "vibrance": 0,
+    "whitePoint": 0
+  },
+  "settings": {},
+  "timestamp": 1780245242031
+}

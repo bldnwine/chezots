@@ -1,0 +1,84 @@
+#!/bin/bash
+set -euo pipefail
+
+STATE_DIR="$HOME/.local/state/hypr/monitors"
+mkdir -p "$STATE_DIR"
+
+TARGET_TYPE="${1:-internal}"
+ACTION="${2:-toggle}"
+
+ALL_HARDWARE=$(hyprctl monitors all -j)
+TOTAL_PHYSICAL=$(echo "$ALL_HARDWARE" | jq '. | length')
+
+get_target_names() {
+    case "$1" in
+        internal)
+            echo "$ALL_HARDWARE" | jq -r '.[] | select(.name | contains("eDP") or contains("LVDS")) | .name'
+            ;;
+        external)
+            echo "$ALL_HARDWARE" | jq -r '.[] | select(.name | contains("eDP") or contains("LVDS") | not) | .name'
+            ;;
+        *)
+            echo "$ALL_HARDWARE" | jq -r --arg t "$1" '.[] | select(.name == $t) | .name'
+            ;;
+    esac
+}
+
+TARGETS=$(get_target_names "$TARGET_TYPE")
+
+if [[ -z "$TARGETS" ]]; then
+    echo "Error: No physical monitors matched criteria '$TARGET_TYPE'." >&2
+    exit 1
+fi
+
+current_disabled_count() {
+    find "$STATE_DIR" -maxdepth 1 -name "disable-*.lua" | wc -l
+}
+
+execute_toggle() {
+    local name=$1
+    local act=$2
+    local flag="$STATE_DIR/disable-$name.lua"
+
+    if [[ "$act" == "toggle" ]]; then
+        if [[ -f "$flag" ]]; then act="on"; else act="off"; fi
+    fi
+
+    if [[ "$act" == "off" ]]; then
+        local future_disabled
+        future_disabled=$(current_disabled_count)
+        if [[ ! -f "$flag" ]]; then
+            future_disabled=$((future_disabled + 1))
+        fi
+
+        if (( future_disabled >= TOTAL_PHYSICAL )); then
+            echo "Error: Cannot disable '$name'; at least one display must remain active." >&2
+            return 1
+        fi
+
+        printf 'hl.monitor({ output = "%s", disabled = true })\n' "$name" > "$flag"
+    elif [[ "$act" == "on" ]]; then
+        rm -f "$flag"
+    fi
+}
+
+CHANGED=0
+for mon in $TARGETS; do
+    if execute_toggle "$mon" "$ACTION"; then
+        CHANGED=1
+    fi
+done
+
+if (( CHANGED == 1 )); then
+    hyprctl reload
+    sleep 1
+    pkill swaybg 2>/dev/null || true
+    uwsm-app -- swaybg -i ~/.config/omarchy/current/background -m fill &
+    pkill waybar 2>/dev/null || true
+    uwsm-app -- waybar &
+    if [[ "$ACTION" != "off" ]]; then
+        for mon in $TARGETS; do
+            hyprctl dispatch dpms on "$mon" >/dev/null 2>&1 || true
+        done
+    fi
+fi

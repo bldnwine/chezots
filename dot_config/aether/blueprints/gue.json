@@ -1,0 +1,46 @@
+{
+  "name": "gue",
+  "palette": {
+    "colors": [
+      "#140a0b",
+      "#987c73",
+      "#737f6a",
+      "#a49064",
+      "#9ba4bb",
+      "#8f7c90",
+      "#7da3ab",
+      "#cbcdb3",
+      "#6c6464",
+      "#c0a094",
+      "#96a489",
+      "#cbb67b",
+      "#c0c9e7",
+      "#b69fb9",
+      "#9fcad4",
+      "#d8dda0"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/yuumei-water-sunset-stars-clouds-hd-wallpaper-d4ec74982da922597403e409b981f21d.jpg",
+    "extendedColors": {
+      "accent": "#9ba4bb",
+      "cursor": "#cbcdb3",
+      "selection_background": "#cbcdb3",
+      "selection_foreground": "#140a0b"
+    }
+  },
+  "adjustments": {
+    "blackPoint": 0,
+    "brightness": 0,
+    "contrast": 0,
+    "gamma": 1,
+    "highlights": 0,
+    "hueShift": 0,
+    "saturation": 0,
+    "shadows": 0,
+    "temperature": 0,
+    "tint": 0,
+    "vibrance": 0,
+    "whitePoint": 0
+  },
+  "settings": {},
+  "timestamp": 1779878590421
+}

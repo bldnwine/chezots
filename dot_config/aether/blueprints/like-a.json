@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#1E0B22",
+      "#bf696a",
+      "#FBF0D8",
+      "#EFC590",
+      "#c283d3",
+      "#c0a5bc",
+      "#cca1d4",
+      "#FCF8F5",
+      "#9d6ba7",
+      "#dda7a8",
+      "#ffffff",
+      "#fcefdf",
+      "#e4c5ed",
+      "#e6dae5",
+      "#efdff2",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/ladpyih_hero.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772949441130,
+  "name": "like a"
+}

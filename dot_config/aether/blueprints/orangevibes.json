@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#232529",
+      "#a48584",
+      "#c5a587",
+      "#c3a488",
+      "#9ea5b8",
+      "#b8a7be",
+      "#a2bbd2",
+      "#dcd9d6",
+      "#787c87",
+      "#ccb8b8",
+      "#c5a487",
+      "#c5a587",
+      "#d2d6df",
+      "#e3dbe5",
+      "#dfe8f1",
+      "#dcd9d6"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/wallhaven-211xrg.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772379579472,
+  "name": "orangevibes"
+}

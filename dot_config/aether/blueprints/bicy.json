@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#0f1217",
+      "#c8cd98",
+      "#a7cd98",
+      "#afcd98",
+      "#8e9ec8",
+      "#98afcd",
+      "#a2d2d2",
+      "#ffffff",
+      "#9e9e9e",
+      "#d5daa4",
+      "#b3daa4",
+      "#bcdaa4",
+      "#cad2e7",
+      "#d5dfec",
+      "#dff1f1",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/HGrYOdfXsAAF7HX.jpeg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1778888301813,
+  "name": "bicy"
+}

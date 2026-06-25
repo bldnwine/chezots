@@ -1,0 +1,187 @@
+/* Aether Rofi Theme */
+
+* {
+    black:      #121212;
+    red:        #b96564;
+    green:      #9f7f4c;
+    yellow:     #aa8852;
+    blue:       #4faa50;
+    magenta:    #9b7b4b;
+    cyan:       #9b9b4b;
+    white:      #ffffff;
+
+    brblack:   #9e9e9e;
+    brred:     #e78684;
+    brgreen:   #bd9657;
+    bryellow:  #c19d64;
+    brblue:    #95ff9b;
+    brmagenta: #bb9254;
+    brcyan:    #bbbb54;
+    brwhite:   #ffffff;
+
+    background: #121212;
+    foreground: #ffffff;
+    selected:  #4faa50;
+    urgent:     #b96564;
+
+    font: "JetBrainsMono Nerd Font 12";
+}
+
+window {
+    background-color: @background;
+    border:           0;
+    border-radius:    12px;
+    border-padding:   0;
+    width:            500px;
+    location:         center;
+    y-offset:         -100px;
+}
+
+mainbox {
+    background-color: @background;
+    border:           0;
+    border-radius:    0;
+    padding:          10px;
+}
+
+inputbar {
+    background-color: @background;
+    border:           0;
+    border-radius:    8px;
+    border-bottom:     2px solid @blue;
+    padding:          10px;
+    margin:           0 0 10px 0;
+    children:         [ prompt, textbox-prompt-colon, entry ];
+}
+
+prompt {
+    background-color: @blue;
+    text-color:       @background;
+    border-radius:    6px;
+    padding:          4px 12px;
+    font:             "JetBrainsMono Nerd Font Bold 12";
+}
+
+textbox-prompt-colon {
+    expand:           false;
+    str:              " ";
+    text-color:       @foreground;
+    vertical-align:   0.5;
+    margin:           0 0.3em 0 0;
+}
+
+entry {
+    text-color:       @foreground;
+    placeholder:      "Type to search...";
+    placeholder-color: @brblack;
+    selection-background: @blue;
+    selection-color: @background;
+    cursor:           text;
+    cursor-color:     @blue;
+}
+
+listview {
+    background-color: @background;
+    border:           0;
+    border-radius:    8px;
+    spacing:          4px;
+    fixed-height:     0;
+    cycle:            true;
+    dynamic:          true;
+    layout:           vertical;
+}
+
+element {
+    background-color: @background;
+    border:           0;
+    border-radius:    6px;
+    padding:          8px 12px;
+    text-color:       @foreground;
+}
+
+element normal.normal {
+    background-color: @background;
+    text-color:       @foreground;
+}
+
+element normal.urgent {
+    background-color: @urgent;
+    text-color:       @background;
+}
+
+element normal.selected {
+    background-color: @selected;
+    text-color:       @background;
+}
+
+element alternate.normal {
+    background-color: @background;
+    text-color:       @foreground;
+}
+
+element alternate.urgent {
+    background-color: @urgent;
+    text-color:       @background;
+}
+
+element alternate.selected {
+    background-color: @selected;
+    text-color:       @background;
+}
+
+element selected.normal {
+    background-color: @blue;
+    text-color:       @background;
+}
+
+element selected.urgent {
+    background-color: @red;
+    text-color:       @background;
+}
+
+scrollbar {
+    background-color: @background;
+    handle-color:     @blue;
+    handle-width:     8px;
+    border:           0;
+    border-radius:    4px;
+    padding:         4px;
+}
+
+sidebar {
+    background-color: @background;
+    border:           0;
+    border-right:     1px solid @brblack;
+    border-radius:    0;
+    padding:          0;
+}
+
+button {
+    background-color: @brblack;
+    text-color:       @foreground;
+    border:           0;
+    border-radius:    6px;
+    padding:          8px 16px;
+    margin:           2px;
+}
+
+button selected {
+    background-color: @blue;
+    text-color:       @background;
+}
+
+textbox {
+    text-color: @foreground;
+    background-color: @background;
+    border:     0;
+    border-radius: 0;
+    padding:    0;
+}
+
+error-message {
+    background-color: @urgent;
+    text-color:       @background;
+    border:           0;
+    border-radius:    8px;
+    padding:         10px;
+}

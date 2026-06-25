@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#121212",
+      "#e6424a",
+      "#79be83",
+      "#cdc898",
+      "#8ea4c8",
+      "#cd98a3",
+      "#a2cfd2",
+      "#ffffff",
+      "#9e9e9e",
+      "#f58e93",
+      "#b5debb",
+      "#dad5a4",
+      "#cad5e7",
+      "#ecd5da",
+      "#dff0f1",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-72qq29.png",
+    "wallpaperUrl": "https://wallhaven.cc/w/72qq29",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1778705459838,
+  "name": "sear"
+}

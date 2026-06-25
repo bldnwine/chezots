@@ -1,0 +1,162 @@
+@define-color background rgb(18,18,18);
+@define-color foreground rgb(255,255,255);
+@define-color accent rgb(79,170,80);
+window#waybar {
+  background: alpha(@background, 0.95);
+  color: @foreground;
+  font-family: "JetBrainsMono Nerd Font Propo", "Fira Code", sans-serif;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.modules-right {
+  margin-right: 6px;
+}
+
+#pulseaudio {
+  padding: 0 8px 0 6px;
+}
+
+#network,
+#custom-notification,
+#mpris,
+#bluetooth {
+  padding: 0 8px;
+}
+
+#clock {
+  margin-left: 8.75px;
+}
+
+#custom-screenrecording-indicator {
+  min-width: 12px;
+  margin-left: 5px;
+  margin-right: 0;
+  font-size: 10px;
+  padding-bottom: 1px;
+  color: @accent;
+}
+
+#custom-screenrecording-indicator.active {
+  color: #a55555;
+}
+
+#cpu,
+#memory,
+#custom-system-icon {
+  padding: 0 8px;
+}
+
+#hardware {
+  margin: 4px 2px;
+}
+
+.not-memory {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+#hardware:hover .not-memory {
+  opacity: 1;
+}
+
+#workspaces button {
+  padding: 0 4px;
+  margin: 0 2px;
+  border: none;
+  background: none;
+  color: @foreground;
+}
+
+#workspaces button.active {
+  color: @foreground;
+  font-weight: bold;
+}
+
+#workspaces button label,
+#workspaces button.active label {
+  background: none;
+}
+
+#mpris {
+  background-color: @accent;
+  color: @background;
+  border-radius: 0 15px 15px 0;
+  padding: 0 15px;
+  margin: 4px 2px;
+}
+
+#pulseaudio-slider {
+  margin: 4px 0;
+  padding: 0 4px;
+}
+
+#pulseaudio-slider slider {
+  min-height: 0px;
+  min-width: 0px;
+  opacity: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+#pulseaudio-slider slider:hover,
+#pulseaudio-slider slider:focus,
+#pulseaudio-slider slider:active,
+#pulseaudio-slider slider:focus-visible {
+  opacity: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#pulseaudio-slider trough {
+  min-height: 18px;
+  min-width: 80px;
+  border-radius: 15px 0 0 15px;
+  background: @background;
+}
+
+#pulseaudio-slider highlight {
+  min-width: 10px;
+  border-radius: 15px 0 0 15px;
+  background: @foreground;
+}
+
+.volume-slider {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+#mpris-vol:hover .volume-slider {
+  opacity: 1;
+}
+
+/* Base: no visual footprint when empty */
+#custom-mpris {
+    padding: 0;
+    margin: 0;
+    background: transparent;
+}
+
+/* Only styled when actively playing */
+#custom-mpris.playing {
+    background-color: @accent;
+    color: @background;
+    border-radius: 0 15px 15px 0;
+    padding: 0 15px;
+    margin: 4px 2px;
+}
+
+#custom-proton {
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+}
+
+#custom-proton.connected {
+    padding: 0 4px;
+    margin: 0;
+    min-width: 60px;
+    color: @accent;
+}
+

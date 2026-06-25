@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#130f0e",
+      "#c05974",
+      "#cd6a74",
+      "#cf7e77",
+      "#cf9168",
+      "#d6b88f",
+      "#cdb36a",
+      "#ded6d3",
+      "#846a62",
+      "#d98299",
+      "#dd7e87",
+      "#e9bdb9",
+      "#dea47c",
+      "#f0e3d1",
+      "#ddc47e",
+      "#f4f2f1"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/grady-frederick-mood-010-color.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772379356173,
+  "name": "green knight"
+}

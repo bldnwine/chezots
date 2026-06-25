@@ -1,0 +1,46 @@
+{
+  "name": "bleaeaa",
+  "palette": {
+    "colors": [
+      "#040615",
+      "#5776ff",
+      "#6df5f8",
+      "#5aeaf8",
+      "#3f74ff",
+      "#4c76ff",
+      "#1adcf3",
+      "#ffffff",
+      "#9e9e9e",
+      "#7a94ff",
+      "#80fcfe",
+      "#7cf3ff",
+      "#6192ff",
+      "#6e94ff",
+      "#39e8fd",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/1920x1080_bonus_a_tree_in_a_snowy_field.jpg",
+    "extendedColors": {
+      "accent": "#3f74ff",
+      "cursor": "#ffffff",
+      "selection_background": "#ffffff",
+      "selection_foreground": "#121212"
+    }
+  },
+  "adjustments": {
+    "blackPoint": 0,
+    "brightness": 0,
+    "contrast": 0,
+    "gamma": 1,
+    "highlights": 0,
+    "hueShift": 0,
+    "saturation": 0,
+    "shadows": 0,
+    "temperature": 0,
+    "tint": 0,
+    "vibrance": 0,
+    "whitePoint": 0
+  },
+  "settings": {},
+  "timestamp": 1780245077855
+}

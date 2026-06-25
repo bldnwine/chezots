@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#010101",
+      "#c0598c",
+      "#cd6a8b",
+      "#cf7786",
+      "#cf7968",
+      "#d6a78f",
+      "#cd9c6a",
+      "#ded3d3",
+      "#846262",
+      "#d982ad",
+      "#dd7e9e",
+      "#e9b9c1",
+      "#de8d7c",
+      "#f0dbd1",
+      "#ddad7e",
+      "#f4f1f1"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/grady-frederick-war-001.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1776410890854,
+  "name": "yeah"
+}

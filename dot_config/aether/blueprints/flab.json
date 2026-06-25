@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#0c1018",
+      "#b3b098",
+      "#819f7e",
+      "#adac91",
+      "#9ea7b8",
+      "#a5b2c0",
+      "#98b3b3",
+      "#dbdcd6",
+      "#787d87",
+      "#b3b398",
+      "#9db398",
+      "#b3b398",
+      "#d2d7df",
+      "#dae0e6",
+      "#98b3b3",
+      "#dcd6d6"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/wallhaven-3qlxjy.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772717988393,
+  "name": "flab"
+}

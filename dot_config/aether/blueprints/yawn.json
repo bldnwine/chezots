@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#301109",
+      "#c17267",
+      "#bcc671",
+      "#B2B469",
+      "#BAB9CE",
+      "#bbaab6",
+      "#bab5bf",
+      "#FCE7D8",
+      "#b57969",
+      "#deada6",
+      "#dde3b0",
+      "#d4d5a4",
+      "#efeff4",
+      "#e4dde2",
+      "#e8e6ea",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-e7pwdw.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/e7pwdw",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772379717121,
+  "name": "yawn"
+}

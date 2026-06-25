@@ -1,0 +1,13 @@
+#!/bin/bash
+STATE_DIR="$HOME/.local/state/hypr/monitors"
+NOTED="$STATE_DIR/.noted-before-suspend"
+sleep 2
+external=$(ls /sys/class/drm/card*-*/status 2>/dev/null \
+    | xargs grep -l connected 2>/dev/null \
+    | grep -v eDP | grep -v LVDS | wc -l)
+if [ "$external" -gt 0 ] && [ -f "$NOTED" ]; then
+    grep -q "disable-eDP" "$NOTED" && \
+        printf 'hl.monitor({ output = "eDP-1", disabled = true })\n' \
+        > "$STATE_DIR/disable-eDP-1.lua"
+fi
+rm -f "$NOTED"

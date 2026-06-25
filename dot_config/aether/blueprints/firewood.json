@@ -1,0 +1,46 @@
+{
+  "name": "firewood",
+  "palette": {
+    "colors": [
+      "#060000",
+      "#997a50",
+      "#8f7f49",
+      "#978454",
+      "#82a289",
+      "#927d5b",
+      "#879574",
+      "#e6c2ae",
+      "#716a67",
+      "#c19f67",
+      "#b5a45c",
+      "#bea969",
+      "#a4c9a9",
+      "#b9a275",
+      "#aabc90",
+      "#ffc89e"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-vpywv3.jpg",
+    "extendedColors": {
+      "accent": "#82a289",
+      "cursor": "#e6c2ae",
+      "selection_background": "#e6c2ae",
+      "selection_foreground": "#200b04"
+    }
+  },
+  "adjustments": {
+    "blackPoint": 0,
+    "brightness": 0,
+    "contrast": 0,
+    "gamma": 1,
+    "highlights": 0,
+    "hueShift": 0,
+    "saturation": 0,
+    "shadows": 0,
+    "temperature": 0,
+    "tint": 0,
+    "vibrance": 0,
+    "whitePoint": 0
+  },
+  "settings": {},
+  "timestamp": 1779869282767
+}

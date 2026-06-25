@@ -1,0 +1,4 @@
+{
+  "template": "wlogout.css",
+  "destination": "~/.config/wlogout/style.css"
+}

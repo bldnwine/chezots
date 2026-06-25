@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#0f1416",
+      "#59c0a7",
+      "#6acdc6",
+      "#77c7cf",
+      "#68a3cf",
+      "#8facd6",
+      "#6a82cd",
+      "#d3dcde",
+      "#627b84",
+      "#82d9c4",
+      "#7eddd6",
+      "#b9e5e9",
+      "#7cb5de",
+      "#d1def0",
+      "#7e95dd",
+      "#f1f3f4"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-l3zyg2.png",
+    "wallpaperUrl": "https://wallhaven.cc/w/l3zyg2",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1776191340816,
+  "name": "samthedog"
+}

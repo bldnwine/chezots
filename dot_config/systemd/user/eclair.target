@@ -1,0 +1,6 @@
+[Unit]
+Description=Eclair Notification Center
+PartOf=graphical-session.target
+
+[Install]
+WantedBy=graphical-session.target

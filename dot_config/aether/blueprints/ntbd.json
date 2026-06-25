@@ -1,0 +1,46 @@
+{
+  "name": "ntbd",
+  "palette": {
+    "colors": [
+      "#000000",
+      "#9e7380",
+      "#5e8293",
+      "#a29672",
+      "#88abbe",
+      "#7c78a3",
+      "#7ea3b5",
+      "#b1d0e4",
+      "#6e695a",
+      "#c498a6",
+      "#7fa6bb",
+      "#c7bc91",
+      "#add0e6",
+      "#a29dcc",
+      "#a3c8dd",
+      "#aadfff"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-zp523j.jpg",
+    "extendedColors": {
+      "accent": "#88abbe",
+      "cursor": "#b1d0e4",
+      "selection_background": "#b1d0e4",
+      "selection_foreground": "#110e04"
+    }
+  },
+  "adjustments": {
+    "blackPoint": 0,
+    "brightness": 0,
+    "contrast": 0,
+    "gamma": 1,
+    "highlights": 0,
+    "hueShift": 0,
+    "saturation": 10,
+    "shadows": 0,
+    "temperature": 0,
+    "tint": 0,
+    "vibrance": 5,
+    "whitePoint": 0
+  },
+  "settings": {},
+  "timestamp": 1781196885401
+}

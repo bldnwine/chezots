@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#1f1618",
+      "#c059a1",
+      "#cd6a9f",
+      "#cf7797",
+      "#cf686b",
+      "#d6998f",
+      "#cd886a",
+      "#ded3d5",
+      "#846268",
+      "#d982be",
+      "#dd7eb0",
+      "#e9b9ca",
+      "#de7c7f",
+      "#f0d5d1",
+      "#dd9b7e",
+      "#f4f1f1"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/G3UYoizWgAA2JXz.jpeg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1776191161063,
+  "name": "pinkbiz"
+}

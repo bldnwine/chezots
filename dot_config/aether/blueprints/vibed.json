@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#0c1018",
+      "#c8c083",
+      "#6cb964",
+      "#c3c17b",
+      "#8aa1cc",
+      "#93b1d2",
+      "#83c8c8",
+      "#e1e5cd",
+      "#5a73a5",
+      "#c8c883",
+      "#90c883",
+      "#c8c883",
+      "#c9d5e8",
+      "#d3e0ed",
+      "#83c8c8",
+      "#e5cdcd"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/minimal-beton-building.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 23.33333333333333,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772717932393,
+  "name": "vibed"
+}

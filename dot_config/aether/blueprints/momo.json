@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#171216",
+      "#f42a25",
+      "#79ec79",
+      "#fad04c",
+      "#706cea",
+      "#a144e4",
+      "#87ccee",
+      "#f2f4f1",
+      "#9d7b97",
+      "#fa413d",
+      "#ec7979",
+      "#ffe9a3",
+      "#bbb9f8",
+      "#bc79ec",
+      "#d6effb",
+      "#f4f1f1"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-k8kmo6.png",
+    "wallpaperUrl": "https://wallhaven.cc/w/k8kmo6",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1778968469843,
+  "name": "momo"
+}

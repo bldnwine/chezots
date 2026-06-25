@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+# Ensure an argument is passed
+if [ -z "$1" ]; then
+    echo "Usage: synthi [start|stop|disable]"
+    exit 1
+fi
+
+case "$1" in
+    start)
+        echo "Enabling and starting Syncthing service..."
+        # Enable boot launch and start the process in RAM immediately
+        systemctl --user enable --now syncthing.service
+        
+        echo "Launching Web App..."
+        gtk-launch Syncthing
+        ;;
+        
+    stop)
+        echo "Stopping Syncthing service..."
+        # Instantly kills the process from RAM
+        systemctl --user stop syncthing.service
+        ;;
+        
+    disable)
+        echo "Disabling and stopping Syncthing service..."
+        # Stops the process and deletes boot symlinks completely
+        systemctl --user disable --now syncthing.service
+        ;;
+        
+    *)
+        echo "Invalid option: $1"
+        echo "Valid commands: synthi start | synthi stop | synthi disable"
+        exit 1
+        ;;
+esac

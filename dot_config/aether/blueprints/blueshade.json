@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#232829",
+      "#87a9c5",
+      "#87c5bb",
+      "#87c5bb",
+      "#87a9c5",
+      "#87aac5",
+      "#87c3c5",
+      "#d6dadc",
+      "#788487",
+      "#b39898",
+      "#b39898",
+      "#b39898",
+      "#87b0c5",
+      "#87a9c5",
+      "#b39898",
+      "#dcd6d6"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-95wey8.png",
+    "wallpaperUrl": "https://wallhaven.cc/w/95wey8",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1775918892902,
+  "name": "blueshade"
+}

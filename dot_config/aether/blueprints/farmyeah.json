@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#0A0A07",
+      "#b27575",
+      "#80b780",
+      "#bdbd89",
+      "#9393c3",
+      "#ae6fae",
+      "#7cb6b6",
+      "#EDEDCA",
+      "#708d6a",
+      "#d5aeae",
+      "#b9dab9",
+      "#dfdfc3",
+      "#cdcde5",
+      "#c482c4",
+      "#90cbcb",
+      "#e7eae6"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/dom-lay-ls-bali.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1776446650578,
+  "name": "farmyeah"
+}

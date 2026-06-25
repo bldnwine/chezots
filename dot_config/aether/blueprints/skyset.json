@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#241e19",
+      "#c0595b",
+      "#cd786a",
+      "#cf9277",
+      "#cfaa68",
+      "#d6c88f",
+      "#cdcb6a",
+      "#ded8d3",
+      "#847262",
+      "#d98284",
+      "#dd8b7e",
+      "#e9c8b9",
+      "#debb7c",
+      "#f0ead1",
+      "#ddda7e",
+      "#f4f2f1"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-mprq61.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/mprq61",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772202928599,
+  "name": "skyset"
+}

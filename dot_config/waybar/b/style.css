@@ -1,0 +1,47 @@
+/* Bar background */
+window#waybar {
+    background: rgba(0, 0, 0, 0.6);
+    color: #ffffff;        /* White text */
+    font-family: "CaskaydiaCove Nerd Font", "Fira Code", sans-serif;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+
+.modules-right {
+  margin-right: 6px;
+}
+
+/* Add internal spacing so icons/text aren't cramped */
+#network, #pulseaudio, #clock, #mpris, #bluetooth {
+    padding: 0 8px;
+}
+
+/* Workspace buttons */
+#workspaces button {
+    padding: 0 4px;
+    margin: 0 2px;
+    border: none;
+    background: none;      /* no fill for inactive buttons */
+    color: #ffffff;
+}
+
+/* Active workspace highlight */
+#workspaces button.active {
+    color: #f5dfae;
+    font-weight: bold;
+}
+
+/* Ensure labels don't inherit unwanted background */
+#workspaces button label,
+#workspaces button.active label {
+    background: none;
+}
+
+#mpris {
+    background-color: #C0A176; /* Match your bar's grey */
+    color: #ffffff;
+    border-radius: 15px;       /* Makes it a pill */
+    padding: 0 15px;           /* Adds space inside the pill */
+    margin: 4px 2px;           /* Adds space outside the pill */
+}

@@ -1,0 +1,46 @@
+{
+  "name": "wsr",
+  "palette": {
+    "colors": [
+      "#000000",
+      "#1a1d1d",
+      "#c9ccc5",
+      "#936431",
+      "#6f4b25",
+      "#504f40",
+      "#5e5b48",
+      "#6b6751",
+      "#4A2E5B",
+      "#868063",
+      "#948c6b",
+      "#a19974",
+      "#afa57d",
+      "#bcb186",
+      "#cabe8e",
+      "#d7ca97"
+    ],
+    "wallpaper": "/home/bldnwine/.config/omarchy/themes/aether/backgrounds/wallhaven-g8566q.png",
+    "extendedColors": {
+      "accent": "#6f4b25",
+      "cursor": "#6b6751",
+      "selection_background": "#6b6751",
+      "selection_foreground": "#000000"
+    }
+  },
+  "adjustments": {
+    "blackPoint": 0,
+    "brightness": 0,
+    "contrast": 0,
+    "gamma": 1,
+    "highlights": 0,
+    "hueShift": 0,
+    "saturation": 0,
+    "shadows": 0,
+    "temperature": 0,
+    "tint": 0,
+    "vibrance": 0,
+    "whitePoint": 0
+  },
+  "settings": {},
+  "timestamp": 1781164833580
+}

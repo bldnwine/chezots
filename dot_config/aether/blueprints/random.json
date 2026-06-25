@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#16171C",
+      "#bc6e6c",
+      "#D18C4A",
+      "#c99f7d",
+      "#a6a6b0",
+      "#b4b1b3",
+      "#B9C5CE",
+      "#C9D3DC",
+      "#858793",
+      "#dbaaa9",
+      "#e8ba8f",
+      "#e6cfbc",
+      "#d6d6db",
+      "#e1e0e1",
+      "#eff2f4",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/wallhaven-8oev1j.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1771925601878,
+  "name": "random"
+}

@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#16161F",
+      "#D16568",
+      "#ab303c",
+      "#3f5a83",
+      "#62709d",
+      "#ad7699",
+      "#58ae66",
+      "#dbdbdb",
+      "#848497",
+      "#e9a9ab",
+      "#c9caca",
+      "#d4d5ce",
+      "#cfd3e2",
+      "#e2dfe2",
+      "#e3e7ed",
+      "#d0cfd1"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-k9p8l6.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/k9p8l6",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1771938120748,
+  "name": "foresta"
+}

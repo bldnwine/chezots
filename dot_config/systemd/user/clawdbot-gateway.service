@@ -1,0 +1,21 @@
+[Unit]
+Description=Clawdbot Gateway (v2026.1.24-3)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart="/usr/bin/node" "/home/bldnwine/.npm-global/lib/node_modules/clawdbot/dist/entry.js" gateway --port 18789
+Restart=always
+RestartSec=5
+KillMode=process
+Environment=HOME=/home/bldnwine
+Environment="PATH=/home/bldnwine/.local/bin:/home/bldnwine/.npm-global/bin:/home/bldnwine/bin:/home/bldnwine/.nvm/current/bin:/home/bldnwine/.fnm/current/bin:/home/bldnwine/.volta/bin:/home/bldnwine/.asdf/shims:/home/bldnwine/.local/share/pnpm:/home/bldnwine/.bun/bin:/usr/local/bin:/usr/bin:/bin"
+Environment=CLAWDBOT_GATEWAY_PORT=18789
+Environment=CLAWDBOT_GATEWAY_TOKEN=b13431e92faf2f04ed1d7cbfd8ee71b5832640a641aa8732
+Environment="CLAWDBOT_SYSTEMD_UNIT=clawdbot-gateway.service"
+Environment=CLAWDBOT_SERVICE_MARKER=clawdbot
+Environment=CLAWDBOT_SERVICE_KIND=gateway
+Environment=CLAWDBOT_SERVICE_VERSION=2026.1.24-3
+
+[Install]
+WantedBy=default.target

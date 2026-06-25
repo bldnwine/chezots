@@ -1,0 +1,46 @@
+{
+  "name": "jap",
+  "palette": {
+    "colors": [
+      "#140a08",
+      "#977c76",
+      "#807b63",
+      "#939579",
+      "#8ba9bd",
+      "#977d6c",
+      "#7ca1b8",
+      "#dbc7b3",
+      "#6b6462",
+      "#bfa098",
+      "#a5a080",
+      "#b8bb96",
+      "#aecfe9",
+      "#bea18b",
+      "#9ec7e4",
+      "#f8d09f"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-w5mdxp.png",
+    "extendedColors": {
+      "accent": "#8ba9bd",
+      "cursor": "#dbc7b3",
+      "selection_background": "#dbc7b3",
+      "selection_foreground": "#140a08"
+    }
+  },
+  "adjustments": {
+    "blackPoint": 0,
+    "brightness": 0,
+    "contrast": 0,
+    "gamma": 1,
+    "highlights": 0,
+    "hueShift": 0,
+    "saturation": 0,
+    "shadows": 0,
+    "temperature": 0,
+    "tint": 0,
+    "vibrance": 0,
+    "whitePoint": 0
+  },
+  "settings": {},
+  "timestamp": 1779878793079
+}

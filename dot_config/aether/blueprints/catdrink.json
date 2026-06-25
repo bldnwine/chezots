@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#130D0D",
+      "#da5b4e",
+      "#989f9c",
+      "#c8a47e",
+      "#9db4b9",
+      "#bbaab5",
+      "#b1c3c3",
+      "#F6E7E0",
+      "#8e7777",
+      "#ee9e96",
+      "#c7cbca",
+      "#e5d1bd",
+      "#d2dde0",
+      "#e4dde2",
+      "#e5ebeb",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-v9v3r5.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/v9v3r5",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772108822828,
+  "name": "catdrink"
+}

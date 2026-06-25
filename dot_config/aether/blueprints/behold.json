@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#241f19",
+      "#c05959",
+      "#cd7a6a",
+      "#cf9577",
+      "#cfad68",
+      "#d6ca8f",
+      "#cdcd6a",
+      "#ded9d3",
+      "#847362",
+      "#d98282",
+      "#dd8e7e",
+      "#e9c9b9",
+      "#debe7c",
+      "#f0ebd1",
+      "#dddd7e",
+      "#f4f2f1"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/Fr7YU2PaIAAcZ1s.jpeg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1778453968239,
+  "name": "behold"
+}

@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#121212",
+      "#b9986f",
+      "#abbe79",
+      "#c3c183",
+      "#cab08c",
+      "#cdb798",
+      "#cbd2a2",
+      "#ffffff",
+      "#9e9e9e",
+      "#d9c4ab",
+      "#d3deb5",
+      "#e3e1bf",
+      "#e8dbc9",
+      "#ece2d5",
+      "#eef1df",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/2-layers-deep.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1776163524422,
+  "name": "layersdeep"
+}

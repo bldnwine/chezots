@@ -1,0 +1,222 @@
+{
+    "layer": "top",
+    "position": "top",
+    "reload_style_on_change": true,
+    "height": 0,
+    "ipc": true,
+    "modules-left": ["hyprland/workspaces"],
+    "modules-center": ["custom/screenrecording-indicator", "clock", "keyboard-state"],
+    "modules-right": ["group/mpris-vol", "group/hardware", "custom/proton", "network", "pulseaudio"],
+    "modifier-reset": "release",
+    "network": {
+    "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+    "format-wifi": "{icon}",
+    "format-ethernet": "󰈁",
+    "format-disconnected": "󰲛",
+    "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+    "on-click": "ghostty --title=impala -e impala",
+    "on-click-middle": "~/.config/waybar/scripts/proton-vpn.sh --menu",
+   },
+    "pulseaudio": {
+        "format": "{icon}",
+        "format-muted": "󰝟",
+        "format-bluetooth": "󰂯",
+        "tooltip-format": "{desc}",
+        "format-icons": {
+            "default": ["", "", ""],
+            "headphone": " ",
+            "headset": "󰋎",
+            "phone": "",
+            "portable": "",
+        },
+        "on-click": "pavucontrol",
+        "on-click-middle": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
+        "on-click-right": "~/.config/waybar/scripts/pulse_switch.sh",
+        "on-scroll-up": "~/.config/waybar/scripts/volume.sh --inc",
+        "on-scroll-down": "~/.config/waybar/scripts/volume.sh --dec",
+        "smooth-scrolling-threshold": 1,
+        "scroll-step": 5
+    },
+
+    "bluetooth": {
+    "format": "<span font='11'>󰂯</span>",
+    "format-disabled": "<span font='11'>󰂲</span>",
+    "format-connected": "<span font='11'>󰂱</span>",
+    "tooltip-format": "{num_connections} connected",
+    "tooltip-format-disabled": "Bluetooth Disabled",
+    "tooltip-format-connected": "{num_connections} connected\n\n{device_enumerate}",
+    "tooltip-format-enumerate-connected": " {device_alias}",
+    "tooltip-format-enumerate-connected-battery": " {device_alias} 󰥉 {device_battery_percentage}%",
+    "on-click": "ghostty --title='Bluetooth Manager' -e bluetui",
+    "interval": 1,
+    "min-length": 1,
+    "max-length": 10
+    },
+
+ "custom/notification": {
+    "tooltip": true,
+    "format": "{icon}",
+    "format-icons": {
+        "notification": "󱅫",
+        "none": ""
+    },
+    "return-type": "json",
+    "exec": "/home/bldnwine/owlcat/eclair/scripts/waybar_notification.sh",
+    "on-click": "/home/bldnwine/owlcat/eclair/toggle_eclair.sh",
+    "on-click-middle": "/home/bldnwine/owlcat/eclair/toggle_mpriswid.sh",   
+    "interval": 2,
+    "escape": true
+},
+    "custom/screenrecording-indicator": {
+    "exec": "/home/bldnwine/.config/hypr/scripts/recording-indicator.sh",
+    "signal": 8,
+    "return-type": "json"
+  },
+
+    
+   "battery": {
+    "format": "{capacity}% {icon}",
+    "format-discharging": "{icon}",
+    "format-charging": "{icon}",
+    "format-plugged": "",
+    "format-icons": {
+      "charging": ["󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󰂅"],
+      "default": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+    },
+    "format-full": "󰂅",
+    "tooltip-format-discharging": "{power:>1.0f}W↓ {capacity}%",
+    "tooltip-format-charging": "{power:>1.0f}W↑ {capacity}%",
+    "interval": 5,
+    "on-click": "omarchy-menu power",
+    "states": {
+      "warning": 20,
+      "critical": 10
+    }
+   },
+
+    "clock": {
+      "format": "{:%a %d - %H:%M}",
+      "on-click": "gsimplecal &",
+      "tooltip-format": "<tt>{calendar}</tt>",
+      "calendar": {
+        "format": {
+            "today": "<span color='#89b4fa'><b>{}</b></span>"
+        },
+      },    
+    },
+
+"custom/mpris": {
+    "exec": "/home/bldnwine/.config/waybar/scripts/mpris.sh",
+    "interval": "once",
+    "return-type": "json",
+    "escape": true,
+    "max-length": 30,
+    "tooltip": false,
+    "on-scroll-up": "playerctld shift",
+    "on-scroll-down": "playerctld unshift",
+    "on-click-middle": "/home/bldnwine/owlcat/eclair/toggle_mpriswid.sh"
+},
+
+"custom/proton": {
+    "interval": 10,
+    "exec": "~/.config/waybar/scripts/proton-vpn.sh --status",
+    "return-type": "json",
+    "format": "{text}",
+    "signal": 1
+},
+
+"mpris": {
+    "player": "playerctld",
+    "max-length": 30,
+    "ellipsis": true,
+    "tooltip": false,
+   //"tooltip-format": "{status_icon} {title} - {artist} {album}",//
+    "format": "{status_icon} {title} - {artist}",
+         "status-icons": {
+                  "playing": "▶",
+                   "paused": "⏸"
+           },
+    "ignored-players": ["chromium", "brave"],
+    "on-scroll-up": "playerctld shift",
+    "on-click-middle": "/home/bldnwine/owlcat/eclair/toggle_mpriswid.sh",
+    "on-scroll-down": "playerctld unshift"
+     },
+
+    "group/mpris-vol": {
+        "orientation": "horizontal",
+        "drawer": {
+            "transition-duration": 500,
+            "children-class": "volume-slider",
+            "transition-left-to-right": false
+        },
+        "modules": [
+            "mpris",
+            "pulseaudio/slider"
+        ]
+    },
+
+    "pulseaudio/slider": {
+        "min": 0,
+        "max": 100,
+        "orientation": "horizontal"
+    },
+
+"custom/mako": {
+
+    "exec": "echo $(makoctl list | jq '.data[][] | length' | wc -l)",
+    "format": " ",
+    "interval": 5,
+    "return-type": "",
+    "on-click": "for i in {1..5}; do makoctl restore; done",
+    "on-click-right": "makoctl dismiss -a",
+    "tooltip": false
+
+},
+"hyprland/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+        "1": "1",
+        "2": "2",
+        "3": "3",
+        "4": "4",
+        "5": "5",
+        "6": "6",
+        "7": "7",
+        "8": "8",
+        "9": "9",
+        "10": "10",
+        "active": "●",  // or "•" for a smaller dot
+        "default": "{name}"
+         }
+    },
+
+    "group/hardware": {
+        "orientation": "horizontal",
+        "drawer": {
+            "transition-duration": 500,
+            "children-class": "not-memory",
+            "transition-left-to-right": false
+        },
+        "modules": [
+            "custom/system-icon",
+            "cpu",
+            "memory"
+        ]
+    },
+
+    "custom/system-icon": {
+        "format": "<span font='11'>󰍛</span>",
+        "tooltip": false
+    },
+
+    "cpu": {
+        "format": "CPU {usage}%",
+        "interval": 10
+    },
+
+    "memory": {
+        "format": "RAM {}%",
+        "interval": 10
+    }
+
+}

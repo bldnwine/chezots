@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#000000",
+      "#1a1d1d",
+      "#c9ccc5",
+      "#3796ec",
+      "#434237",
+      "#504f40",
+      "#5e5b48",
+      "#6b6751",
+      "#ffffff",
+      "#868063",
+      "#948c6b",
+      "#a19974",
+      "#afa57d",
+      "#bcb186",
+      "#cabe8e",
+      "#d7ca97"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/HJHK5zHXQAElFR_.jpeg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1779778311151,
+  "name": "mmms"
+}

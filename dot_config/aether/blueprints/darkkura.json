@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#121212",
+      "#cf595b",
+      "#5ebcd2",
+      "#f37935",
+      "#838dd2",
+      "#cd98cb",
+      "#9acadb",
+      "#ffffff",
+      "#9e9e9e",
+      "#e79d9e",
+      "#77cde2",
+      "#fc9155",
+      "#c5caec",
+      "#ecd5eb",
+      "#ddeef4",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-5wvpd7.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/5wvpd7",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1771913565288,
+  "name": "darkkura"
+}

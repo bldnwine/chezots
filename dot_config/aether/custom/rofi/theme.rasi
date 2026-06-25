@@ -1,0 +1,187 @@
+/* Aether Rofi Theme */
+
+* {
+    black:      {black};
+    red:        {red};
+    green:      {green};
+    yellow:     {yellow};
+    blue:       {blue};
+    magenta:    {magenta};
+    cyan:       {cyan};
+    white:      {white};
+
+    brblack:   {bright_black};
+    brred:     {bright_red};
+    brgreen:   {bright_green};
+    bryellow:  {bright_yellow};
+    brblue:    {bright_blue};
+    brmagenta: {bright_magenta};
+    brcyan:    {bright_cyan};
+    brwhite:   {bright_white};
+
+    background: {background};
+    foreground: {foreground};
+    selected:  {blue};
+    urgent:     {red};
+
+    font: "JetBrainsMono Nerd Font 12";
+}
+
+window {
+    background-color: @background;
+    border:           0;
+    border-radius:    12px;
+    border-padding:   0;
+    width:            500px;
+    location:         center;
+    y-offset:         -100px;
+}
+
+mainbox {
+    background-color: @background;
+    border:           0;
+    border-radius:    0;
+    padding:          10px;
+}
+
+inputbar {
+    background-color: @background;
+    border:           0;
+    border-radius:    8px;
+    border-bottom:     2px solid @blue;
+    padding:          10px;
+    margin:           0 0 10px 0;
+    children:         [ prompt, textbox-prompt-colon, entry ];
+}
+
+prompt {
+    background-color: @blue;
+    text-color:       @background;
+    border-radius:    6px;
+    padding:          4px 12px;
+    font:             "JetBrainsMono Nerd Font Bold 12";
+}
+
+textbox-prompt-colon {
+    expand:           false;
+    str:              " ";
+    text-color:       @foreground;
+    vertical-align:   0.5;
+    margin:           0 0.3em 0 0;
+}
+
+entry {
+    text-color:       @foreground;
+    placeholder:      "Type to search...";
+    placeholder-color: @brblack;
+    selection-background: @blue;
+    selection-color: @background;
+    cursor:           text;
+    cursor-color:     @blue;
+}
+
+listview {
+    background-color: @background;
+    border:           0;
+    border-radius:    8px;
+    spacing:          4px;
+    fixed-height:     0;
+    cycle:            true;
+    dynamic:          true;
+    layout:           vertical;
+}
+
+element {
+    background-color: @background;
+    border:           0;
+    border-radius:    6px;
+    padding:          8px 12px;
+    text-color:       @foreground;
+}
+
+element normal.normal {
+    background-color: @background;
+    text-color:       @foreground;
+}
+
+element normal.urgent {
+    background-color: @urgent;
+    text-color:       @background;
+}
+
+element normal.selected {
+    background-color: @selected;
+    text-color:       @background;
+}
+
+element alternate.normal {
+    background-color: @background;
+    text-color:       @foreground;
+}
+
+element alternate.urgent {
+    background-color: @urgent;
+    text-color:       @background;
+}
+
+element alternate.selected {
+    background-color: @selected;
+    text-color:       @background;
+}
+
+element selected.normal {
+    background-color: @blue;
+    text-color:       @background;
+}
+
+element selected.urgent {
+    background-color: @red;
+    text-color:       @background;
+}
+
+scrollbar {
+    background-color: @background;
+    handle-color:     @blue;
+    handle-width:     8px;
+    border:           0;
+    border-radius:    4px;
+    padding:         4px;
+}
+
+sidebar {
+    background-color: @background;
+    border:           0;
+    border-right:     1px solid @brblack;
+    border-radius:    0;
+    padding:          0;
+}
+
+button {
+    background-color: @brblack;
+    text-color:       @foreground;
+    border:           0;
+    border-radius:    6px;
+    padding:          8px 16px;
+    margin:           2px;
+}
+
+button selected {
+    background-color: @blue;
+    text-color:       @background;
+}
+
+textbox {
+    text-color: @foreground;
+    background-color: @background;
+    border:     0;
+    border-radius: 0;
+    padding:    0;
+}
+
+error-message {
+    background-color: @urgent;
+    text-color:       @background;
+    border:           0;
+    border-radius:    8px;
+    padding:         10px;
+}

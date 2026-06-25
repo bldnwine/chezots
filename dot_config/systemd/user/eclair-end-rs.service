@@ -1,0 +1,16 @@
+[Unit]
+Description=Eclair Notification Daemon
+After=graphical-session.target
+PartOf=eclair.target
+
+[Service]
+Type=dbus
+BusName=org.freedesktop.Notifications
+ExecStart=/home/bldnwine/owlcat/eclair/end-rs/target/release/end-rs run
+Restart=on-failure
+RestartSec=5
+Environment=WAYLAND_DISPLAY=wayland-1
+KillMode=mixed
+
+[Install]
+WantedBy=eclair.target

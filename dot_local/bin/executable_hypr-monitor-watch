@@ -1,0 +1,21 @@
+#!/bin/bash
+SOCKET="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+STATE_DIR="$HOME/.local/state/hypr/monitors"
+
+cleanup_disabled() {
+    connected=$(ls /sys/class/drm/card*-*/status 2>/dev/null \
+        | xargs grep -l connected 2>/dev/null | wc -l)
+    if [ "$connected" -le 1 ]; then
+        rm -f "$STATE_DIR"/disable-*.lua
+        hyprctl reload
+    fi
+}
+
+socat -U - "UNIX-CONNECT:$SOCKET" | while read -r event; do
+    case "$event" in
+        monitorremoved\>\>*|monitorremovedv2\>\>*)
+            cleanup_disabled
+            (sleep 1; cleanup_disabled) &
+            ;;
+    esac
+done

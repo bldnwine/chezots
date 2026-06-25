@@ -1,0 +1,19 @@
+drun-launch = true
+terminal = ghostty 
+prompt-text = ""
+
+
+font = "JetBrainsMono Nerd Font"
+font-size = 14
+background-color = {color0}
+text-color = #ffffff
+corner-radius = 15
+border-width = 0
+outline-width = 1
+outline-color = #c0caf5
+width = 315
+height = 300
+padding-top = 5
+padding-left = 10
+num-results = 10
+selection-color = {color3}

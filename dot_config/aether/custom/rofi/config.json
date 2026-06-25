@@ -1,0 +1,4 @@
+{
+  "template": "theme.rasi",
+  "destination": "~/.config/rofi/themes/aether.rasi"
+}

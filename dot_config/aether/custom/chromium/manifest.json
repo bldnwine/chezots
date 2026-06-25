@@ -1,0 +1,72 @@
+{
+    "manifest_version": 2,
+    "name": "Aether Theme",
+    "version": "1.0",
+    "description": "Aether dynamically generated theme",
+    "theme": {
+        "images": {
+            "theme_frame": "images/theme_frame.png",
+            "theme_toolbar": "images/theme_toolbar.png",
+            "theme_tab_background": "images/theme_tab_background.png",
+            "theme_ntp_background": "images/theme_ntp_background.png"
+        },
+        "colors": {
+            "frame": [{background}],
+            "frame_inactive": [{bright_black}],
+            "frame_incognito": [{black}],
+            "frame_incognito_inactive": [{black}],
+            "toolbar": [{background}],
+            "tab_background_text": [{foreground}],
+            "tab_text": [{foreground}],
+            "bookmark_text": [{foreground}],
+            "ntp_background": [{background}],
+            "ntp_text": [{foreground}],
+            "ntp_link": [{blue}],
+            "ntp_link_underline": [{blue}],
+            "control_background": [{background}],
+            "button_background": [{bright_black}],
+            "button_background_hover": [{blue}],
+            "button_background_active": [{blue}],
+            "button_foreground": [{foreground}],
+            "button_foreground_hover": [{background}],
+            "button_foreground_active": [{background}],
+            "omnibox_background": [{background}],
+            "omnibox_text": [{foreground}],
+            "omnibox_text_hover": [{foreground}],
+            "omnibox_text_focus": [{foreground}],
+            "omnibox_bubble_background": [{bright_black}],
+            "omnibox_bubble_text": [{foreground}],
+            "location_bar_background": [{background}],
+            "location_bar_border": [{bright_black}],
+            "location_bar_text": [{foreground}],
+            "incognito_frame": [{black}],
+            "incognito_toolbar": [{black}],
+            "incognito_tab_background": [{black}],
+            "incognito_tab_text": [{white}],
+            "incognito_bookmark_text": [{white}],
+            "ntp_background": [{background}],
+            "ntp_text": [{foreground}],
+            "ntp_link": [{blue}],
+            "ntp_link_underline": [{blue}],
+            "ntp_header": [{foreground}],
+            "ntp_section": [{foreground}],
+            "ntp_section_link": [{blue}],
+            "ntp_section_link_underline": [{blue}],
+            "infobars": [{background}],
+            "info_bar_border": [{bright_black}]
+        },
+        "tints": {
+            "buttons": [0.0, 0.0, 1.0],
+            "frame": [0.0, 0.0, 1.0],
+            "frame_inactive": [0.0, 0.0, 0.7],
+            "frame_incognito": [0.0, 0.0, 0.5],
+            "frame_incognito_inactive": [0.0, 0.0, 0.3],
+            "background_tab": [0.0, 0.0, 0.7]
+        },
+        "properties": {
+            "ntp_background_repeat": "no-repeat",
+            "ntp_background_position": "center",
+            "ntp_background_size": "cover"
+        }
+    }
+}

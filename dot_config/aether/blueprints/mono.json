@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#191919",
+      "#998e8e",
+      "#a09797",
+      "#988d8d",
+      "#a79d9d",
+      "#b5adad",
+      "#c4bdbd",
+      "#DADADA",
+      "#c2bfbf",
+      "#c5bebe",
+      "#ccc7c7",
+      "#b0a8a8",
+      "#bfb8b8",
+      "#cdc8c8",
+      "#dcd8d8",
+      "#e7e6e6"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/wallhaven-85z1o1 (1).jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1771913342153,
+  "name": "mono"
+}

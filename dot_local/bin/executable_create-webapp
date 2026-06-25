@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# No icon prompt anymore. Just Name and URL.
+if [ "$#" -lt 2 ]; then
+  echo -e "\e[32mCreating new web app (using system icon).\n\e[0m"
+  APP_NAME=$(gum input --prompt "Name> " --placeholder "WhatsApp")
+  APP_URL=$(gum input --prompt "URL> " --placeholder "https://web.whatsapp.com")
+else
+  APP_NAME="$1"
+  APP_URL="$2"
+fi
+
+# Validation
+if [[ -z "$APP_NAME" || -z "$APP_URL" ]]; then
+  echo "Error: Missing Info. Usage: create-webapp [Name] [URL]"
+  exit 1
+fi
+
+# Create .desktop file
+DESKTOP_FILE="$HOME/.local/share/applications/$APP_NAME.desktop"
+
+# We use 'Icon=web-browser' which pulls your system theme's browser icon automatically.
+cat >"$DESKTOP_FILE" <<EOF
+[Desktop Entry]
+Version=1.0
+Name=$APP_NAME
+Comment=Web App for $APP_NAME
+Exec=$HOME/.local/bin/omarchy-launch-webapp $APP_URL
+Terminal=false
+Type=Application
+Icon=web-browser
+Categories=Network;WebBrowser;
+StartupNotify=true
+EOF
+
+chmod +x "$DESKTOP_FILE"
+
+echo -e "\n\e[32mSuccess! $APP_NAME created.\e[0m"

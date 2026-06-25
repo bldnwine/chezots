@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#232928",
+      "#a48486",
+      "#8caba5",
+      "#b19f95",
+      "#98b3b2",
+      "#98b3b2",
+      "#98b3b1",
+      "#d6dcdb",
+      "#788783",
+      "#ccb8b9",
+      "#c0d3cf",
+      "#d9cfc9",
+      "#97b5b5",
+      "#98b3b1",
+      "#98b3b2",
+      "#dcd6d6"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-kwerp6.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/kwerp6",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772380075062,
+  "name": "greenborne"
+}

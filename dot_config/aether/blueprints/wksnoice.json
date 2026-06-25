@@ -1,0 +1,46 @@
+{
+  "name": "wksnoice",
+  "palette": {
+    "colors": [
+      "#121212",
+      "#b96564",
+      "#9f7f4c",
+      "#aa8852",
+      "#4faa50",
+      "#9b7b4b",
+      "#9b9b4b",
+      "#ffffff",
+      "#9e9e9e",
+      "#e78684",
+      "#bd9657",
+      "#c19d64",
+      "#95ff9b",
+      "#bb9254",
+      "#bbbb54",
+      "#ffffff"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-3qr2oy.jpg",
+    "extendedColors": {
+      "accent": "#4faa50",
+      "cursor": "#ffffff",
+      "selection_background": "#ffffff",
+      "selection_foreground": "#121212"
+    }
+  },
+  "adjustments": {
+    "blackPoint": 0,
+    "brightness": 0,
+    "contrast": 0,
+    "gamma": 1,
+    "highlights": 0,
+    "hueShift": 0,
+    "saturation": 0,
+    "shadows": 0,
+    "temperature": 0,
+    "tint": 0,
+    "vibrance": 0,
+    "whitePoint": 0
+  },
+  "settings": {},
+  "timestamp": 1781120041648
+}

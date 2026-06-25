@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#96a6b6",
+      "#677b82",
+      "#d6dddf",
+      "#252e3d",
+      "#516166",
+      "#49585d",
+      "#424f53",
+      "#202629",
+      "#ffffff",
+      "#2c3538",
+      "#252c2e",
+      "#1d2325",
+      "#161a1c",
+      "#0f1213",
+      "#070909",
+      "#000000"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/3000x1688_mlfw_mountain-snow-minima.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": true,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": true,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1779776579974,
+  "name": "wha"
+}

@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#090807",
+      "#c05c59",
+      "#cd7e6a",
+      "#cf9877",
+      "#cfb068",
+      "#d6cd8f",
+      "#cacd6a",
+      "#ded9d3",
+      "#847462",
+      "#d98582",
+      "#dd917e",
+      "#e9cbb9",
+      "#dec17c",
+      "#f0ecd1",
+      "#d9dd7e",
+      "#f4f2f1"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-438w60.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/438w60",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1776191424280,
+  "name": "darken"
+}

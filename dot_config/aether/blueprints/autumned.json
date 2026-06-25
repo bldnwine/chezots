@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#252329",
+      "#a48485",
+      "#a5aa8d",
+      "#b3ae98",
+      "#9ea5b8",
+      "#bea7bb",
+      "#b0b3c5",
+      "#dcdad6",
+      "#7c7887",
+      "#ccb8b8",
+      "#cfd2c1",
+      "#b5a697",
+      "#d2d6df",
+      "#e5dbe4",
+      "#e5e6ec",
+      "#dcd6d6"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-4owl2m.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/4owl2m",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1775918788111,
+  "name": "autumned"
+}

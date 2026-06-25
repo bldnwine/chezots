@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#1f2b2d",
+      "#c18e8b",
+      "#a5b681",
+      "#bcbc8a",
+      "#9494c2",
+      "#b581b5",
+      "#7db9cf",
+      "#d2d2e0",
+      "#698d96",
+      "#c28c89",
+      "#cfd9ba",
+      "#dedec4",
+      "#cecee3",
+      "#bd8ebd",
+      "#7db9cf",
+      "#e0d2d2"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-9mjoy1.png",
+    "wallpaperUrl": "https://wallhaven.cc/w/9mjoy1",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 11.481481481481481,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1772464276424,
+  "name": "wellwell"
+}

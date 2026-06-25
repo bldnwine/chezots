@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#040408",
+      "#8f8f99",
+      "#9696a1",
+      "#95959f",
+      "#a5a5ad",
+      "#b5b5bc",
+      "#c5c5ca",
+      "#E4E2DE",
+      "#c6c6c9",
+      "#bfbfc5",
+      "#c6c6cd",
+      "#b0b0b7",
+      "#bfbfc6",
+      "#d0d0d4",
+      "#dfdfe3",
+      "#ededee"
+    ],
+    "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-21gxdy.jpg",
+    "wallpaperUrl": "https://wallhaven.cc/w/21gxdy",
+    "wallpaperSource": "wallhaven",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1771863861541,
+  "name": "black forest?"
+}

@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#000000",
+      "#1d1e1f",
+      "#f9f4f1",
+      "#5f6b7b",
+      "#37414c",
+      "#404c5b",
+      "#49586a",
+      "#526479",
+      "#e9ecf0",
+      "#647b97",
+      "#6d87a6",
+      "#7692b5",
+      "#7e9ec4",
+      "#87aad3",
+      "#90b5e2",
+      "#99c1f1"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/BG1.jpeg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1779023767893,
+  "name": "archytest1"
+}

@@ -1,0 +1,70 @@
+{
+  "palette": {
+    "colors": [
+      "#0B0B0B",
+      "#998e8e",
+      "#a09797",
+      "#a89e9e",
+      "#afa7a7",
+      "#b6afaf",
+      "#beb7b7",
+      "#c2c2c2",
+      "#0a0909",
+      "#c5bebe",
+      "#ccc7c7",
+      "#d4cece",
+      "#dbd7d7",
+      "#e2dfdf",
+      "#eae7e7",
+      "#312f2f"
+    ],
+    "wallpaper": "/home/bldnwine/Wallpapers/2-layers-deep.jpg",
+    "wallpaperUrl": null,
+    "wallpaperSource": "local",
+    "lightMode": false,
+    "lockedColors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "extendedColors": {}
+  },
+  "adjustments": {
+    "vibrance": 0,
+    "saturation": 0,
+    "contrast": 0,
+    "brightness": 0,
+    "shadows": 0,
+    "highlights": 0,
+    "hueShift": 0,
+    "temperature": 0,
+    "tint": 0,
+    "blackPoint": 0,
+    "whitePoint": 0,
+    "gamma": 1
+  },
+  "appOverrides": {},
+  "settings": {
+    "includeNeovim": true,
+    "includeZed": false,
+    "includeVscode": false,
+    "includeGtk": true,
+    "lightMode": false,
+    "selectedNeovimConfig": null
+  },
+  "timestamp": 1776163591342,
+  "name": "layers"
+}

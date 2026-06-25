@@ -1,0 +1,144 @@
+#
+# ~/.bashrc
+#
+
+# If not running interactively, don't do anything
+[[ $- != *i* ]] && return
+
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+#PS1='[\u@\h \W]\$ '
+PS1="\[\e[32m\]\w \[\e[33m\]> \[\e[0m\]"
+
+export EDITOR=nvim
+export VISUAL=nvim
+alias pacupdate='sudo pacman -Syu'
+alias aurupdate='yay -Syu --aur'
+alias thememe='~/owlcat/themes/manager.sh'
+alias hyprconf='nano ~/.config/hypr/hyprland.conf'
+alias hylua='nano ~/.config/hypr/hyprland.lua'
+alias waybarconf='nano ~/.config/waybar/config.jsonc'
+alias waybarstyle='nano ~/.config/aether/custom/waybar/waybar.css'
+alias waybarre='pkill waybar && waybar & disown'
+alias rsw="pkill waybar; waybar &>/dev/null & disown"
+alias ghostconf=' ghostty +edit-config'
+alias conf='yazi ~/.config'
+alias bashrc='nano ~/.bashrc'
+alias sbash='source ~/.bashrc'
+alias bkmrk='yazi Pictures/Bookmarks'
+alias displayimg='kitty +kitten icat'
+alias cpuperf='sudo cpupower frequency-set -g performance'
+alias laptog='hypr-monitor-control internal toggle'
+alias externaltog='hypr-monitor-control external toggle'
+alias hdmitog='hypr-monitor-control HDMI-A-1 toggle'
+alias flambo='gocryptfs akai akeru'
+alias lambo='fusermount3 -u akeru'
+alias britd='brightnessctl set 10%-'
+alias britu='brightnessctl set 10%+'
+alias notes='nano ~/Docs/base/notes.md'
+alias showip='ip route | grep default'
+alias toohot='sudo lnxrouter --ap wlan0 owlcat -p rolby123 --freq-band 2.4 -c 6'
+alias qweny='ollama run qwen3.5:4b'
+alias qwenl='ollama run qwen3.5:0.8b'
+alias stopqweny='ollama stop qwen3.5:4b'
+alias llama='ollama run llama3.2:latest'
+alias startllama='sudo systemctl enable --now ollama'
+alias stopllama='sudo systemctl stop ollama'
+alias disablellama='sudo systemctl disable ollama'
+alias qwen='ollama run qwen2.5-coder:3b'
+alias stopqwen='ollama stop qwen2.5-coder:3b'
+alias enablemolt='systemctl --user enable openclaw-gateway.service'
+alias disablemolt='systemctl --user disable openclaw-gateway.service'
+alias enablesh='sudo systemctl enable --now sshd'
+alias killsh='pkill -u bldnwine sshd'
+alias disablesh='sudo systemctl disable --now sshd'
+alias flamn='~/akeru/flame.sh'
+alias dmcams='./go2rtc_linux_amd64'
+alias oc='opencode'
+alias ocol='ollama launch opencode --config'
+alias wifipw='iw dev wlan0 get power_save 2>/dev/null'
+alias sdmcams="./go2rtc_linux_amd64 & sleep 2 && gtk-launch DMSS"
+##FUNCTIONS##
+twitch() {
+    if [ -z "$1" ] || [ -z "$2" ]; then
+        echo "Usage: twitch <channel> <quality> (e.g., twitch chess24 480p or twitch chess24 best)"
+        return 1
+    fi
+    streamlink --player mpv --player-args "-" "https://www.twitch.tv/$1" "$2"
+}
+export PATH="$HOME/.local/bin:$PATH"
+
+cd() {
+    builtin cd "$@" && [ -n "$1" ] && ls -AF || true
+}
+amd() {
+    DRI_PRIME=1 "$@"
+}
+yta() {
+    mkdir -p ~/Music
+    yt-dlp -x --audio-format m4a --embed-metadata --embed-thumbnail --add-metadata -o "~/Music/%(title)s.%(ext)s" "$1"
+}
+
+ytv() {
+    mkdir -p ~/Videos
+    yt-dlp -f "bv*[height<=1080]+ba/b[height<=1080]" -o "~/Videos/%(title)s.%(ext)s" "$1"
+}
+
+un() {
+    gocryptfs "$1" "akeru"
+}
+
+proton() {
+    if [ "$1" = "down" ]; then
+        # Find and bring down any active proton interface
+        local active_interfaces=$(wg show interfaces)
+        for iface in $active_interfaces; do
+            if [[ "$iface" == proton* ]]; then
+                sudo wg-quick down "$iface"
+            fi
+        done
+    elif [[ "$1" =~ ^[0-9]+$ ]]; then
+        # Automatically tear down existing proton connections to avoid routing conflicts
+        local active_interfaces=$(wg show interfaces)
+        for iface in $active_interfaces; do
+            if [[ "$iface" == proton* ]]; then
+                sudo wg-quick down "$iface"
+            fi
+        done
+        sudo wg-quick up "proton$1"
+    else
+        echo "Usage: proton [number] (e.g., proton 1) or proton down"
+        return 1
+    fi
+}
+
+mus() {
+    if [ "${1:-}" = "ls" ]; then
+        yazi "${HOME}/Music"
+        return 0
+    fi
+    local music_dir="${HOME}/Music/${1:-}"
+
+    if [ ! -d "$music_dir" ]; then
+        echo "Error: Directory $music_dir does not exist." >&2
+        return 1
+    fi
+    mpv --shuffle --no-video --term-osd-bar --load-scripts=no --script=/etc/mpv/scripts/mpris.so "$music_dir"
+}
+rmpcx() {
+    (
+        systemctl --user start mpd.service 
+        trap 'systemctl --user stop mpd.service' EXIT
+        rmpc
+    )
+}
+export PATH="$HOME/.npm-global/bin:$PATH"
+export PATH="$HOME/go/bin:$PATH"
+alias startmolt="openclaw gateway start"
+alias stopmolt="openclaw gateway stop"
+alias moltui="openclaw tui"
+export OLLAMA_API_KEY="ollama-local"
+
+# OpenClaw Completion
+source "/home/bldnwine/.openclaw/completions/openclaw.bash"
+eval "$(zoxide init bash)"
