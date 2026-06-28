@@ -55,6 +55,7 @@ alias disablesh='sudo systemctl disable --now sshd'
 alias flamn='~/akeru/flame.sh'
 alias dmcams='./go2rtc_linux_amd64'
 alias oc='opencode'
+alias y='yazi'
 alias ocol='ollama launch opencode --config'
 alias wifipw='iw dev wlan0 get power_save 2>/dev/null'
 alias sdmcams="./go2rtc_linux_amd64 & sleep 2 && gtk-launch DMSS"

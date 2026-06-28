@@ -3,10 +3,15 @@
 # Get default browser
 browser=$(xdg-settings get default-web-browser)
 
-# Fallback to Chromium if browser doesn't support --app flag
+# Categorize: chromium-based gets --app mode, firefox-based gets normal window
 case $browser in
-    google-chrome*|brave-browser*|microsoft-edge*|opera*|vivaldi*|helium*|chromium*) ;;
-    *) browser="chromium.desktop" ;;
+    google-chrome*|brave-browser*|microsoft-edge*|opera*|vivaldi*|helium*|chromium*)
+        APP_MODE="--app" ;;
+    zen*|firefox*)
+        APP_MODE="" ;;
+    *)
+        browser="chromium.desktop"
+        APP_MODE="--app" ;;
 esac
 
 # Extract Exec path from desktop file
@@ -27,5 +32,9 @@ if [ -z "$EXEC_PATH" ]; then
     fi
 fi
 
-# Launch with UWSM
-exec setsid uwsm-app -- "$EXEC_PATH" --app="$1" "${@:2}"
+# Launch
+if [ -n "$APP_MODE" ]; then
+    exec "$EXEC_PATH" "$APP_MODE=$1" "${@:2}"
+else
+    exec "$EXEC_PATH" --blank-window "$1" "${@:2}"
+fi

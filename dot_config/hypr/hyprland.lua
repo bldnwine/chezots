@@ -25,6 +25,11 @@ hl.monitor({
 	scale = "1",
 })
 
+hl.device({
+	name = "dell0810:00-044e:120a-touchpad",
+	enabled = false,
+})
+
 -- Apply persistent monitor overrides from state directory
 local state_dir = os.getenv("HOME") .. "/.local/state/hypr/monitors/"
 local p = io.popen('ls "' .. state_dir .. '" 2>/dev/null')
@@ -279,9 +284,8 @@ hl.bind(mainMod .. " + SHIFT + G", function()
 end)
 
 hl.bind("ALT + F", hl.dsp.exec_cmd(launch("helium-browser")))
-hl.bind("CONTROL + I", hl.dsp.exec_cmd(launch("helium-browser --incognito")))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(launch("zen-browser -P default")))
-hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(launch("/usr/bin/brave --incognito")))
+hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(launch("zen-browser --private-window")))
 hl.bind(mainMod .. " + ALT", hl.dsp.exec_cmd("sh -c 'killall -SIGUSR1 waybar'"))
 hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd('grim -g "$(slurp)" - | tee ~/Pictures/ss/ss-$(date +%s).png | wl-copy'))
 hl.bind(mainMod .. " + SHIFT + Z", hl.dsp.exec_cmd('grim -g "$(slurp)" - | wl-copy'))

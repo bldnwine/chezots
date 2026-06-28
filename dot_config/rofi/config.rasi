@@ -5,3 +5,5 @@
 //@theme "/usr/share/rofi/themes/DarkBlue.rasi"
 
 @theme "/usr/share/rofi/themes/android_notification.rasi"
+
+//@theme "/home/bldnwine/.config/aether/theme/rofi-theme.rasi"
