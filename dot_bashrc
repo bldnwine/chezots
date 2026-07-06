@@ -140,6 +140,5 @@ alias stopmolt="openclaw gateway stop"
 alias moltui="openclaw tui"
 export OLLAMA_API_KEY="ollama-local"
 
-# OpenClaw Completion
-source "/home/bldnwine/.openclaw/completions/openclaw.bash"
 eval "$(zoxide init bash)"
+eval "$(fzf --bash)"

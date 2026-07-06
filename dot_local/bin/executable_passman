@@ -1,0 +1,54 @@
+#!/home/bldnwine/Projects/pm/.venv/bin/python
+import secrets
+import string
+import subprocess
+import sys
+
+# from cryptography.fernet import Fernet
+import pyperclip
+
+# Check if akeru is already mounted
+import os
+
+mount_point = "/home/bldnwine/akeru"
+if not os.path.ismount(mount_point):
+    print(f"{mount_point} is not mounted, mounting with gocryptfs...")
+    try:
+        result = subprocess.run(
+            ["gocryptfs", "akai", "akeru"], check=True, capture_output=True, text=True
+        )
+        print(f"gocryptfs mounted successfully")
+    except subprocess.CalledProcessError as e:
+        print(f"Error running gocryptfs: {e}")
+        print(f"stderr: {e.stderr}")
+        sys.exit(1)
+    except FileNotFoundError:
+        print(
+            "Error: gocryptfs command not found. Please ensure gocryptfs is installed and in PATH."
+        )
+        sys.exit(1)
+
+if len(sys.argv) > 1 and sys.argv[1] == "crypt":
+    subprocess.run(["nano", "/home/bldnwine/akeru/crypt.txt"])
+    sys.exit(0)
+
+charset = string.ascii_letters + string.digits + string.punctuation
+sitename = input("Enter site name: ")
+usernameemail = input("Enter email/username: ")
+choice = input("Use custom password or generate a password(type 'gen'): ")
+if choice == "gen":
+    while True:
+        password = "".join(secrets.choice(charset) for _ in range(10))
+        choose = input(
+            f"{password} is the password, type 'r' to generate again or 'c' to continue: "
+        )
+        if choose == "c":
+            break
+    pyperclip.copy(password)
+else:
+    password = input("Enter password: ")
+with open("/home/bldnwine/akeru/crypt.txt", "a") as f:
+    f.write(
+        f"\n\n\nSite: {sitename}\nUsername/Email: {usernameemail}\nPassword: {password}"
+    )
+print("Success")

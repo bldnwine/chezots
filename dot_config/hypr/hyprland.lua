@@ -4,8 +4,9 @@
 -- https://wiki.hypr.land/Configuring/Start/
 -- #######################################################################################
 
--- Aether Theme - to be handled separately later
--- source = /home/bldnwine/.config/aether/theme/hyprland.conf
+local f = io.open(os.getenv("HOME") .. "/.config/aether/theme/colors.toml")
+local accent = f and f:read("*a"):match('accent%s*=%s*"#(.-)"') or "4faa50"
+if f then f:close() end
 
 ------------------
 ---- MONITORS ----
@@ -114,7 +115,7 @@ hl.config({
 		gaps_out = 7,
 		border_size = 0,
 		col = {
-			active_border = "rgb(7fbbb3)",
+			active_border = "rgb(" .. accent .. ")",
 			inactive_border = "rgba(595959aa)",
 		},
 		resize_on_border = false,
@@ -415,9 +416,9 @@ hl.window_rule({
 hl.window_rule({
 	name = "Aether",
 	match = { class = "li.oever.aether", title = "Aether" },
+        size = { 1593, 953 },
 	float = true,
-	center = true,
-	size = { 1270, 720 },
+	center = true
 })
 
 hl.window_rule({

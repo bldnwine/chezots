@@ -10,17 +10,18 @@
     "modifier-reset": "release",
     "network": {
     "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
-    "format-wifi": "{icon}",
-    "format-ethernet": "󰈁",
+    "format-wifi": "{essid}",
+    "format-ethernet": "{ifname} 󰈁",
     "format-disconnected": "󰲛",
     "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+    "interval": 3,
     "on-click": "ghostty --title=impala -e impala",
     "on-click-middle": "~/.config/waybar/scripts/proton-vpn.sh --menu",
    },
     "pulseaudio": {
-        "format": "{icon}",
+        "format": "{volume}% {icon}",
         "format-muted": "󰝟",
-        "format-bluetooth": "󰂯",
+        "format-bluetooth": "{volume}% 󰂯",
         "tooltip-format": "{desc}",
         "format-icons": {
             "default": ["", "", ""],
@@ -34,7 +35,9 @@
         "on-click-right": "~/.config/waybar/scripts/pulse_switch.sh",
         "on-scroll-up": "~/.config/waybar/scripts/volume.sh --inc",
         "on-scroll-down": "~/.config/waybar/scripts/volume.sh --dec",
+        "on-update": "echo $(date +%H:%M:%S:%N) >> /tmp/pa-updates.log",
         "smooth-scrolling-threshold": 1,
+        "interval": 1,
         "scroll-step": 5
     },
 
