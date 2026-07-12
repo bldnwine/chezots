@@ -1,189 +1,79 @@
-/* Aether Rofi Theme */
-
 * {
-    black:      {black};
-    red:        {red};
-    green:      {green};
-    yellow:     {yellow};
-    blue:       {blue};
-    magenta:    {magenta};
-    cyan:       {cyan};
-    white:      {white};
+    font: "JetBrainsMono Nerd Font 14";
+    background-color: transparent;
+}
 
-    brblack:   {bright_black};
-    brred:     {bright_red};
-    brgreen:   {bright_green};
-    bryellow:  {bright_yellow};
-    brblue:    {bright_blue};
-    brmagenta: {bright_magenta};
-    brcyan:    {bright_cyan};
-    brwhite:   {bright_white};
-
-    background: {background};
-    foreground: {foreground};
-    selected:  {blue};
-    urgent:     {red};
-
-    font: "JetBrainsMono Nerd Font 12";
+configuration {
+    modi:        "drun,run,window";
+    show-icons:  false;
+    drun-display-format: "{name}";
 }
 
 window {
-    background-color: var(background);
-    border:           0;
-    border-radius:    12px;
-    border-padding:   0;
-    width:            500px;
     location:         center;
-    y-offset:         -100px;
+    width:            315px;
+    height:           300px;
+    border:           0px;
+    border-color:     {foreground};
+    border-radius:    15px;
+    background-color: {background};
 }
 
 mainbox {
-    background-color: var(background);
-    border:           0;
-    border-radius:    0;
-    padding:          10px;
-}
-
-inputbar {
-    background-color: var(background);
-    border:           0;
-    border-radius:    8px;
-    border:            0 0 2px 0;
-    border-color:      var(blue);
-    padding:          10px;
-    margin:           0 0 10px 0;
-    children:         [ prompt, textbox-prompt-colon, entry ];
+    padding: 5px 10px;
 }
 
 prompt {
-    background-color: var(blue);
-    text-color:       var(background);
-    border-radius:    6px;
-    padding:          4px 12px;
-    font:             "JetBrainsMono Nerd Font Bold 12";
+    enabled: false;
 }
 
-textbox-prompt-colon {
-    expand:           false;
-    str:              " ";
-    text-color:       var(foreground);
-    vertical-align:   0.5;
-    margin:           0 0.3em 0 0;
+inputbar {
+    children:         [ entry ];
+    padding:          0 0 8px 0;
+    background-color: transparent;
 }
 
 entry {
-    text-color:       var(foreground);
-    placeholder:      "Type to search...";
-    placeholder-color: var(brblack);
-    selection-background: var(blue);
-    selection-color: var(background);
-    cursor:           text;
-    cursor-color:     var(blue);
+    placeholder:       "";
+    placeholder-color: {foreground};
+    cursor:            text;
+    cursor-color:      {accent};
+    text-color:        {foreground};
+    background-color:  transparent;
 }
 
 listview {
-    background-color: var(background);
-    border:           0;
-    border-radius:    8px;
-    spacing:          4px;
-    fixed-height:     0;
+    lines:            10;
+    spacing:          2px;
     cycle:            true;
     dynamic:          true;
     layout:           vertical;
+    fixed-height:     0;
+    background-color: transparent;
 }
 
 element {
-    background-color: var(background);
-    border:           0;
-    border-radius:    6px;
-    padding:          8px 12px;
-    text-color:       var(foreground);
+    padding:          6px 10px;
+    text-color:       {foreground};
+    background-color: transparent;
 }
 
-element normal.normal {
-    background-color: var(background);
-    text-color:       var(foreground);
+element selected {
+    background-color: transparent;
+    text-color:       {accent};
 }
 
-element normal.urgent {
-    background-color: var(urgent);
-    text-color:       var(background);
+element-text selected {
+    background-color: transparent;
+    text-color:       {accent};
+  }
+
+element-text {
+    text-color:       {foreground};
+    background-color: transparent;
 }
 
-element normal.selected {
-    background-color: var(selected);
-    text-color:       var(background);
-}
-
-element alternate.normal {
-    background-color: var(background);
-    text-color:       var(foreground);
-}
-
-element alternate.urgent {
-    background-color: var(urgent);
-    text-color:       var(background);
-}
-
-element alternate.selected {
-    background-color: var(selected);
-    text-color:       var(background);
-}
-
-element selected.normal {
-    background-color: var(blue);
-    text-color:       var(background);
-}
-
-element selected.urgent {
-    background-color: var(red);
-    text-color:       var(background);
-}
-
-scrollbar {
-    background-color: var(background);
-    handle-color:     var(blue);
-    handle-width:     8px;
-    border:           0;
-    border-radius:    4px;
-    padding:         4px;
-}
-
-sidebar {
-    background-color: var(background);
-    border:           0;
-    border-right:     1px;
-    border-color:     var(brblack);
-    border-radius:    0;
-    padding:          0;
-}
-
-button {
-    background-color: var(brblack);
-    text-color:       var(foreground);
-    border:           0;
-    border-radius:    6px;
-    padding:          8px 16px;
-    margin:           2px;
-}
-
-button selected {
-    background-color: var(blue);
-    text-color:       var(background);
-}
-
-textbox {
-    text-color: var(foreground);
-    background-color: var(background);
-    border:     0;
-    border-radius: 0;
-    padding:    0;
-}
-
-error-message {
-    background-color: var(urgent);
-    text-color:       var(background);
-    border:           0;
-    border-radius:    8px;
-    padding:         10px;
+element-icon {
+    size:             0;
+    background-color: transparent;
 }
