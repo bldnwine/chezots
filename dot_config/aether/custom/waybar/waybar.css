@@ -20,6 +20,7 @@ window#waybar {
 #network,
 #custom-notification,
 #mpris,
+#battery,
 #bluetooth {
   padding: 0 8px;
 }
@@ -154,9 +155,7 @@ window#waybar {
 }
 
 #custom-proton.connected {
-    padding: 0 4px;
-    margin: 0;
-    min-width: 60px;
+    padding: 0 8px;
     color: @accent;
 }
 

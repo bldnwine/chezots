@@ -1,0 +1,26 @@
+#!/bin/bash
+
+if pgrep -f "^gpu-screen-recorder" >/dev/null; then
+  capture-screenrecording --stop-recording
+  exit 0
+fi
+
+entries=(
+  "󰑋  Desktop audio only"
+  "  Desktop + microphone"
+  "  Region + desktop audio"
+  "  Fullscreen + desktop audio"
+  "  Fullscreen + desktop + mic"
+  "  Webcam + desktop audio"
+)
+
+selected=$(printf '%s\n' "${entries[@]}" | rofi -dmenu -p "Screen recording")
+
+case "$selected" in
+  "󰑋  Desktop audio only")       capture-screenrecording --fullscreen --with-desktop-audio ;;
+  "  Desktop + microphone")      capture-screenrecording --fullscreen --with-desktop-audio --with-microphone-audio ;;
+  "  Region + desktop audio")    capture-screenrecording --with-desktop-audio ;;
+  "  Fullscreen + desktop audio")  capture-screenrecording --fullscreen --with-desktop-audio ;;
+  "  Fullscreen + desktop + mic")  capture-screenrecording --fullscreen --with-desktop-audio --with-microphone-audio ;;
+  "  Webcam + desktop audio")    capture-screenrecording --with-desktop-audio --with-webcam ;;
+esac

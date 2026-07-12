@@ -4,6 +4,18 @@
 
 //@theme "/usr/share/rofi/themes/DarkBlue.rasi"
 
-@theme "/usr/share/rofi/themes/android_notification.rasi"
+//@theme "/usr/share/rofi/themes/android_notification.rasi"
 
-//@theme "/home/bldnwine/.config/aether/theme/rofi-theme.rasi"
+//theme "/home/bldnwine/.config/rofi/themes/aether.rasi"
+
+//@theme "/usr/share/rofi/themes/sidebar.rasi"
+
+//@theme "/usr/share/rofi/themes/arthur.rasi"
+
+//@theme "/usr/share/rofi/themes/DarkBlue.rasi"
+
+//@theme "/usr/share/rofi/themes/dmenu.rasi"
+
+//@theme "/usr/share/rofi/themes/gruvbox-dark-hard.rasi"
+
+@theme "/usr/share/rofi/themes/arthur.rasi"

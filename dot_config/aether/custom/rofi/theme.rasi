@@ -28,7 +28,7 @@
 }
 
 window {
-    background-color: @background;
+    background-color: var(background);
     border:           0;
     border-radius:    12px;
     border-padding:   0;
@@ -38,25 +38,26 @@ window {
 }
 
 mainbox {
-    background-color: @background;
+    background-color: var(background);
     border:           0;
     border-radius:    0;
     padding:          10px;
 }
 
 inputbar {
-    background-color: @background;
+    background-color: var(background);
     border:           0;
     border-radius:    8px;
-    border-bottom:     2px solid @blue;
+    border:            0 0 2px 0;
+    border-color:      var(blue);
     padding:          10px;
     margin:           0 0 10px 0;
     children:         [ prompt, textbox-prompt-colon, entry ];
 }
 
 prompt {
-    background-color: @blue;
-    text-color:       @background;
+    background-color: var(blue);
+    text-color:       var(background);
     border-radius:    6px;
     padding:          4px 12px;
     font:             "JetBrainsMono Nerd Font Bold 12";
@@ -65,23 +66,23 @@ prompt {
 textbox-prompt-colon {
     expand:           false;
     str:              " ";
-    text-color:       @foreground;
+    text-color:       var(foreground);
     vertical-align:   0.5;
     margin:           0 0.3em 0 0;
 }
 
 entry {
-    text-color:       @foreground;
+    text-color:       var(foreground);
     placeholder:      "Type to search...";
-    placeholder-color: @brblack;
-    selection-background: @blue;
-    selection-color: @background;
+    placeholder-color: var(brblack);
+    selection-background: var(blue);
+    selection-color: var(background);
     cursor:           text;
-    cursor-color:     @blue;
+    cursor-color:     var(blue);
 }
 
 listview {
-    background-color: @background;
+    background-color: var(background);
     border:           0;
     border-radius:    8px;
     spacing:          4px;
@@ -92,56 +93,56 @@ listview {
 }
 
 element {
-    background-color: @background;
+    background-color: var(background);
     border:           0;
     border-radius:    6px;
     padding:          8px 12px;
-    text-color:       @foreground;
+    text-color:       var(foreground);
 }
 
 element normal.normal {
-    background-color: @background;
-    text-color:       @foreground;
+    background-color: var(background);
+    text-color:       var(foreground);
 }
 
 element normal.urgent {
-    background-color: @urgent;
-    text-color:       @background;
+    background-color: var(urgent);
+    text-color:       var(background);
 }
 
 element normal.selected {
-    background-color: @selected;
-    text-color:       @background;
+    background-color: var(selected);
+    text-color:       var(background);
 }
 
 element alternate.normal {
-    background-color: @background;
-    text-color:       @foreground;
+    background-color: var(background);
+    text-color:       var(foreground);
 }
 
 element alternate.urgent {
-    background-color: @urgent;
-    text-color:       @background;
+    background-color: var(urgent);
+    text-color:       var(background);
 }
 
 element alternate.selected {
-    background-color: @selected;
-    text-color:       @background;
+    background-color: var(selected);
+    text-color:       var(background);
 }
 
 element selected.normal {
-    background-color: @blue;
-    text-color:       @background;
+    background-color: var(blue);
+    text-color:       var(background);
 }
 
 element selected.urgent {
-    background-color: @red;
-    text-color:       @background;
+    background-color: var(red);
+    text-color:       var(background);
 }
 
 scrollbar {
-    background-color: @background;
-    handle-color:     @blue;
+    background-color: var(background);
+    handle-color:     var(blue);
     handle-width:     8px;
     border:           0;
     border-radius:    4px;
@@ -149,16 +150,17 @@ scrollbar {
 }
 
 sidebar {
-    background-color: @background;
+    background-color: var(background);
     border:           0;
-    border-right:     1px solid @brblack;
+    border-right:     1px;
+    border-color:     var(brblack);
     border-radius:    0;
     padding:          0;
 }
 
 button {
-    background-color: @brblack;
-    text-color:       @foreground;
+    background-color: var(brblack);
+    text-color:       var(foreground);
     border:           0;
     border-radius:    6px;
     padding:          8px 16px;
@@ -166,21 +168,21 @@ button {
 }
 
 button selected {
-    background-color: @blue;
-    text-color:       @background;
+    background-color: var(blue);
+    text-color:       var(background);
 }
 
 textbox {
-    text-color: @foreground;
-    background-color: @background;
+    text-color: var(foreground);
+    background-color: var(background);
     border:     0;
     border-radius: 0;
     padding:    0;
 }
 
 error-message {
-    background-color: @urgent;
-    text-color:       @background;
+    background-color: var(urgent);
+    text-color:       var(background);
     border:           0;
     border-radius:    8px;
     padding:         10px;

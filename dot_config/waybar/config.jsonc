@@ -6,7 +6,7 @@
     "ipc": true,
     "modules-left": ["hyprland/workspaces"],
     "modules-center": ["custom/screenrecording-indicator", "clock", "keyboard-state"],
-    "modules-right": ["group/mpris-vol", "group/hardware", "custom/proton", "network", "pulseaudio"],
+    "modules-right": ["group/mpris-vol", "group/hardware", "bluetooth", "custom/proton", "network", "pulseaudio"],
     "modifier-reset": "release",
     "network": {
     "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
@@ -21,14 +21,15 @@
     "pulseaudio": {
         "format": "{volume}% {icon}",
         "format-muted": "󰝟",
-        "format-bluetooth": "{volume}% 󰂯",
         "tooltip-format": "{desc}",
         "format-icons": {
-            "default": ["", "", ""],
+            "default": ["", "", ""], 
+            "speaker": ["󰓃", "󰓃", "󰓃"],
+            "alsa_output.pci-0000_00_1f.3.analog-stereo": ["", "", ""],
             "headphone": " ",
             "headset": "󰋎",
             "phone": "",
-            "portable": "",
+            "portable": ""
         },
         "on-click": "pavucontrol",
         "on-click-middle": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
@@ -37,14 +38,13 @@
         "on-scroll-down": "~/.config/waybar/scripts/volume.sh --dec",
         "on-update": "echo $(date +%H:%M:%S:%N) >> /tmp/pa-updates.log",
         "smooth-scrolling-threshold": 1,
-        "interval": 1,
         "scroll-step": 5
     },
 
     "bluetooth": {
-    "format": "<span font='11'>󰂯</span>",
-    "format-disabled": "<span font='11'>󰂲</span>",
-    "format-connected": "<span font='11'>󰂱</span>",
+    "format": "<span font='11'>󰂯</span> {num_connections}",
+    "format-disabled": "{num_connections}<span font='11'>󰲂</span>",
+    "format-connected": "({num_connections})<span font='11'>󰂱</span>",
     "tooltip-format": "{num_connections} connected",
     "tooltip-format-disabled": "Bluetooth Disabled",
     "tooltip-format-connected": "{num_connections} connected\n\n{device_enumerate}",

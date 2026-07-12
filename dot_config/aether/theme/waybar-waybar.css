@@ -1,6 +1,6 @@
-@define-color background rgb(18,18,18);
-@define-color foreground rgb(255,255,255);
-@define-color accent rgb(79,170,80);
+@define-color background rgb(22,22,22);
+@define-color foreground rgb(221,213,213);
+@define-color accent rgb(186,156,156);
 window#waybar {
   background: alpha(@background, 0.95);
   color: @foreground;
@@ -20,6 +20,7 @@ window#waybar {
 #network,
 #custom-notification,
 #mpris,
+#battery,
 #bluetooth {
   padding: 0 8px;
 }
@@ -154,9 +155,7 @@ window#waybar {
 }
 
 #custom-proton.connected {
-    padding: 0 4px;
-    margin: 0;
-    min-width: 60px;
+    padding: 0 8px;
     color: @accent;
 }
 
