@@ -1,0 +1,33 @@
+#!/bin/bash
+
+OUTPUT_DIR="$HOME/Pictures/ss"
+
+pkill slurp && exit 0
+
+MODE="${1:-smart}"
+PROCESSING="${2:-slurp}"
+
+cleanup_freeze() {
+  [[ -n $FREEZE_PID ]] && kill $FREEZE_PID 2>/dev/null
+}
+trap cleanup_freeze EXIT
+
+{ read -r FREEZE_PID; read -r SELECTION; } < <(capture-region "$MODE" --keep-freeze)
+
+[[ -z $SELECTION ]] && exit 0
+
+case "$PROCESSING" in
+  copy)
+    grim -g "$SELECTION" - | wl-copy --type image/png
+    notify-send "Screenshot copied to clipboard" -t 2000
+    ;;
+  save|slurp|*)
+    mkdir -p "$OUTPUT_DIR"
+    FILENAME="screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png"
+    FILEPATH="$OUTPUT_DIR/$FILENAME"
+    grim -g "$SELECTION" "$FILEPATH" || exit 1
+    wl-copy --type image/png <"$FILEPATH"
+    notify-send "Screenshot saved" "$FILEPATH" -t 3000
+    echo "$FILEPATH"
+    ;;
+esac

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+declare -A folders=(
+  ["Documents"]="$HOME/Docs"
+  ["sr"]="$HOME/Videos/sr"
+  ["ss"]="$HOME/Pictures/ss"
+  ["Projects"]="$HOME/Projects"
+  ["Videos"]="$HOME/Videos"
+  ["Pictures"]="$HOME/Pictures"
+  [".config"]="$HOME/.config"
+  [".local"]="$HOME/.local"
+  ["Music"]="$HOME/Music"
+  ["Downloads"]="$HOME/Downloads"
+)
+
+choice=$(printf "%s\n" "${!folders[@]}" | rofi -dmenu -p "" -i)
+
+[[ -z "$choice" || -z "${folders[$choice]}" ]] && exit 1
+
+ghostty -e yazi "${folders[$choice]}"
