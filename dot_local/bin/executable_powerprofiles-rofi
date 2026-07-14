@@ -1,0 +1,8 @@
+#!/bin/bash
+
+current=$(powerprofilesctl get)
+options=(performance balanced power-saver)
+
+selected=$(printf '%s\n' "${options[@]}" | rofi -dmenu -p "Power profile" -mesg "Current: $current" -theme-str 'window {width: 15%;}')
+
+[[ -n $selected ]] && powerprofilesctl set "$selected"
