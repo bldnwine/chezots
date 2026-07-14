@@ -1,6 +1,6 @@
-@define-color background rgb(22,22,22);
-@define-color foreground rgb(221,213,213);
-@define-color accent rgb(186,156,156);
+@define-color background rgb(13,8,8);
+@define-color foreground rgb(180,178,168);
+@define-color accent rgb(98,137,167);
 window#waybar {
   background: alpha(@background, 0.95);
   color: @foreground;

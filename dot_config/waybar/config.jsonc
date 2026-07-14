@@ -42,7 +42,7 @@
     },
 
     "bluetooth": {
-    "format": "<span font='11'>󰂯</span> {num_connections}",
+    "format": "<span font='11'>󰂯</span>",
     "format-disabled": "{num_connections}<span font='11'>󰲂</span>",
     "format-connected": "({num_connections})<span font='11'>󰂱</span>",
     "tooltip-format": "{num_connections} connected",
@@ -90,7 +90,6 @@
     "tooltip-format-discharging": "{power:>1.0f}W↓ {capacity}%",
     "tooltip-format-charging": "{power:>1.0f}W↑ {capacity}%",
     "interval": 5,
-    "on-click": "omarchy-menu power",
     "states": {
       "warning": 20,
       "critical": 10

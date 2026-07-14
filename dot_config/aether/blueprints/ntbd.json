@@ -21,10 +21,10 @@
     ],
     "wallpaper": "/home/bldnwine/.local/share/aether/wallpapers/wallhaven-zp523j.jpg",
     "extendedColors": {
-      "accent": "#88abbe",
+      "accent": "#be88be",
       "cursor": "#b1d0e4",
       "selection_background": "#b1d0e4",
-      "selection_foreground": "#110e04"
+      "selection_foreground": "#000000"
     }
   },
   "adjustments": {
@@ -42,5 +42,5 @@
     "whitePoint": 0
   },
   "settings": {},
-  "timestamp": 1781196885401
+  "timestamp": 1783893428859
 }

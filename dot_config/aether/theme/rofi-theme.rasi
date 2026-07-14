@@ -14,9 +14,9 @@ window {
     width:            315px;
     height:           300px;
     border:           0px;
-    border-color:     #ddd5d5;
+    border-color:     #B4B2A8;
     border-radius:    15px;
-    background-color: #161616;
+    background-color: #0d0808;
 }
 
 mainbox {
@@ -35,10 +35,10 @@ inputbar {
 
 entry {
     placeholder:       "";
-    placeholder-color: #ddd5d5;
+    placeholder-color: #B4B2A8;
     cursor:            text;
-    cursor-color:      #ba9c9c;
-    text-color:        #ddd5d5;
+    cursor-color:      #6289A7;
+    text-color:        #B4B2A8;
     background-color:  transparent;
 }
 
@@ -54,22 +54,22 @@ listview {
 
 element {
     padding:          6px 10px;
-    text-color:       #ddd5d5;
+    text-color:       #B4B2A8;
     background-color: transparent;
 }
 
 element selected {
     background-color: transparent;
-    text-color:       #ba9c9c;
+    text-color:       #6289A7;
 }
 
 element-text selected {
     background-color: transparent;
-    text-color:       #ba9c9c;
+    text-color:       #6289A7;
   }
 
 element-text {
-    text-color:       #ddd5d5;
+    text-color:       #B4B2A8;
     background-color: transparent;
 }
 
