@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-CHEZMOI_DIR="${HOME}/.local/share/chezmoi"
-
-if [ ! -d "$CHEZMOI_DIR" ]; then
-    echo "chezmoi source dir not found at $CHEZMOI_DIR" >&2
-    exit 1
-fi
-
 TARGET_USER_HOME="$HOME"
 SOURCE_USER="/home/bldnwine"
 
