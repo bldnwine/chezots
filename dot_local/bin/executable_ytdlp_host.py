@@ -22,15 +22,6 @@ def send_message(msg):
     sys.stdout.buffer.flush()
 
 
-def get_expected_filename(ytdlp, output_template, url):
-    cmd = [ytdlp, '--print', 'filename', '-o', output_template, url]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    if result.returncode != 0:
-        return None
-    lines = [l.strip() for l in result.stdout.split('\n') if l.strip()]
-    return lines[-1] if lines else None
-
-
 def main():
     try:
         params = get_message()
@@ -41,7 +32,8 @@ def main():
     url = params.get('url', '')
     quality = params.get('quality', 'best')
     fmt = params.get('format', 'mp4')
-    save_path = params.get('savePath', '~/Videos/ytdlpx')
+    save_path = params.get('savePath', '~/Videos')
+    audio_only = params.get('audioOnly', False)
     notify_system = params.get('notifySystem', False)
 
     if not url or not (url.startswith('http://') or url.startswith('https://')):
@@ -59,52 +51,28 @@ def main():
         })
         return
 
-    try:
-        subprocess.run(
-            [ytdlp, '--simulate', url],
-            capture_output=True, timeout=30, check=True
-        )
-    except subprocess.CalledProcessError:
-        send_message({
-            'type': 'error',
-            'message': 'No downloadable video found at this URL'
-        })
-        return
-    except subprocess.TimeoutExpired:
-        pass
-
-    output_template = os.path.join(save_path, '%(title)s [%(id)s].%(ext)s')
-    filename = get_expected_filename(ytdlp, output_template, url)
-    if filename is None:
-        send_message({'type': 'error', 'message': 'Could not determine output filename'})
-        return
-
-    filepath = os.path.join(save_path, filename)
-    if os.path.exists(filepath):
-        base, ext = os.path.splitext(filename)
-        n = 1
-        while os.path.exists(os.path.join(save_path, f'{base} ({n}){ext}')):
-            n += 1
-        filename = f'{base} ({n}){ext}'
-        filepath = os.path.join(save_path, filename)
-        output_template = filepath
-
     send_message({'type': 'started'})
 
-    cmd = [ytdlp, '-f', quality, '-o', output_template, url]
-    if fmt:
-        cmd.extend(['--merge-output-format', fmt])
+    output_template = os.path.join(save_path, '%(title)s.%(ext)s')
+    cmd = [ytdlp, '-o', output_template, '--embed-metadata', '--embed-thumbnail']
+    if audio_only:
+        cmd.extend(['--extract-audio', '--audio-format', fmt])
+    else:
+        cmd.extend(['-f', quality])
+        if fmt:
+            cmd.extend(['--merge-output-format', fmt])
+    cmd.append(url)
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)
+        with open('/tmp/ytdlpx_debug.log', 'w') as dbg:
+            result = subprocess.run(cmd, stdout=dbg, stderr=dbg, text=True, timeout=7200)
         if result.returncode == 0:
             send_message({
                 'type': 'complete',
-                'title': filename,
-                'filepath': filepath
+                'filepath': output_template
             })
             if notify_system and shutil.which('notify-send'):
-                subprocess.Popen(['notify-send', 'ytdlpx', f'Complete: {filename}'])
+                subprocess.Popen(['notify-send', 'ytdlpx', f'Download complete'])
         else:
             error_msg = result.stderr.strip() or 'Download failed'
             send_message({'type': 'error', 'message': error_msg})

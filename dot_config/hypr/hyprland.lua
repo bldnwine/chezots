@@ -93,7 +93,7 @@ hl.on("hyprland.start", function()
 	-- hl.exec_cmd("swaybg -i ~/.config/aether/theme/backgrounds/* -m fill")
 	hl.exec_cmd(launch("swaybg -i ~/.config/omarchy/current/background -m fill"))
 	hl.exec_cmd(launch("hypr-monitor-watch"))
-	hl.exec_cmd("powerprofiles-set")
+	-- hl.exec_cmd("powerprofiles-set")
 	-- hl.exec_cmd("avizo-service")
 end)
 

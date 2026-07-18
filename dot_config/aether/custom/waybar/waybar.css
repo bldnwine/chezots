@@ -2,7 +2,7 @@
 @define-color foreground rgb({foreground.rgb});
 @define-color accent rgb({accent.rgb});
 window#waybar {
-  background: alpha(@background, 0.95);
+  background: alpha(@background, 0.85);
   color: @foreground;
   font-family: "JetBrainsMono Nerd Font Propo", "Fira Code", sans-serif;
   font-weight: bold;

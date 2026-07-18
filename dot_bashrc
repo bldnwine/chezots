@@ -38,6 +38,7 @@ alias britu='brightnessctl set 10%+'
 alias notes='nano ~/Docs/base/notes.md'
 alias showip='ip route | grep default'
 alias toohot='sudo lnxrouter --ap wlan0 owlcat -p rolby123 --freq-band 2.4 -c 6'
+alias remu='cd /home/bldnwine/Projects/remoteu && uv run remoteu.py'
 alias qweny='ollama run qwen3.5:4b'
 alias qwenl='ollama run qwen3.5:0.8b'
 alias stopqweny='ollama stop qwen3.5:4b'
@@ -77,7 +78,7 @@ amd() {
 }
 yta() {
     mkdir -p ~/Music
-    yt-dlp -x --audio-format m4a --embed-metadata --embed-thumbnail --add-metadata -o "~/Music/%(title)s.%(ext)s" "$1"
+    yt-dlp -x --audio-format m4a --embed-metadata --embed-thumbnail --convert-thumbnails jpg --compat-options embed-thumbnail-atomicparsley -o "~/Music/%(title)s.%(ext)s" "$1"
 }
 
 ytv() {
