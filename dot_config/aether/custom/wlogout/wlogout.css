@@ -12,7 +12,7 @@ button {
     border-color: black;
 	text-decoration-color: #FFFFFF;
     color: #FFFFFF;
-	background-color: #1E1E1E;
+	background-color: {background};
 	border-style: solid;
 	border-width: 1px;
 	background-repeat: no-repeat;
