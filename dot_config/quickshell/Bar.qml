@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.Pipewire
 import Quickshell.Services.Mpris
+import Quickshell.Hyprland
 
 PanelWindow {
 	id: bar
@@ -31,7 +32,7 @@ PanelWindow {
 					label: String(index + 1)
 					active: bar.root.activeWs === (index + 1)
 					present: bar.root.existingWs.indexOf(index + 1) !== -1
-					onActivated: bar.root.run("hyprctl dispatch workspace " + (index + 1))
+					onActivated: bar.root.dispatchWorkspace(index + 1)
 				}
 			}
 		}
@@ -136,6 +137,53 @@ PanelWindow {
 			Module { root: bar.root; visible: root.batteryIcon().length > 0; glyph: root.batteryIcon()
 				tooltip: "Battery " + root.batVal + "%" + (root.batState.length > 0 ? " · " + root.batState : "")
 				color: root.batVal <= 10 ? root.seal : root.batVal <= 20 ? root.accent : root.ink; fontSize: 12 }
+		}
+	}
+
+	// ===== TOOLTIP POPUP =====
+	PopupWindow {
+		visible: bar.root.tooltipShown && bar.root.tooltipTarget !== null
+		color: "transparent"
+
+		anchor {
+			window: bar
+			adjustment: PopupAdjustment.Slide
+			edges: Edges.Top | Edges.Left
+			gravity: Edges.Bottom | Edges.Right
+
+			onAnchoring: {
+				var target = bar.root.tooltipTarget;
+				if (!target) return;
+				var pw = tooltipBubble.implicitWidth;
+				var ph = tooltipBubble.implicitHeight;
+				var lx = target.width / 2 - pw / 2;
+				var ly = target.height + 6;
+				var pt = bar.contentItem.mapFromItem(target, lx, ly);
+				anchor.rect.x = Math.round(pt.x);
+				anchor.rect.y = Math.round(pt.y);
+				anchor.rect.width = 1;
+				anchor.rect.height = 1;
+			}
+		}
+
+		Rectangle {
+			id: tooltipBubble
+			width: tipLabel.implicitWidth + 16
+			height: tipLabel.implicitHeight + 6
+			color: bar.root.bg
+			border.color: bar.root.sep
+			border.width: 1
+			radius: bar.root.cornerRadius
+
+			Text {
+				id: tipLabel
+				anchors.centerIn: parent
+				text: bar.root.tooltipText
+				color: bar.root.ink
+				font.family: bar.root.mono
+				font.pixelSize: 10
+				font.letterSpacing: 1
+			}
 		}
 	}
 }

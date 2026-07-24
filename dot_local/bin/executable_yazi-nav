@@ -13,8 +13,13 @@ declare -A folders=(
   ["Downloads"]="$HOME/Downloads"
 )
 
-choice=$(printf "%s\n" "${!folders[@]}" | rofi -dmenu -p "" -i)
+choice=$(printf "%s\n" "${!folders[@]}" | rofi -dmenu -p "" -i -kb-custom-1 "Alt+Return")
+exit_code=$?
 
 [[ -z "$choice" || -z "${folders[$choice]}" ]] && exit 1
 
-ghostty -e yazi "${folders[$choice]}"
+if [[ $exit_code -eq 10 ]]; then
+  nemo "${folders[$choice]}"
+else
+  ghostty -e yazi "${folders[$choice]}"
+fi

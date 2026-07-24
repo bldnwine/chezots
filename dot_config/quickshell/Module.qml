@@ -14,17 +14,9 @@ Item {
 	signal activated()
 	signal rightActivated()
 
-	width: 24; height: 28
+	property bool tooltipHovered: mouse.containsMouse
 
-	Timer {
-		id: tipDelay
-		interval: 320
-		onTriggered: {
-			if (!mod.tooltip) return;
-			var p = mod.mapToItem(null, mod.width / 2, mod.height / 2);
-			mod.root.showTooltip(mod.tooltip, p.x, p.y);
-		}
-	}
+	width: 24; height: 28
 
 	Rectangle {
 		anchors.fill: parent
@@ -49,11 +41,11 @@ Item {
 		hoverEnabled: true
 		acceptedButtons: Qt.LeftButton | Qt.RightButton
 		cursorShape: Qt.PointingHandCursor
-		onEntered: { if (mod.tooltip) tipDelay.restart() }
-		onExited: { tipDelay.stop(); mod.root.hideTooltip(mod.tooltip) }
+		property bool tooltipHovered: mouse.containsMouse
+		onEntered: { if (mod.tooltip) mod.root.showTooltip(mod, mod.tooltip) }
+		onExited: { mod.root.hideTooltip(mod) }
 		onClicked: (e) => {
-			tipDelay.stop();
-			mod.root.hideTooltip(mod.tooltip);
+			mod.root.hideTooltip(mod);
 			if (e.button === Qt.RightButton) mod.rightActivated();
 			else mod.activated();
 		}

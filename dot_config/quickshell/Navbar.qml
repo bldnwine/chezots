@@ -4,6 +4,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Pipewire
 import Quickshell.Services.Mpris
+import Quickshell.Hyprland
 
 Item {
 	id: nav
@@ -56,10 +57,34 @@ Item {
 		return _wifiRamp[idx];
 	}
 
-	// ===== WORKSPACES (polled 2 Hz) =====
-	property int activeWs: 1
-	property var existingWs: [1, 2, 3, 4, 5]
+	// ===== WORKSPACES (Hyprland IPC) =====
+	property int activeWs: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1
+	property var existingWs: [1,2,3,4,5]
 	property int lastDirection: 0
+	property int _prevActiveWs: -1
+	onActiveWsChanged: {
+		if (_prevActiveWs >= 0) {
+			if (activeWs > _prevActiveWs) lastDirection = 1;
+			else if (activeWs < _prevActiveWs) lastDirection = -1;
+		}
+		_prevActiveWs = activeWs;
+	}
+
+	function _refreshExistingWs() {
+		if (!Hyprland.workspaces) return;
+		var ids = [1,2,3,4,5];
+		var vals = Hyprland.workspaces.values;
+		for (var i = 0; i < vals.length; i++) {
+			var id = vals[i].id;
+			if (id > 0 && id <= 10 && ids.indexOf(id) === -1) ids.push(id);
+		}
+		ids.sort(function(a,b) { return a-b; });
+		existingWs = ids;
+	}
+
+	function dispatchWorkspace(id) {
+		nav.run("hyprctl dispatch workspace " + id);
+	}
 
 	// ===== AUDIO (polled 2 s, falls back when Pipewire bindings don't fire) =====
 	readonly property var activeSink: Pipewire.defaultAudioSink
@@ -143,20 +168,87 @@ Item {
 	}
 
 	// ===== TOOLTIP =====
+	property var tooltipTarget: null
+	property var pendingTooltipTarget: null
 	property string tooltipText: ""
-	property real tooltipBarX: 0; property real tooltipBarY: 0
+	property string pendingTooltipText: ""
 	property bool tooltipShown: false
-	property int barHeight: 28
-	function showTooltip(text, x, y) { tooltipText = text; tooltipBarX = x; tooltipBarY = y; tooltipShown = true }
-	function hideTooltip(text) { if (!text || tooltipText === text) tooltipShown = false }
+	property int tooltipRequest: 0
 
-	Component.onCompleted: nav._updateAudioIcon()
+	function targetTooltipHovered(target) {
+		return !!target && target.visible !== false && target.opacity !== 0 && target.tooltipHovered === true
+	}
+
+	function clearTooltip() {
+		tooltipTimer.stop()
+		pendingTooltipTarget = null
+		pendingTooltipText = ""
+		tooltipTarget = null
+		tooltipText = ""
+		tooltipShown = false
+	}
+
+	function showTooltip(target, text) {
+		clearTooltip()
+		if (!targetTooltipHovered(target) || !text) {
+			tooltipRequest += 1
+			return
+		}
+		var request = tooltipRequest + 1
+		tooltipRequest = request
+		pendingTooltipTarget = target
+		pendingTooltipText = text
+		Qt.callLater(function() {
+			if (request !== tooltipRequest) return
+			if (!targetTooltipHovered(pendingTooltipTarget)) {
+				clearTooltip()
+				return
+			}
+			tooltipTarget = pendingTooltipTarget
+			tooltipText = pendingTooltipText
+			pendingTooltipTarget = null
+			pendingTooltipText = ""
+			tooltipTimer.restart()
+		})
+	}
+
+	function hideTooltip(target) {
+		if (tooltipTarget !== target && pendingTooltipTarget !== target) return
+		tooltipRequest += 1
+		clearTooltip()
+	}
+
+	// ===== TOOLTIP TIMERS =====
+	Timer {
+		id: tooltipTimer
+		interval: 400
+		onTriggered: {
+			if (nav.targetTooltipHovered(nav.tooltipTarget)) nav.tooltipShown = true
+			else nav.clearTooltip()
+		}
+	}
+	Timer {
+		interval: 100
+		running: nav.tooltipShown
+		repeat: true
+		onTriggered: if (!nav.targetTooltipHovered(nav.tooltipTarget)) nav.hideTooltip(nav.tooltipTarget)
+	}
+
+	// ===== IPC EVENT HANDLERS =====
+	Connections {
+		target: Hyprland
+		function onRawEvent(event) {
+			if (event && (event.name === "createworkspace" || event.name === "destroyworkspace"))
+				nav._refreshExistingWs();
+		}
+	}
+	Component.onCompleted: {
+		nav._updateAudioIcon()
+		nav._refreshExistingWs()
+	}
 
 	// ===== SURFACE =====
 	Bar { root: nav }
-
-	// ===== TOOLTIP =====
-	TooltipOverlay { root: nav }
 
 	// ===== CLOCK TIMER =====
 	Timer {
@@ -253,28 +345,6 @@ Item {
 		stdout: SplitParser { splitMarker: "\n"; onRead: (d) => { var s = d.trim().split(" "); if (s.length >= 2) { nav.batVal = parseInt(s[0]) || 0; nav.batState = s[1] } } }
 	}
 	Timer { interval: 10000; running: true; repeat: true; triggeredOnStart: true; onTriggered: batProc.running = true }
-
-	// ===== WORKSPACE PROBE (2 Hz) =====
-	Process {
-		id: wsProbe; running: false
-		command: ["bash", "-lc",
-			"act=$(hyprctl activeworkspace -j 2>/dev/null | sed -n 's/.*\"id\": *\\([0-9]*\\).*/\\1/p' | head -1); "
-			+ "ids=$(hyprctl workspaces -j 2>/dev/null | tr ',' '\\n' | sed -n 's/.*\"id\": *\\([0-9]*\\).*/\\1/p' | sort -nu | paste -sd,); "
-			+ "printf '%s|%s' \"${act:-1}\" \"${ids:-1}\""]
-		stdout: StdioCollector {
-			onStreamFinished: {
-				const p = this.text.split("|");
-				if (p.length !== 2) return;
-				const next = parseInt(p[0]) || 1;
-				if (next > nav.activeWs) nav.lastDirection = 1;
-				else if (next < nav.activeWs) nav.lastDirection = -1;
-				nav.activeWs = next;
-				const have = p[1].split(",").map(s => parseInt(s)).filter(n => !isNaN(n));
-				nav.existingWs = [...new Set([...have, 1, 2, 3, 4, 5])].sort((a,b) => a-b).slice(0, 9);
-			}
-		}
-	}
-	Timer { interval: 500; running: true; repeat: true; triggeredOnStart: true; onTriggered: wsProbe.running = true }
 
 	// ===== AUDIO PROBE (2 s) =====
 	Process {
