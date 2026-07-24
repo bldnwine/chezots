@@ -1,0 +1,16 @@
+#!/bin/bash
+
+css="$HOME/.config/aether/theme/waybar-waybar.css"
+
+if [ ! -f "$css" ]; then
+    echo "wayt: $css not found" >&2
+    exit 1
+fi
+
+if grep -q 'alpha(@background, 0\.85)' "$css"; then
+    sed -i 's/alpha(@background, 0\.85)/alpha(@background, 0)/' "$css"
+    echo "opacity: 0"
+else
+    sed -i 's/alpha(@background, 0)/alpha(@background, 0.85)/' "$css"
+    echo "opacity: 0.85"
+fi

@@ -14,6 +14,7 @@ export EDITOR=nvim
 export VISUAL=nvim
 alias pacupdate='sudo pacman -Syu'
 alias aurupdate='yay -Syu --aur'
+alias ff='fastfetch'
 alias thememe='~/owlcat/themes/manager.sh'
 alias hyprconf='nano ~/.config/hypr/hyprland.conf'
 alias hylua='nano ~/.config/hypr/hyprland.lua'
@@ -48,8 +49,6 @@ alias stopllama='sudo systemctl stop ollama'
 alias disablellama='sudo systemctl disable ollama'
 alias qwen='ollama run qwen2.5-coder:3b'
 alias stopqwen='ollama stop qwen2.5-coder:3b'
-alias enablemolt='systemctl --user enable openclaw-gateway.service'
-alias disablemolt='systemctl --user disable openclaw-gateway.service'
 alias enablesh='sudo systemctl enable --now sshd'
 alias killsh='pkill -u bldnwine sshd'
 alias disablesh='sudo systemctl disable --now sshd'
@@ -136,9 +135,6 @@ rmpcx() {
 }
 export PATH="$HOME/.npm-global/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
-alias startmolt="openclaw gateway start"
-alias stopmolt="openclaw gateway stop"
-alias moltui="openclaw tui"
 export OLLAMA_API_KEY="ollama-local"
 
 eval "$(zoxide init bash)"
