@@ -10,8 +10,8 @@
     "modifier-reset": "release",
     "network": {
     "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
-    "format-wifi": "{essid}",
-    "format-ethernet": "{ifname} 󰈁",
+    "format-wifi": "{icon} {essid}",
+    "format-ethernet": "󰈁 {ifname}",
     "format-disconnected": "󰲛",
     "tooltip-format-wifi": "{essid} ({signalStrength}%)",
     "interval": 3,
@@ -19,7 +19,7 @@
     "on-click-middle": "~/.config/waybar/scripts/proton-vpn.sh --menu",
    },
     "pulseaudio": {
-        "format": "{volume}% {icon}",
+        "format": "{icon} {volume}%",
         "format-muted": "󰝟",
         "tooltip-format": "{desc}",
         "format-icons": {

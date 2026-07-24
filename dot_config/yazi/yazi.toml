@@ -1,6 +1,11 @@
 [mgr]
 show_hidden = true
 
+[preview]
+max_width = 400
+max_height = 500
+image_quality = 60
+
 [[opener.web-screenshot]]
 run = '''
 url=$(exiftool -s3 -URL "$1" 2>/dev/null)

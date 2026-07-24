@@ -14,9 +14,9 @@ window {
     width:            315px;
     height:           300px;
     border:           0px;
-    border-color:     #ffffff;
+    border-color:     #D7DCE1;
     border-radius:    15px;
-    background-color: #121212;
+    background-color: #20242E;
 }
 
 mainbox {
@@ -35,10 +35,10 @@ inputbar {
 
 entry {
     placeholder:       "";
-    placeholder-color: #ffffff;
+    placeholder-color: #D7DCE1;
     cursor:            text;
-    cursor-color:      #8ea4c8;
-    text-color:        #ffffff;
+    cursor-color:      #82a5e4;
+    text-color:        #D7DCE1;
     background-color:  transparent;
 }
 
@@ -54,22 +54,22 @@ listview {
 
 element {
     padding:          6px 10px;
-    text-color:       #ffffff;
+    text-color:       #D7DCE1;
     background-color: transparent;
 }
 
 element selected {
     background-color: transparent;
-    text-color:       #8ea4c8;
+    text-color:       #82a5e4;
 }
 
 element-text selected {
     background-color: transparent;
-    text-color:       #8ea4c8;
+    text-color:       #82a5e4;
   }
 
 element-text {
-    text-color:       #ffffff;
+    text-color:       #D7DCE1;
     background-color: transparent;
 }
 

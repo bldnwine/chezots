@@ -71,7 +71,7 @@ local function launch(command)
 end
 
 local terminal = launch("ghostty")
-local fileManager = launch("nautilus")
+local fileManager = launch("nemo")
 local menu = 'result=$(tofi-drun --drun-launch=false) && [ -n "$result" ] && uwsm-app -- $result 2>/dev/null'
 -- State variables for toggle functions
 local monitor_active = true
@@ -128,7 +128,7 @@ hl.config({
 		rounding = 0,
 		rounding_power = 2,
 		active_opacity = 0.97,
-		inactive_opacity = 0.95,
+		inactive_opacity = 0.90,
 		fullscreen_opacity = 1.0,
 
 		shadow = {
@@ -253,7 +253,7 @@ local mainMod = "SUPER"
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + CONTROL + M", hl.dsp.exec_cmd("uwsm stop"))
-hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(fileManager .. " --new-window"))
+hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + Y", hl.dsp.exec_cmd(terminal .. " -e yazi"))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd(menu))
@@ -266,6 +266,7 @@ hl.bind(mainMod .. " + CONTROL + B", hl.dsp.exec_cmd(terminal .. " --title='Blue
 hl.bind(mainMod .. " + CONTROL + N", hl.dsp.exec_cmd(terminal .. " --title='impala' -e impala"))
 --hl.bind(mainMod .. " + X", hl.dsp.exec_cmd(launch("waypaper")))
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd(terminal .. " -e nvim"))
+hl.bind(mainMod .. " + ALT + N", hl.dsp.exec_cmd(terminal .. " -e nano"))
 --hl.bind(mainMod .. " + Y", hl.dsp.exec_cmd(launch("~/.config/hypr/scripts/ytsearch.sh")))
 --hl.bind(mainMod .. " + SHIFT + Y", hl.dsp.exec_cmd(launch("~/.config/hypr/scripts/ytmusicsearch.sh")))
 hl.bind(mainMod .. " + K", hl.dsp.exec_cmd(launch("~/.config/waybar/scripts/proton-vpn.sh --menu")))
@@ -452,5 +453,5 @@ hl.window_rule({
 	match = { class = "zen", title = "Zen Browser" },
 	float = true,
 	center = true,
-	size = { 1203, 1017 },
+	size = { 1447,1009 },
 })
