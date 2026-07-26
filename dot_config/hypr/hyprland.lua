@@ -309,11 +309,17 @@ hl.bind(mainMod .. " + Period", function()
 		hl.exec_cmd(launch("pactl set-default-sink alsa_output.pci-0000_00_1b.0.analog-stereo"))
 	end
 end)
--- hl.bind(mainMod .. " + G", hl.dsp.exec_cmd("~/Projects/bookshot/shot.py"))
-hl.bind("SHIFT + G", hl.dsp.exec_cmd("~/shot"))
+hl.bind("SUPER + CTRL + Z", function()
+  local zoom = hl.get_config("cursor.zoom_factor") or 1
+  hl.config({ cursor = { zoom_factor = zoom + 1 } })
+end)
+
+hl.bind("SUPER + ALT + Z", function()
+  hl.config({ cursor = { zoom_factor = 1 } })
+end)
 hl.bind(mainMod .. " + CONTROL + up", hl.dsp.exec_cmd("~/.config/waybar/scripts/volume.sh --inc"), {repeating = true})
 hl.bind(mainMod .. " + CONTROL + down", hl.dsp.exec_cmd("~/.config/waybar/scripts/volume.sh --dec"), {repeating = true})
-hl.bind(mainMod .. " + G", hl.dsp.exec_cmd(launch("gtk-launch Gemini")))
+hl.bind(mainMod .. " + G", hl.dsp.exec_cmd(launch("~/.config/hypr/scripts/layout_switcher.sh")))
 
 hl.bind(mainMod .. " + left", hl.dsp.focus({ direction = "left" }))
 hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))

@@ -42,6 +42,20 @@
         "scroll-step": 5
     },
 
+    "pulseaudio#input": {
+    "format-source": "",
+    "format-source-muted": " ",
+    "format": "{format_source}",
+    "tooltip-format": "{format_source} {source_volume}%",
+    "scroll-step": 1,
+    "smooth-scrolling-threshold": 1,
+    "max-volume": 100,
+    "on-click": "pavucontrol",
+    "on-click-right": "pamixer -t",
+    "on-scroll-up": "pactl set-source-volume @DEFAULT_SOURCE@ +1%",
+    "on-scroll-down": "pactl set-source-volume @DEFAULT_SOURCE@ -1%",
+    },
+    
     "bluetooth": {
     "format": "<span font='11'>󰂯</span>",
     "format-disabled": "{num_connections}<span font='11'>󰲂</span>",
