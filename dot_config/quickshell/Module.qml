@@ -1,53 +1,81 @@
 import QtQuick
+import QtQuick.Layouts
 
 Item {
-	id: mod
-	required property var root
+    id: modItem
+    required property var root
 
-	property string glyph: ""
-	property string tooltip: ""
-	property color color: root.ink
-	property string fontFamily: root.mono
-	property int fontSize: 12
-	property int glyphYOffset: -1
+    property string glyph: ""
+    property string tooltip: ""
+    property color color: root.ink
+    property string fontFamily: root.mono
+    property int fontSize: 12
+    // Optical centring. Every font here (Nerd Font, kanji serif, omarchy
+    // mark) has ascender > |descender|, so anchors.centerIn lands the
+    // inked glyph below the geometric centre. A 1px lift restores it.
+    // Negative = up, positive = down — override per-instance if a glyph
+    // needs more.
+    property int glyphYOffset: -1
 
-	signal activated()
-	signal rightActivated()
+    signal activated()
+    signal middleActivated()
+    signal rightActivated()
 
-	property bool tooltipHovered: mouse.containsMouse
+    Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
+    Layout.preferredWidth:  root.isHorizontal ? 24 : root.barHeight
+    Layout.preferredHeight: root.isHorizontal ? root.barHeight : 24
 
-	width: 24; height: 28
+    // Short hover delay before the tooltip appears so a sweep across
+    // the bar doesn't flash labels for every icon in passing.
+    Timer {
+        id: tipDelay
+        interval: 320
+        onTriggered: {
+            if (!modItem.tooltip) return;
+            const p = modItem.mapToItem(null, modItem.width / 2, modItem.height / 2);
+            modItem.root.showTooltip(modItem.tooltip, p.x, p.y);
+        }
+    }
 
-	Rectangle {
-		anchors.fill: parent
-		anchors.margins: 3
-		radius: 4
-		color: mouse.containsMouse ? Qt.rgba(mod.root.ink.r, mod.root.ink.g, mod.root.ink.b, 0.08) : "transparent"
-		Behavior on color { ColorAnimation { duration: 180 } }
-	}
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 3
+        radius: modItem.root.cornerRadius
+        color: mouse.containsMouse ? Qt.rgba(modItem.root.ink.r, modItem.root.ink.g, modItem.root.ink.b, 0.08) : "transparent"
+        Behavior on color { ColorAnimation { duration: 180 } }
+    }
 
-	Text {
-		anchors.centerIn: parent
-		anchors.verticalCenterOffset: mod.glyphYOffset
-		text: mod.glyph
-		color: mod.color
-		font.family: mod.fontFamily
-		font.pixelSize: mod.fontSize
-	}
+    Bloom { id: bloom; root: modItem.root }
 
-	MouseArea {
-		id: mouse
-		anchors.fill: parent
-		hoverEnabled: true
-		acceptedButtons: Qt.LeftButton | Qt.RightButton
-		cursorShape: Qt.PointingHandCursor
-		property bool tooltipHovered: mouse.containsMouse
-		onEntered: { if (mod.tooltip) mod.root.showTooltip(mod, mod.tooltip) }
-		onExited: { mod.root.hideTooltip(mod) }
-		onClicked: (e) => {
-			mod.root.hideTooltip(mod);
-			if (e.button === Qt.RightButton) mod.rightActivated();
-			else mod.activated();
-		}
-	}
+    Text {
+        anchors.centerIn: parent
+        anchors.verticalCenterOffset: modItem.glyphYOffset
+        text: modItem.glyph
+        color: modItem.color
+        font.family: modItem.fontFamily
+        font.pixelSize: modItem.fontSize
+    }
+
+    MouseArea {
+        id: mouse
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        cursorShape: Qt.PointingHandCursor
+        onEntered: {
+            bloom.fire(mouseX, mouseY);
+            if (modItem.tooltip) tipDelay.restart();
+        }
+        onExited: {
+            tipDelay.stop();
+            modItem.root.hideTooltip(modItem.tooltip);
+        }
+        onClicked: (e) => {
+            tipDelay.stop();
+            modItem.root.hideTooltip(modItem.tooltip);
+            if (e.button === Qt.RightButton) modItem.rightActivated();
+            else if (e.button === Qt.MiddleButton) modItem.middleActivated();
+            else modItem.activated();
+        }
+    }
 }

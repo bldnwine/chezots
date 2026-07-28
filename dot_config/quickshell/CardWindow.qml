@@ -2,20 +2,57 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 
+// Tier-B popup chrome. Full-screen overlay PanelWindow + centered card with
+// the OmniMenu visual language: mono-caps header (title + status subtitle),
+// scale-from-center reveal, click-outside dismiss, Esc dismiss, optional
+// footer hint line. Widgets put their own body inside as default children
+// and listen to keyPressed() for widget-specific keyboard nav.
+//
+// Usage:
+//   CardWindow {
+//       theme: root
+//       revealed: root.aetherVisible
+//       onDismiss: root.aetherVisible = false
+//       onKeyPressed: function(event) { ... widget keys ... }
+//       title: "AETHER"
+//       subtitle: "12 BLUEPRINTS"
+//       footer: "↵ APPLY  ·  ESC CLOSE"
+//       Item { ... body ... }
+//   }
 PanelWindow {
     id: card
+
     required property var theme
 
     property bool revealed: false
     property real cardWidth: 460
+    // -1 -> auto-size from content implicit height; otherwise fixed.
     property real cardHeight: -1
     property string title: ""
     property string subtitle: ""
     property string footer: ""
     property string layerNamespace: "omarchy-card"
+    property bool plain: false
+    // Right-side header content (chevrons, refresh buttons, etc.). The
+    // inline Component is instantiated as a Loader child; lexical scope
+    // means ids declared in the popup file are reachable from inside.
+    property Component headerRight: null
+
+    // Anchored placement. anchorEdge "" (default) centres the card; "top"/
+    // "bottom"/"left"/"right" hugs the bar's inner edge and centres on
+    // (anchorBarX, anchorBarY) along the parallel axis, clamped on-screen.
+    // The Scale origin tracks the trigger so a clamped card still feels
+    // rooted in the icon the user clicked.
+    property string anchorEdge: ""
+    property real   anchorBarX: 0
+    property real   anchorBarY: 0
+    property real   anchorGap: 8
+    readonly property bool _anchored: anchorEdge === "top"  || anchorEdge === "bottom"
+                                   || anchorEdge === "left" || anchorEdge === "right"
 
     signal dismiss()
     signal keyPressed(var event)
+
     default property alias bodyData: bodyContainer.data
 
     visible: revealed || _reveal > 0.001
@@ -29,7 +66,7 @@ PanelWindow {
     property real _reveal: revealed ? 1 : 0
     Behavior on _reveal {
         NumberAnimation {
-            duration: card.revealed ? 220 : 140
+            duration: card.plain ? 0 : (card.revealed ? 220 : 140)
             easing.type: card.revealed ? Easing.OutCubic : Easing.InCubic
         }
     }
@@ -46,18 +83,43 @@ PanelWindow {
         color: card.theme.bg
         border.color: card.theme.sep
         border.width: 1
-        radius: card.theme.cornerRadius
+        radius: card.plain ? 0 : card.theme.cornerRadius
 
-        x: (parent.width - width) / 2
-        y: (parent.height - height) / 2
-
-        transform: Scale {
-            origin.x: surface.width / 2
-            origin.y: surface.height / 2
-            xScale: card._reveal
-            yScale: card._reveal
+        x: {
+            if (!card._anchored) return (parent.width - width) / 2;
+            if (card.anchorEdge === "left")  return card.theme.barHeight + card.anchorGap;
+            if (card.anchorEdge === "right") return parent.width - card.theme.barHeight - width - card.anchorGap;
+            return Math.max(card.anchorGap,
+                            Math.min(parent.width - width - card.anchorGap,
+                                     card.anchorBarX - width / 2));
+        }
+        y: {
+            if (!card._anchored) return (parent.height - height) / 2;
+            if (card.anchorEdge === "top")    return card.theme.barHeight + card.anchorGap;
+            if (card.anchorEdge === "bottom") return parent.height - card.theme.barHeight - height - card.anchorGap;
+            return Math.max(card.anchorGap,
+                            Math.min(parent.height - height - card.anchorGap,
+                                     card.anchorBarY - height / 2));
         }
 
+        transform: Scale {
+            origin.x: {
+                if (!card._anchored) return surface.width / 2;
+                if (card.anchorEdge === "left")  return 0;
+                if (card.anchorEdge === "right") return surface.width;
+                return Math.max(0, Math.min(surface.width, card.anchorBarX - surface.x));
+            }
+            origin.y: {
+                if (!card._anchored) return surface.height / 2;
+                if (card.anchorEdge === "top")    return 0;
+                if (card.anchorEdge === "bottom") return surface.height;
+                return Math.max(0, Math.min(surface.height, card.anchorBarY - surface.y));
+            }
+            xScale: card.plain ? 1 : card._reveal
+            yScale: card.plain ? 1 : card._reveal
+        }
+
+        // Swallow clicks so the dismiss MouseArea doesn't fire on body taps.
         MouseArea { anchors.fill: parent }
 
         focus: card.revealed
@@ -73,16 +135,18 @@ PanelWindow {
         Column {
             id: bodyCol
             anchors.fill: parent
-            anchors.margins: 17
-            spacing: 12
+            anchors.margins: card.plain ? 14 : 17
+            spacing: card.plain ? 10 : 12
 
             Item {
                 width: parent.width
                 height: 43
-                visible: card.title.length > 0 || card.subtitle.length > 0
+                visible: card.title.length > 0 || card.subtitle.length > 0 || card.headerRight !== null
 
                 Column {
                     anchors.left: parent.left
+                    anchors.right: headerRightLoader.left
+                    anchors.rightMargin: card.headerRight ? 12 : 0
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
                     Text {
@@ -90,8 +154,8 @@ PanelWindow {
                         text: card.title
                         color: card.theme.ink
                         font.family: card.theme.mono
-                        font.pixelSize: 19
-                        font.letterSpacing: 4
+                        font.pixelSize: card.plain ? 15 : 19
+                        font.letterSpacing: card.plain ? 3 : 4
                         font.weight: Font.Medium
                     }
                     Text {
@@ -104,6 +168,13 @@ PanelWindow {
                         font.pixelSize: 11
                         font.letterSpacing: 2
                     }
+                }
+
+                Loader {
+                    id: headerRightLoader
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    sourceComponent: card.headerRight
                 }
             }
 

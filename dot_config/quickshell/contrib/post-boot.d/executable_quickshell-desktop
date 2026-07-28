@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Launch the Quickshell desktop (bar + omni-menu) at session start.
+# -d daemonizes so this hook script can exit immediately.
+# -n bails out if an instance is already running (idempotent).
+qs -n -d -c desktop
