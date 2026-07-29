@@ -467,23 +467,6 @@ Item {
             root.close();
             return;
         }
-        // Aether toggle — in-process since Locus and Navbar share the
-        // same QML context; no need to fork a process at all.
-        if (item.exec === "qs -c desktop ipc call aether toggle") {
-            if (root.navbar) root.navbar.openAether();
-            root.close();
-            return;
-        }
-        // IPC calls to the running quickshell — run as a direct child
-        // Process instead of setsid/uwsm-app detach, so the IPC socket
-        // is reachable and the shell isn't sourced unnecessarily.
-        if (item.exec && item.exec.indexOf("qs ") === 0 && item.exec.indexOf("ipc call") >= 0) {
-            runner.command = item.exec.split(" ");
-            runner.running = false;
-            runner.running = true;
-            root.close();
-            return;
-        }
         bookmarks.record(item);
         // TUI commands need a real terminal — fzf, sudo prompts, and bash
         // `read` fail when launched detached. `item.tui` holds the wrapper

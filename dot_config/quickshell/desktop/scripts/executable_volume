@@ -15,4 +15,4 @@ percent=$(awk '{for(i=1;i<=NF;i++) if($i~/^[0-9.]+$/) print int($i*100)}' <<<"$s
 if grep -q MUTED <<<"$state" || [ "$percent" -eq 0 ]; then
   icon="volume-muted"; else icon="volume-high"
 fi
-qs ipc call -- osd show "$(jq -cn --arg icon "$icon" --argjson value "$percent" '{icon:$icon,value:$value}')"
+qs -c desktop ipc call -- osd show "$(jq -cn --arg icon "$icon" --argjson value "$percent" '{icon:$icon,value:$value}')"

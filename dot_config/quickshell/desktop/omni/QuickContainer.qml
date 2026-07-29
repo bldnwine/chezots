@@ -205,6 +205,7 @@ Item {
         Component { id: screenshotsBodyComp; QuickScreenshotsBody { root: detailPanel.omni; nav: detailPanel.omni.navbar } }
         Component { id: videosBodyComp;      QuickVideosBody      { root: detailPanel.omni; nav: detailPanel.omni.navbar } }
         Component { id: powerBodyComp;       QuickPowerBody       { root: detailPanel.omni; nav: detailPanel.omni.navbar } }
+        Component { id: hyprlandBodyComp;    QuickHyprlandBody    { root: detailPanel.omni; nav: detailPanel.omni.navbar } }
 
         // Header (always visible at the top of the panel)
         RowLayout {
@@ -307,6 +308,7 @@ Item {
                         case "screenshots": return screenshotsBodyComp;
                         case "videos":      return videosBodyComp;
                         case "power":       return powerBodyComp;
+                        case "hyprland":    return hyprlandBodyComp;
                     }
                     return null;
                 }

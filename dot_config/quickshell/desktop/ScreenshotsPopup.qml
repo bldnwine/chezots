@@ -91,7 +91,7 @@ CardWindow {
             visible: screenshotsPopup.root.screenshotFiles.length === 0
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            text: "~/Pictures/screenshot-*.png"
+            text: "~/Pictures/ss/*.png"
             color: screenshotsPopup.root.inkDeep
             font.family: screenshotsPopup.root.mono
             font.pixelSize: 11

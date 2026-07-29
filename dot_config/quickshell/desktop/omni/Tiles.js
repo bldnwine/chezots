@@ -33,7 +33,9 @@ var base = [
     { key: "videos",      keywords: "videos films clips recordings browse gallery library",
       action: "qs -c desktop ipc call videos toggle" },
     { key: "power",       keywords: "power menu suspend hibernate logout restart shutdown lock",
-      action: "omarchy-menu power" }
+      action: "omarchy-menu power" },
+    { key: "hyprland",    keywords: "hyprland layout dwindle master monocle scrolling config editor",
+      action: "qs -c desktop ipc call hyprland toggle" }
 ];
 
 // Build the per-tile dynamic map (glyph/label/sub/tone) from live
@@ -107,6 +109,7 @@ function buildDyn(n) {
         calendar:    { glyph: "󰃭",          label: "CALENDAR",    sub: n.dd + " " + n.mon, tone: n.ink },
         screenshots: { glyph: n.icoCamera,  label: "SHOTS",       sub: "BROWSE",           tone: n.ink },
         videos:      { glyph: n.icoFilm,    label: "VIDEOS",      sub: "BROWSE",           tone: n.ink },
-        power:       { glyph: n.icoPower,   label: "POWER",       sub: "MENU",             tone: n.ink }
+        power:       { glyph: n.icoPower,   label: "POWER",       sub: "MENU",             tone: n.ink },
+        hyprland:    { glyph: "󰜮",          label: "HYPRLAND",    sub: "LAYOUT",           tone: n.ink }
     };
 }

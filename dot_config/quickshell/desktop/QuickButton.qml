@@ -15,6 +15,7 @@ Item {
     property int    padH: 14
 
     signal clicked()
+    signal rightClicked()
 
     implicitWidth:  content.implicitWidth + padH * 2
     implicitHeight: 28
@@ -61,7 +62,11 @@ Item {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
-        onClicked: btn.clicked()
+        onClicked: (mouse) => {
+            if (mouse.button === Qt.RightButton) btn.rightClicked();
+            else btn.clicked();
+        }
     }
 }

@@ -18,7 +18,7 @@ CardWindow {
     anchorBarY: systemPopup.root.popupAnchorY
 
     function openBtop() {
-        systemPopup.root.run("omarchy-launch-or-focus-tui btop");
+        systemPopup.root.run("ghostty --title=btop -e btop");
         systemPopup.root.systemVisible = false;
     }
 

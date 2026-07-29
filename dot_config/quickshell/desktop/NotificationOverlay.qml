@@ -50,6 +50,10 @@ Item {
     }
 
     NotificationServer {
+        actionsSupported: true
+        bodyMarkupSupported: true
+        imageSupported: true
+        persistenceSupported: true
         onNotification: function(notification) {
             notification.tracked = true;
             root.showNotif(notification);

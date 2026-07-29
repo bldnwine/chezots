@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Io
 
 PanelWindow {
     id: bar
@@ -404,12 +405,17 @@ PanelWindow {
                 glyph: "󰍛"
                 tooltip: "CPU " + Math.round(bar.root.cpuVal) + "% · MEM " + Math.round(bar.root.memVal) + "%"
                 color: bar.root.cpuVal > 80 ? bar.root.seal : bar.root.ink
-                onActivated: bar.root.run("ghostty --title=btop -e btop")
+                Component.onCompleted: bar.root.systemAnchorItem = this
+                onActivated: {
+                    if (bar.root.systemVisible) bar.root.systemVisible = false;
+                    else bar.root.openSystem();
+                }
             }
 
             Module {
                 root: bar.root
                 glyph: bar.root.btIcon
+                fontSize: 13
                 tooltip: {
                     if (!bar.root.btPowered) return "Bluetooth off";
                     const conn = bar.root.btDevices.filter(d => d.connected);
@@ -423,11 +429,12 @@ PanelWindow {
                 id: netMod
                 root: bar.root
                 glyph: bar.root.netIcon
+                color: bar.root.wireprotonActiveIface.length > 0 ? bar.root.accent : bar.root.ink
                 tooltip: {
                     if (bar.root.netKind === "eth") return "Ethernet";
                     if (bar.root.netKind === "wifi") {
                         const name = bar.root.wifiSsid || "(hidden)";
-                        return "Wi-Fi · " + name + " · " + bar.root.wifiSignal + "%";
+                        return name + " · " + bar.root.wifiSignal + "%";
                     }
                     return "Offline";
                 }
@@ -486,7 +493,7 @@ PanelWindow {
                 onActivated: bar.root.run("pavucontrol")
                 onMiddleActivated: bar.root.run("pamixer -t")
                 onRightActivated: bar.root.run("~/.config/waybar/scripts/pulse_switch.sh")
-                onWheelActivated: (delta) => bar.root.run(delta > 0 ? "~/.config/quickshell/scripts/volume +5" : "~/.config/quickshell/scripts/volume -5")
+                onWheelActivated: (delta) => bar.root.run(delta > 0 ? "~/.config/quickshell/desktop/scripts/volume +5" : "~/.config/quickshell/desktop/scripts/volume -5")
             }
 
             // Surfaces only when omarchy-update-available exits 0. Sits
@@ -523,6 +530,16 @@ PanelWindow {
                 }
                 color: bar.root.batVal <= 10 ? bar.root.seal : bar.root.batVal <= 20 ? bar.root.indigo : bar.root.ink
                 onActivated: bar.root.run("omarchy-menu power")
+            }
+
+            Module {
+                root: bar.root
+                glyph: "󰻂"
+                visible: bar.root.recordingActive
+                color: bar.root.seal
+                tooltip: "RECORDING"
+                fontSize: 9
+                onActivated: bar.root.run("qs -c desktop ipc call screenrecord toggle")
             }
 
         }

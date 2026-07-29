@@ -65,16 +65,15 @@ const fileIcons = {
 // routes to the fd file-search drill.
 const categoryNav = [
     { title: "Quick",   icon: "󱎫", category: "Browse", isCategory: true, target: "Quick",       keywords: "quick settings panel tray toggle popup display weather calendar aether screenshots videos brightness volume mute" },
+    { title: "Favourites", icon: "󰓎", category: "Browse", isCategory: true, target: favCategory,  keywords: "favourites favorites favs starred pinned bookmarks marked" },
     { title: "Apps",    icon: "󰀻", category: "Browse", isCategory: true, target: "App",         keywords: "apps applications launcher programs software desktop" },
     { title: "Files",   icon: "󰉋", category: "Browse", isCategory: true, target: fileCategory,  keywords: "files file search find folder browse path open image picture document text fd" },
-    { title: "Favourites", icon: "󰓎", category: "Browse", isCategory: true, target: favCategory,  keywords: "favourites favorites favs starred pinned bookmarks marked" },
     { title: "History", icon: "󰋚", category: "Browse", isCategory: true, target: histCategory,    keywords: "history recent recents log past activity used opened" },
     { title: "Style",   icon: "󰏘", category: "Browse", isCategory: true, target: "Style",       keywords: "style theme appearance look font background corners waybar screensaver" },
     { title: "System",  icon: "󰐥", category: "Browse", isCategory: true, target: "System",      keywords: "system lock suspend hibernate logout restart reboot shutdown power" },
-    { title: "Toggle",  icon: "󰨚", category: "Browse", isCategory: true, target: "Toggle",      keywords: "toggle screensaver nightlight idle notifications bar layout gaps scaling sudo touchpad" },
+    { title: "Toggle",  icon: "󰨚", category: "Browse", isCategory: true, target: "Toggle",      keywords: "toggle nightlight notifications layout gaps scaling sudo touchpad" },
     { title: "Trigger", icon: "󰚥", category: "Browse", isCategory: true, target: "Trigger",     keywords: "trigger reminder transcode capture share toggle hardware" },
     { title: "Capture", icon: "󰄀", category: "Browse", isCategory: true, target: "Capture",     keywords: "capture screenshot screenrecord ocr text extraction color picker" },
-    { title: "Share",   icon: "󰒖", category: "Browse", isCategory: true, target: "Share",       keywords: "share clipboard file folder receive localsend send transfer" },
     { title: "Learn",   icon: "󰂺", category: "Browse", isCategory: true, target: "Learn",       keywords: "learn docs manual help keybindings wiki cheatsheet" },
     { title: "Processes", icon: "󰍛", category: "Browse", isCategory: true, target: procCategory,  keywords: "processes process kill task manager ps top htop activity cpu memory" },
     { title: "Themes",    icon: "󰸌", category: "Browse", isCategory: true, target: themeCategory, keywords: "themes theme palette color swatch switcher dark light apply" }
@@ -112,7 +111,6 @@ const omarchyItems = [
 
     // ----- System -----
     { title: "Lock Screen",         icon: "󰌾", category: "System", keywords: "lock screen security hyprlock password",                                            exec: "loginctl lock-session" },
-    { title: "Force Screensaver",   icon: "󱄄", category: "System", keywords: "screensaver force start show idle",                                              exec: "omarchy-launch-screensaver force" },
     { title: "Suspend",             icon: "󰒲", category: "System", keywords: "suspend sleep power down ram s3",                                                 exec: "systemctl suspend" },
     { title: "Hibernate",           icon: "󰤁", category: "System", keywords: "hibernate disk power down s4 swap",                                               exec: "systemctl hibernate" },
     { title: "Logout",              icon: "󰍃", category: "System", keywords: "logout signout exit session end",                                                  exec: "uwsm stop" },
@@ -120,33 +118,18 @@ const omarchyItems = [
     { title: "Shutdown",            icon: "󰐥", category: "System", keywords: "shutdown poweroff off halt turn off",                                              exec: "systemctl poweroff" },
 
     // ----- Toggle -----
-    { title: "Toggle Screensaver",  icon: "󱄄", category: "Toggle", keywords: "toggle screensaver enable disable on off",                                        exec: "omarchy-toggle-screensaver" },
-    { title: "Toggle Nightlight",   icon: "󰔎", category: "Toggle", keywords: "toggle nightlight blue light filter warm color temperature hyprsunset",            exec: "omarchy-toggle-nightlight" },
-    { title: "Toggle Idle Lock",    icon: "󱫖", category: "Toggle", keywords: "toggle idle lock auto away timeout",                                                exec: "omarchy-toggle-idle" },
+    { title: "Toggle Nightlight",   icon: "󰔎", category: "Toggle", keywords: "toggle nightlight blue light filter warm color temperature hyprsunset",            exec: "qs -c desktop ipc call nightlight toggle" },
     { title: "Toggle Notifications",icon: "󰂛", category: "Toggle", keywords: "toggle notifications silence mute mako dnd",                                       exec: "omarchy-toggle-notification-silencing" },
-    { title: "Toggle Top Bar",      icon: "󰍜", category: "Toggle", keywords: "toggle waybar top bar show hide visibility",                                       exec: "omarchy-toggle-waybar" },
-    { title: "Toggle Workspace Layout", icon: "󱂬", category: "Toggle", keywords: "toggle workspace layout dwindle master tile hyprland",                          exec: "omarchy-hyprland-workspace-layout-toggle" },
-    { title: "Toggle Window Gaps",  icon: "󱂩", category: "Toggle", keywords: "toggle gaps window spacing hyprland margin",                                       exec: "omarchy-hyprland-window-gaps-toggle" },
-    { title: "Toggle 1-Window Ratio",icon: "󰋃", category: "Toggle", keywords: "toggle aspect ratio single window square",                                          exec: "omarchy-hyprland-window-single-square-aspect-toggle" },
-    { title: "Toggle Monitor Scaling", icon: "󰍹", category: "Toggle", keywords: "toggle monitor scaling cycle resolution hidpi",                                  exec: "omarchy-hyprland-monitor-scaling-cycle" },
-    { title: "Toggle Direct Boot",  icon: "󰓅", category: "Toggle", keywords: "toggle direct boot autologin no password",                                          exec: "omarchy-config-direct-boot", tui: "omarchy-launch-floating-terminal-with-presentation" },
-    { title: "Toggle Passwordless Sudo", icon: "󰟵", category: "Toggle", keywords: "passwordless sudo nopasswd root admin security",                               exec: "omarchy-sudo-passwordless",  tui: "omarchy-launch-floating-terminal-with-presentation" },
-    { title: "Toggle Suspend",      icon: "󰒲", category: "Toggle", keywords: "toggle suspend disable enable sleep power",                                        exec: "omarchy-toggle-suspend" },
-    { title: "Toggle Touchpad",     icon: "󰟸", category: "Toggle", keywords: "toggle touchpad trackpad enable disable",                                          exec: "omarchy-toggle-touchpad" },
-    { title: "Toggle Touchscreen",  icon: "󰆽", category: "Toggle", keywords: "toggle touchscreen enable disable",                                                exec: "omarchy-toggle-touchscreen" },
+    { title: "Toggle Touchpad",     icon: "󰟸", category: "Toggle", keywords: "toggle touchpad trackpad enable disable",                                          exec: "/home/bldnwine/.config/quickshell/desktop/scripts/touchpad-toggle" },
+    { title: "Toggle Hyprland Menu",icon: "󰜮", category: "Toggle", keywords: "toggle hyprland layout dwindle master monocle scrolling config editor",             exec: "qs -c desktop ipc call hyprland toggle" },
+    { title: "Toggle Proton VPN",   icon: "󰦝", category: "Toggle", keywords: "toggle proton vpn wireguard connect disconnect",                                     exec: "qs -c desktop ipc call wireproton toggle" },
 
     // ----- Capture -----
-    { title: "Screenshot",          icon: "󰄀", category: "Capture", keywords: "screenshot screen capture image png shot snip print",                              exec: "omarchy-capture-screenshot" },
-    { title: "Screen Record",       icon: "󰑊", category: "Capture", keywords: "screen record video capture mp4 gif",                                              exec: "omarchy-capture-screenrecording" },
-    { title: "Text Extraction (OCR)",icon: "󰴑", category: "Capture", keywords: "ocr text extract recognize image scan copy",                                       exec: "omarchy-capture-text-extraction" },
+    { title: "Screenshot",          icon: "󰄀", category: "Capture", keywords: "screenshot screen capture image png shot snip print",                              exec: "capture-screenshot" },
+    { title: "Screen Record",       icon: "󰑊", category: "Capture", keywords: "screen record video capture mp4 gif",                                              exec: "qs -c desktop ipc call screenrecord toggle" },
+    { title: "Text Extraction (OCR)",icon: "󰴑", category: "Capture", keywords: "ocr text extract recognize image scan copy",                                       exec: "cmd-ocr" },
     { title: "Color Picker",        icon: "󰃉", category: "Capture", keywords: "color picker hex rgb hyprpicker dropper sample eyedropper",                        exec: "bash -c 'pkill hyprpicker || hyprpicker -a'" },
-    { title: "Notes",               icon: "󰍔", category: "Capture", keywords: "notes note markdown scratchpad journal nvim neovim editor write text omni-notes",  exec: "bash -c 'mkdir -p \"$HOME/Documents/omni-notes\" && cd \"$HOME/Documents/omni-notes\" && nvim .'", tui: "omarchy-launch-tui" },
-
-    // ----- Share -----
-    { title: "Share Clipboard",     icon: "󰅎", category: "Share",   keywords: "share clipboard localsend send transfer",                                          exec: "omarchy-menu-share clipboard" },
-    { title: "Share File",          icon: "󰈤", category: "Share",   keywords: "share file send transfer localsend",                                                exec: "omarchy-menu-share file",   tui: "omarchy-launch-tui" },
-    { title: "Share Folder",        icon: "󰉒", category: "Share",   keywords: "share folder directory send transfer localsend",                                    exec: "omarchy-menu-share folder", tui: "omarchy-launch-tui" },
-    { title: "Receive (LocalSend)", icon: "󰥦", category: "Share",   keywords: "receive localsend share airdrop transfer",                                          exec: "uwsm-app -- localsend" },
+    { title: "Notes",               icon: "󰍔", category: "Capture", keywords: "notes note markdown scratchpad journal nano ghostty editor write text",  exec: "ghostty -e nano" },
 
     // ----- Trigger -----
     { title: "Set Reminder",        icon: "󰔛", category: "Trigger", keywords: "reminder alarm timer notify wake notification",                                    exec: "omarchy-menu reminder-set" },
@@ -154,12 +137,6 @@ const omarchyItems = [
     { title: "Clear Reminders",     icon: "󰔛", category: "Trigger", keywords: "reminders clear delete remove all",                                                 exec: "omarchy-reminder clear" },
     { title: "Transcode Media",     icon: "󰧸", category: "Trigger", keywords: "transcode media video audio convert compress mp4 mp3",                              exec: "omarchy-transcode" },
 
-    // ----- Learn -----
-    { title: "Keybindings",         icon: "󰌌", category: "Learn", keywords: "keybindings shortcuts hotkeys cheatsheet reference help",                              exec: "omarchy-menu-keybindings" },
-    { title: "Tmux Keybindings",    icon: "󱂬", category: "Learn", keywords: "tmux keybindings shortcuts reference",                                                 exec: "omarchy-menu-tmux-keybindings" },
-    { title: "Omarchy Manual",      icon: "󰂺", category: "Learn", keywords: "omarchy manual docs documentation help learn",                                         exec: "omarchy-launch-webapp 'https://learn.omacom.io/2/the-omarchy-manual'" },
-    { title: "Hyprland Wiki",       icon: "󱁉", category: "Learn", keywords: "hyprland wiki docs documentation help",                                                exec: "omarchy-launch-webapp 'https://wiki.hypr.land/'" },
-    { title: "Arch Wiki",           icon: "󰣇", category: "Learn", keywords: "arch wiki docs documentation help linux",                                              exec: "omarchy-launch-webapp 'https://wiki.archlinux.org/title/Main_page'" },
     { title: "Neovim Keymaps",      icon: "󰕷", category: "Learn", keywords: "neovim nvim keymaps shortcuts lazyvim reference",                                      exec: "omarchy-launch-webapp 'https://www.lazyvim.org/keymaps'" },
     { title: "Bash Cheatsheet",     icon: "󱆃", category: "Learn", keywords: "bash shell cheatsheet reference scripting",                                            exec: "omarchy-launch-webapp 'https://devhints.io/bash'" }
 ];

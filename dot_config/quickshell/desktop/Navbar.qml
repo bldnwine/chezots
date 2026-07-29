@@ -66,7 +66,7 @@ Item {
 
     readonly property int barHeight: 26
     readonly property string aetherBin: "/home/bldnwine/aethergo/build/bin/aether"
-    readonly property string pushThemeScript: Quickshell.env("HOME") + "/.config/quickshell/scripts/aether-push-theme.sh"
+    readonly property string pushThemeScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/aether-push-theme.sh"
 
     // ---------- Edge ----------
     // Drives bar anchors, internal Row/Column flow, and where the toggle
@@ -457,6 +457,94 @@ Item {
         return Math.ceil(root.screenshotFiles.length / root.screenshotsPerPage);
     }
 
+    // ---------- Hyprland menu state ----------
+    property bool hyprlandVisible: false
+    function openHyprland() {
+        hyprlandProbe.running = false;
+        hyprlandProbe.running = true;
+        root.hyprlandVisible = true;
+    }
+
+    readonly property string hyprlandLayout: hyprlandProbe.ready
+        ? hyprlandProbe.stdout.trim() : ""
+
+    Process {
+        id: hyprlandProbe
+        running: false
+        command: ["sh", "-c", "hyprctl getoption general:layout -j | jq -r '.str'"]
+        stdout: StdioCollector {}
+    }
+
+    // ---------- Screen Record popup state ----------
+    property bool screenRecordVisible: false
+    property bool recordingActive: false
+    function openScreenRecord() {
+        screenRecordProbe.running = false;
+        screenRecordProbe.running = true;
+        root.screenRecordVisible = true;
+    }
+    Timer {
+        interval: 2000
+        repeat: true
+        running: true
+        onTriggered: {
+            screenRecordProbe.running = false;
+            screenRecordProbe.running = true;
+        }
+    }
+    Process {
+        id: screenRecordProbe
+        running: false
+        command: ["sh", "-c", "pgrep -f '^gpu-screen-recorder' >/dev/null && echo 1 || echo 0"]
+        stdout: StdioCollector {
+            onStreamFinished: root.recordingActive = (text.trim() === "1");
+        }
+    }
+
+    // ---------- Proton VPN popup state ----------
+    Timer {
+        id: wireprotonStatusTimer
+        interval: 5000
+        running: true
+        repeat: true
+        onTriggered: {
+            wireprotonStatusProbe.running = false;
+            wireprotonStatusProbe.running = true;
+        }
+    }
+    property bool wireprotonVisible: false
+    property string wireprotonActiveIface: ""
+    property var wireprotonConfigs: []
+    function openWireproton() {
+        wireprotonStatusProbe.running = false;
+        wireprotonStatusProbe.running = true;
+        wireprotonConfigProbe.running = false;
+        wireprotonConfigProbe.running = true;
+        root.wireprotonVisible = true;
+    }
+    Process {
+        id: wireprotonStatusProbe
+        running: false
+        command: ["sh", "-c", "ls /sys/class/net/ 2>/dev/null | grep '^proton' | head -1"]
+        stdout: StdioCollector {
+            onStreamFinished: root.wireprotonActiveIface = text.trim();
+        }
+    }
+    Process {
+        id: wireprotonConfigProbe
+        running: false
+        command: ["sh", "-c", "sudo /usr/bin/ls /etc/wireguard 2>/dev/null | grep '^proton.*\\.conf$' | sed 's/\\.conf$//' | sort"]
+        stdout: StdioCollector {
+            onStreamFinished: root.wireprotonConfigs = text.trim().split("\n").filter(s => s.length > 0);
+        }
+    }
+
+    // ---------- Locusfavs popup state ----------
+    property bool locusfavsVisible: false
+    function openLocusfavs() {
+        root.locusfavsVisible = true;
+    }
+
     // ---------- Videos popup state ----------
     property bool videosVisible: false
     property int videoPage: 0
@@ -742,6 +830,9 @@ Item {
     // so the slider tracks reflect what was last set, even across daemon
     // restarts.
     property bool  displayVisible: false
+    property int savedWarmthK: 6500
+    property int savedGammaPct: 100
+    property int savedBrightnessPct: 100
     property real  warmthK: 6500
     property int   brightnessPct: 100
     property real  gammaPct: 100
@@ -774,6 +865,7 @@ Item {
 
     function openDisplay() {
         if (root.displayAnchorItem) root.anchorPopupTo(root.displayAnchorItem);
+        savedWarmthK = warmthK; savedGammaPct = gammaPct; savedBrightnessPct = brightnessPct;
         displayProbe.running = true;
         root.displayRow = 0;
         root.displayVisible = true;
@@ -845,14 +937,15 @@ Item {
         root.displayVisible = false;
     }
     function resetDisplay() {
-        root.warmthK = 6500;
-        root.gammaPct = 100;
-        root.brightnessPct = 100;
+        root.warmthK = savedWarmthK;
+        root.gammaPct = savedGammaPct;
+        root.brightnessPct = savedBrightnessPct;
+        const w = (savedWarmthK >= 6500) ? "identity" : "temperature " + savedWarmthK;
         const prelude = root.sunsetReady ? "" : root.ensureSunset;
         root.run(prelude
-                 + "hyprctl hyprsunset identity"
-                 + " && hyprctl hyprsunset gamma 100"
-                 + " && brightnessctl set 100%");
+                 + "hyprctl hyprsunset " + w
+                 + " && hyprctl hyprsunset gamma " + savedGammaPct
+                 + " && brightnessctl set " + savedBrightnessPct + "%");
         root.sunsetReady = true;
     }
 
@@ -1103,11 +1196,12 @@ Item {
         id: systemProbe
         running: false
         command: ["bash", "-lc",
-            "read _ a b c d _ < <(grep '^cpu ' /proc/stat); "
-            + "sleep 0.15; "
-            + "read _ e f g h _ < <(grep '^cpu ' /proc/stat); "
-            + "du=$(( (e+f+g) - (a+b+c) )); dt=$(( (e+f+g+h) - (a+b+c+d) )); "
-            + "cpu=$(( dt>0 ? du*100/dt : 0 )); "
+            "read _ a b c d iowait irq softirq steal _ < <(grep '^cpu ' /proc/stat); "
+            + "sleep 2; "
+            + "read _ e f g h iowait2 irq2 softirq2 steal2 _ < <(grep '^cpu ' /proc/stat); "
+            + "ad=$(( (e+f+g+irq2+softirq2+steal2) - (a+b+c+irq+softirq+steal) )); "
+            + "td=$(( (e+f+g+h+iowait2+irq2+softirq2+steal2) - (a+b+c+d+iowait+irq+softirq+steal) )); "
+            + "cpu=$(( td>0 ? ad*100/td : 0 )); "
             + "mem=$(awk '/MemTotal/{t=$2}/MemAvailable/{m=$2}END{printf \"%d\",(t-m)*100/t}' /proc/meminfo); "
             + "printf '%d|%d' \"$cpu\" \"$mem\""]
         stdout: StdioCollector {
@@ -1120,7 +1214,7 @@ Item {
             }
         }
     }
-    Timer { interval: 2000; running: true; repeat: true; triggeredOnStart: true
+    Timer { interval: 5000; running: true; repeat: true; triggeredOnStart: true
         onTriggered: { systemProbe.running = false; systemProbe.running = true; } }
 
     // ---------- Telemetry (1 Hz) ----------
@@ -1580,7 +1674,7 @@ Item {
         id: screenshotProbe
         running: false
         command: ["sh", "-c",
-            "ls -t " + Quickshell.env("HOME") + "/Pictures/screenshot-*.png 2>/dev/null | head -60"]
+            "ls -t " + Quickshell.env("HOME") + "/Pictures/ss/*.png 2>/dev/null | head -60"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const lines = this.text.trim().split("\n").filter(s => s.length > 0);
@@ -1790,6 +1884,10 @@ Item {
     AetherPopup      { root: root }
     DisplayPopup     { root: root }
     WeatherPopup     { root: root }
+    HyprlandPopup    { root: root }
+    ScreenRecordPopup { root: root }
+    WireprotonPopup   { root: root }
+    Locusfavs    { root: root }
     Osd              { root: root }
     NotificationOverlay { root: root }
 
@@ -1854,6 +1952,31 @@ Item {
         function blank(): void { root.blankScreen(); }
     }
 
+    IpcHandler {
+        target: "nightlight"
+        function toggle(): void {
+            if (root.warmthK < 6500) {
+                root.run("PREV=$(cat /tmp/nightlight-prev-bright 2>/dev/null || echo 100); "
+                    + root.ensureSunset
+                    + "hyprctl hyprsunset identity && hyprctl hyprsunset gamma 100"
+                    + " && brightnessctl set \"$PREV\"%");
+                root.sunsetReady = true;
+                root.warmthK = 6500;
+                root.gammaPct = 100;
+                root.brightnessPct = 100;
+            } else {
+                root.run("echo $(( $(brightnessctl get) * 100 / $(brightnessctl max) )) > /tmp/nightlight-prev-bright; "
+                    + root.ensureSunset
+                    + "hyprctl hyprsunset temperature 3000 && hyprctl hyprsunset gamma 85"
+                    + " && brightnessctl set 30%");
+                root.sunsetReady = true;
+                root.warmthK = 3000;
+                root.gammaPct = 85;
+                root.brightnessPct = 30;
+            }
+        }
+    }
+
     // bind = SUPER, C, exec, qs ipc call calendar toggle
     IpcHandler {
         target: "calendar"
@@ -1883,6 +2006,46 @@ Item {
         target: "bar"
         function set(name: string): void { root.setBarVariant(name); }
         function zen(): void       { root.setBarVariant("zen"); }
+    }
+
+    IpcHandler {
+        target: "hyprland"
+        function toggle(): void {
+            if (root.hyprlandVisible) root.hyprlandVisible = false;
+            else root.openHyprland();
+        }
+        function open(): void  { root.openHyprland(); }
+        function close(): void { root.hyprlandVisible = false; }
+    }
+
+    IpcHandler {
+        target: "screenrecord"
+        function toggle(): void {
+            if (root.screenRecordVisible) root.screenRecordVisible = false;
+            else root.openScreenRecord();
+        }
+        function open(): void  { root.openScreenRecord(); }
+        function close(): void { root.screenRecordVisible = false; }
+    }
+
+    IpcHandler {
+        target: "wireproton"
+        function toggle(): void {
+            if (root.wireprotonVisible) root.wireprotonVisible = false;
+            else root.openWireproton();
+        }
+        function open(): void  { root.openWireproton(); }
+        function close(): void { root.wireprotonVisible = false; }
+    }
+
+    IpcHandler {
+        target: "locusfavs"
+        function toggle(): void {
+            if (root.locusfavsVisible) root.locusfavsVisible = false;
+            else root.openLocusfavs();
+        }
+        function open(): void  { root.openLocusfavs(); }
+        function close(): void { root.locusfavsVisible = false; }
     }
 
     // ---------- MPRIS (now playing) ----------
