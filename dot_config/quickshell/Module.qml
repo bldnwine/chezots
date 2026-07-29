@@ -20,6 +20,7 @@ Item {
     signal activated()
     signal middleActivated()
     signal rightActivated()
+    signal wheelActivated(real delta)
 
     Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
     Layout.preferredWidth:  root.isHorizontal ? 24 : root.barHeight
@@ -76,6 +77,9 @@ Item {
             if (e.button === Qt.RightButton) modItem.rightActivated();
             else if (e.button === Qt.MiddleButton) modItem.middleActivated();
             else modItem.activated();
+        }
+        onWheel: (wheel) => {
+            if (wheel.angleDelta.y !== 0) modItem.wheelActivated(wheel.angleDelta.y);
         }
     }
 }

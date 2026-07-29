@@ -257,6 +257,7 @@ hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + Y", hl.dsp.exec_cmd(terminal .. " -e yazi"))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd(menu))
+hl.bind(mainMod .. " + J", hl.dsp.exec_cmd("qs ipc call locus toggle"))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + H", hl.dsp.exec_cmd("killall -SIGUSR1 waybar"))
 hl.bind(mainMod .. " + SHIFT + H", hl.dsp.exec_cmd("wayt"))
@@ -280,6 +281,7 @@ hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen_state({ action = "toggle", i
 hl.bind(mainMod .. " + CONTROL + Y", hl.dsp.exec_cmd(launch("cmd-ocr")))
 --hl.bind(mainMod .. " + CONTROL + T", hl.dsp.exec_cmd(launch("qs -p ~/.config/quickshell/test-bp.qml")))
 hl.bind(mainMod .. " + CONTROL + T", hl.dsp.exec_cmd(launch("qs ipc call aether toggle || qs -p ~/.config/quickshell/test-bp.qml --no-duplicate")))
+hl.bind(mainMod .. " + SHIFT + A", hl.dsp.exec_cmd(launch("qs ipc call aether toggle || qs -p ~/.config/quickshell/test-bp.qml --no-duplicate")))
 hl.bind(mainMod .. " + SHIFT + G", function()
 	local gapsIn = hl.get_config("general.gaps_in")
 	if gapsIn.top == 1 then
@@ -298,6 +300,8 @@ hl.bind(mainMod .. " + SHIFT + Z", hl.dsp.exec_cmd('capture-screenshot smart cop
 hl.bind(mainMod .. " + ALT + Space", hl.dsp.exec_cmd(launch("~/.local/bin/yazi-nav")))
 hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd(launch("~/.local/bin/capture-screenrecording-rofi")))
 hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd("hyprpicker -f hex -a"))
+hl.bind(mainMod .. " + ALT + T", hl.dsp.exec_cmd("notification-time"))
+hl.bind(mainMod .. " + ALT + G", hl.dsp.exec_cmd("hyprland-transparency"))
 hl.bind(mainMod .. " + Period", function()
 	local handle = io.popen("pactl get-default-sink")
 	local current = handle:read("*a"):gsub("%s+", "")
@@ -317,8 +321,8 @@ end)
 hl.bind("SUPER + ALT + Z", function()
   hl.config({ cursor = { zoom_factor = 1 } })
 end)
-hl.bind(mainMod .. " + CONTROL + up", hl.dsp.exec_cmd("~/.config/waybar/scripts/volume.sh --inc"), {repeating = true})
-hl.bind(mainMod .. " + CONTROL + down", hl.dsp.exec_cmd("~/.config/waybar/scripts/volume.sh --dec"), {repeating = true})
+hl.bind(mainMod .. " + CONTROL + up", hl.dsp.exec_cmd("~/.config/quickshell/scripts/volume +5"), {repeating = true})
+hl.bind(mainMod .. " + CONTROL + down", hl.dsp.exec_cmd("~/.config/quickshell/scripts/volume -5"), {repeating = true})
 hl.bind(mainMod .. " + G", hl.dsp.exec_cmd(launch("~/.config/hypr/scripts/layout_switcher.sh")))
 
 hl.bind(mainMod .. " + left", hl.dsp.focus({ direction = "left" }))
@@ -346,12 +350,12 @@ hl.bind(mainMod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd(launch("volumectl -u up")), { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd(launch("volumectl -u down")), { locked = true, repeating = true })
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd(launch("volumectl toggle-mute")), { locked = true, repeating = true })
-hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd(launch("volumectl toggle-mic-mute")), { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd(launch("lightctl up")), { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(launch("lightctl down")), { locked = true, repeating = true })
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("~/.config/quickshell/scripts/volume +5"), { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("~/.config/quickshell/scripts/volume -5"), { locked = true, repeating = true })
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("~/.config/quickshell/scripts/volume mute"), { locked = true })
+hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("~/.config/quickshell/scripts/mic-mute"), { locked = true })
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("~/.config/quickshell/scripts/brightness +5"), { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.config/quickshell/scripts/brightness -5"), { locked = true, repeating = true })
 
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd(launch("playerctl next")), { locked = true })
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd(launch("playerctl play-pause")), { locked = true })
@@ -423,6 +427,14 @@ hl.window_rule({
 	float = true,
 	center = true,
 	size = { 800, 600 },
+})
+
+hl.window_rule({
+        name = "kew",
+        match = { class = "com.mitchellh.ghostty", title = "^(kew).*" },
+        float = true,
+        center = true,
+	size = { 1211, 821 },
 })
 
 hl.window_rule({

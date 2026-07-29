@@ -11,10 +11,10 @@
     "network": {
     "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
     "format-wifi": "{icon} {essid}",
-    "format-ethernet": "󰈁 {ifname}",
+    "format-ethernet": "WIRED",
     "format-disconnected": "󰲛",
     "tooltip-format-wifi": "{signalStrength}%\n⬇ {bandwidthDownBytes}\n⬆ {bandwidthUpBytes}",
-    "tooltip-format-ethernet": "⬇ {bandwidthDownBytes}\n⬆ {bandwidthUpBytes}",
+    "tooltip-format-ethernet": "{ifname}\n⬇ {bandwidthDownBytes}\n⬆ {bandwidthUpBytes}",
     "interval": 3,
     "on-click": "ghostty --title=impala -e impala",
     "on-click-middle": "~/.config/waybar/scripts/proton-vpn.sh --menu",

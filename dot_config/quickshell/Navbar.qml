@@ -84,17 +84,13 @@ Item {
     }
 
     // ---------- Bar variant ----------
-    // Which bar face is rendered. "zen" is the original 静 minimalist bar;
-    // "hackerman" is the tactical/terminal readout; "whiterose" is a plain
-    // black-and-white editorial bar. All surfaces are always instantiated below and gate on this
-    // string via `visible`; an unmapped layer-surface reserves no exclusive
-    // zone, so exactly one bar owns the edge at a time.
+    // Which bar face is rendered. "zen" is the original 静 minimalist bar.
     //
     // Persisted to its own one-line state file (same scheme as Theme's
     // corner toggle) so the choice survives a relogin. Read once at startup
     // via cat — a FileView's initial load races property assignment in some
     // Quickshell builds and can clobber the value back to the default.
-    readonly property var barVariants: ["zen", "hackerman", "whiterose"]
+    readonly property var barVariants: ["zen"]
     readonly property string barVariantStatePath:
         Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-variant"
     property string barVariant: "zen"
@@ -108,10 +104,6 @@ Item {
             + " > " + JSON.stringify(root.barVariantStatePath)];
         barVariantWriter.running = false;
         barVariantWriter.running = true;
-    }
-    function cycleBarVariant() {
-        const i = root.barVariants.indexOf(root.barVariant);
-        root.setBarVariant(root.barVariants[(i + 1) % root.barVariants.length]);
     }
 
     Process { id: barVariantWriter; running: false }
@@ -1097,7 +1089,7 @@ Item {
     Process { id: themeApplier; running: false }
     function run(cmd) {
         console.log("[RUN-DIAG] " + cmd);
-        runner.command = ["bash", "-lc", cmd];
+        runner.command = ["bash", "-c", cmd];
         runner.running = false;
         runner.running = true;
     }
@@ -1789,11 +1781,7 @@ Item {
     }
 
     // ---------- Surfaces ----------
-    // All bar faces are instantiated; only the one matching barVariant maps
-    // to the edge (the other is an unmapped, zero-exclusive-zone window).
     Bar              { root: root; visible: root.barVariant === "zen" }
-    BarHacker        { root: root; visible: root.barVariant === "hackerman" }
-    BarWhiterose     { root: root; visible: root.barVariant === "whiterose" }
     TooltipOverlay   { root: root }
     SystemPopup      { root: root }
     CalendarPopup    { root: root }
@@ -1802,6 +1790,8 @@ Item {
     AetherPopup      { root: root }
     DisplayPopup     { root: root }
     WeatherPopup     { root: root }
+    Osd              { root: root }
+    NotificationOverlay { root: root }
 
     // ---------- IPC ----------
     // Lets external keybinds drive the screenshots popup. Wire up in
@@ -1891,12 +1881,8 @@ Item {
     // Also surfaced as a "Bar Style" row in the omni palette.
     IpcHandler {
         target: "bar"
-        function toggle(): void    { root.cycleBarVariant(); }
         function set(name: string): void { root.setBarVariant(name); }
         function zen(): void       { root.setBarVariant("zen"); }
-        function hackerman(): void { root.setBarVariant("hackerman"); }
-        function whiterose(): void { root.setBarVariant("whiterose"); }
-        function plain(): void     { root.setBarVariant("whiterose"); }
     }
 
     // ---------- MPRIS (now playing) ----------
@@ -1910,26 +1896,45 @@ Item {
     property string musicTitle: ""
     property string musicArtist: ""
     property bool   musicPlaying: false
+    property int    musicSourceIndex: -1
 
     function refreshMusic() {
         const players = Mpris.players ? Mpris.players.values : [];
         let best = null;
-        let bestRank = -1;
-        for (let i = 0; i < players.length; i++) {
-            const p = players[i];
-            if (!p) continue;
-            const hasTitle = !!(p.trackTitle && p.trackTitle.length > 0);
-            // 2 = playing with title, 1 = paused with title, 0 = anything else.
-            // Ties broken by list order, which roughly tracks bus registration.
-            let rank = 0;
-            if (hasTitle && p.isPlaying) rank = 2;
-            else if (hasTitle) rank = 1;
-            if (rank > bestRank) { best = p; bestRank = rank; }
+        if (root.musicSourceIndex >= 0 && root.musicSourceIndex < players.length) {
+            best = players[root.musicSourceIndex];
+        } else {
+            root.musicSourceIndex = -1;
+            let bestRank = -1;
+            for (let i = 0; i < players.length; i++) {
+                const p = players[i];
+                if (!p) continue;
+                const hasTitle = !!(p.trackTitle && p.trackTitle.length > 0);
+                let rank = 0;
+                if (hasTitle && p.isPlaying) rank = 2;
+                else if (hasTitle) rank = 1;
+                if (rank > bestRank) { best = p; bestRank = rank; }
+            }
         }
         root.musicPlayer  = best;
         root.musicTitle   = best ? (best.trackTitle  || "") : "";
         root.musicArtist  = best ? (best.trackArtist || "") : "";
         root.musicPlaying = best ? !!best.isPlaying : false;
+    }
+
+    function musicNextSource() {
+        const players = Mpris.players ? Mpris.players.values : [];
+        if (players.length === 0) return;
+        const idx = root.musicSourceIndex < 0 ? 0 : root.musicSourceIndex + 1;
+        root.musicSourceIndex = idx >= players.length ? 0 : idx;
+        root.refreshMusic();
+    }
+    function musicPrevSource() {
+        const players = Mpris.players ? Mpris.players.values : [];
+        if (players.length === 0) return;
+        const idx = root.musicSourceIndex < 0 ? 0 : root.musicSourceIndex - 1;
+        root.musicSourceIndex = idx < 0 ? players.length - 1 : idx;
+        root.refreshMusic();
     }
 
     function musicToggle() {

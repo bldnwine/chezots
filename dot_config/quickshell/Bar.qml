@@ -33,9 +33,8 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "omarchy-menu"
 
-    // Re-claim the popup anchors when this face becomes the visible one
-    // (the sibling BarHacker registers its own items while it's up). Popups
-    // read these at open time, so whoever is mapped must own them.
+    // Re-claim the popup anchors when this face becomes the visible one.
+    // Popups read these at open time, so whoever is mapped must own them.
     onVisibleChanged: if (visible) {
         bar.root.calendarAnchorItem = clockItem;
         bar.root.weatherAnchorItem = weatherMod;
@@ -153,7 +152,7 @@ PanelWindow {
                 text: bar.root.dow + " " + bar.root.dd + " - " + bar.root.hh + ":" + bar.root.mm
                 color: clockMouse.containsMouse ? bar.root.seal : bar.root.ink
                 font.family: bar.root.mono
-                font.pixelSize: 12
+                font.pixelSize: 11
                 font.letterSpacing: 2
                 font.weight: Font.Light
                 Behavior on color { ColorAnimation { duration: 180 } }
@@ -210,161 +209,11 @@ PanelWindow {
             }
         }
 
-        // Now-playing pill, anchored to the bar's right edge so it sits
-        // outside (to the right of) the system-icons cluster. The
-        // GridLayout reserves room for it via an enlarged rightMargin when
-        // visible so the icons stop short and don't overlap. Sits above
-        // the GridLayout (same z trick the clockItem uses).
-        Item {
-            id: musicItem
-            // `present` is the logical "show the pill" state; the item lingers
-            // a beat past it (openW > 0.5) so the closing slide can finish
-            // before it leaves the layout.
-            readonly property bool present: bar.root.isHorizontal && bar.root.musicTitle.length > 0
-            // Natural pill width (icon + label + 12px padding). The +8 folds
-            // in the gap to the icon cluster so the reservation below tracks a
-            // single animated number — no 8px snap when the pill maps/unmaps.
-            readonly property real contentW: musicRow.width + 12
-            property real openW: present ? contentW + 8 : 0
-            // One Behavior drives all three motions: slide open on track
-            // start, ease between widths on a title change, slide shut on
-            // stop. 220ms OutCubic — a short, settled glide.
-            Behavior on openW { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-
-            visible: present || openW > 0.5
-            anchors.right: parent.right
-            anchors.rightMargin: bar.cloudMode ? bar.cloudAir + bar.cloudPad + 2 : 10
-            anchors.verticalCenter: parent.verticalCenter
-            // Match the -1 optical lift applied to icons / clock so the
-            // pill sits on the same baseline as the rest of the bar row.
-            anchors.verticalCenterOffset: -1
-            height: 16
-            width: openW
-            z: 10
-
-            readonly property string tipText: bar.root.musicArtist.length > 0
-                                              ? bar.root.musicTitle + " - " + bar.root.musicArtist
-                                              : bar.root.musicTitle
-
-            Rectangle {
-                id: musicPill
-                // Pinned to the right edge so the pill grows leftward as the
-                // item widens; the 8px gap to the icon cluster sits to its
-                // left. clip masks the centred row to the animating width so
-                // the open reads as the pill inflating, not text spilling out.
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(0, parent.width - 8)
-                height: parent.height
-                radius: height / 2
-                color: bar.root.accent
-                clip: true
-                opacity: musicMouse.containsMouse ? 1.0 : 0.9
-                Behavior on opacity { NumberAnimation { duration: 180 } }
-
-                Row {
-                    id: musicRow
-                    anchors.centerIn: parent
-                    spacing: 5
-
-                    Text {
-                        id: musicIcon
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: bar.root.icoMusic
-                        color: bar.root.paper
-                        font.family: bar.root.mono
-                        font.pixelSize: 9
-                    }
-
-                    Text {
-                        id: musicLabel
-                        anchors.verticalCenter: parent.verticalCenter
-                        // Hard cap on the text portion; outer Item width
-                        // tracks this + 12px of pill padding. The font is
-                        // monospace, so we truncate to the exact character
-                        // count that fits 140px and append ".." rather than
-                        // letting a half-glyph bleed under the fade.
-                        readonly property int maxChars:
-                            Math.max(2, Math.floor(140 / chMetric.advanceWidth))
-                        readonly property bool truncated:
-                            bar.root.musicTitle.length > maxChars
-                        text: truncated
-                              ? bar.root.musicTitle.slice(0, maxChars - 2) + ".."
-                              : bar.root.musicTitle
-                        color: bar.root.paper
-                        font.family: bar.root.mono
-                        font.pixelSize: 10
-                        font.weight: Font.Medium
-
-                        // One monospace cell, used to convert the 140px cap
-                        // into a character count.
-                        TextMetrics {
-                            id: chMetric
-                            font: musicLabel.font
-                            text: "0"
-                        }
-                    }
-                }
-
-                // Right-edge fade: only when the title is actually clipped.
-                // A horizontal transparent->accent gradient layered over the
-                // text tail dissolves it into the pill. Sits inside the pill
-                // so it inherits the hover opacity, and Qt.rgba(...,0) fades
-                // alpha only (no dark tint mid-gradient). Runs flush to the
-                // pill's right edge; matching radius keeps the rounded corner
-                // clean (the left corners round under the transparent stop).
-                Rectangle {
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    height: parent.height
-                    width: 40
-                    radius: parent.radius
-                    visible: musicLabel.truncated
-                    // Front-loaded ramp: alpha climbs fast, then the right
-                    // ~40% sits fully on accent, so the tail reads as solidly
-                    // dissolved rather than a gentle wash.
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Qt.rgba(bar.root.accent.r, bar.root.accent.g, bar.root.accent.b, 0) }
-                        GradientStop { position: 0.6; color: bar.root.accent }
-                        GradientStop { position: 1.0; color: bar.root.accent }
-                    }
-                }
-            }
-
-            Timer {
-                id: musicTipDelay
-                interval: 320
-                onTriggered: {
-                    const p = musicItem.mapToItem(null, musicItem.width / 2, musicItem.height / 2);
-                    bar.root.showTooltip(musicItem.tipText, p.x, p.y);
-                }
-            }
-
-            MouseArea {
-                id: musicMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                cursorShape: Qt.PointingHandCursor
-                onEntered: musicTipDelay.restart()
-                onExited:  { musicTipDelay.stop(); bar.root.hideTooltip(musicItem.tipText); }
-                onClicked: (e) => {
-                    musicTipDelay.stop();
-                    bar.root.hideTooltip(musicItem.tipText);
-                    if (e.button === Qt.RightButton)       bar.root.musicNext();
-                    else if (e.button === Qt.MiddleButton) bar.root.musicPrev();
-                    else                                    bar.root.musicToggle();
-                }
-            }
-        }
-
         GridLayout {
             anchors.fill: parent
             anchors.leftMargin:   bar.root.isHorizontal ? (bar.cloudMode ? bar.cloudAir + bar.cloudPad : 10) : 0
             anchors.rightMargin:  bar.root.isHorizontal
-                                  ? ((bar.cloudMode ? bar.cloudAir + bar.cloudPad : 10)
-                                     + musicItem.openW)
+                                  ? (bar.cloudMode ? bar.cloudAir + bar.cloudPad : 10)
                                   : 0
             anchors.topMargin:    bar.root.isHorizontal
                                   ? (bar.cloudMode
@@ -382,19 +231,6 @@ PanelWindow {
             columns: bar.root.isHorizontal ? -1 : 1
             rows:    bar.root.isHorizontal ? 1  : -1
 
-            Module {
-                root: bar.root
-                glyph: bar.root.icoOmarchy
-                tooltip: "Menu"
-                color: bar.root.seal
-                fontFamily: "omarchy"
-                fontSize: 14
-                onActivated: bar.root.paletteToggleRequested()
-                onRightActivated: bar.root.run("xdg-terminal-exec")
-            }
-
-            Separator { root: bar.root }
-
             Repeater {
                 model: 10
                 delegate: Workspace {
@@ -411,6 +247,120 @@ PanelWindow {
             Item {
                 Layout.fillWidth:  bar.root.isHorizontal
                 Layout.fillHeight: !bar.root.isHorizontal
+            }
+
+            Item {
+                id: musicItem
+                readonly property bool present: bar.root.isHorizontal && bar.root.musicTitle.length > 0
+                readonly property real contentW: musicRow.width + 12
+                property real openW: present ? contentW + 8 : 0
+                Behavior on openW { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+
+                visible: present || openW > 0.5
+                Layout.preferredWidth: openW
+                Layout.preferredHeight: 16
+                Layout.alignment: Qt.AlignVCenter
+
+                readonly property string tipText: bar.root.musicArtist.length > 0
+                                                  ? bar.root.musicTitle + " - " + bar.root.musicArtist
+                                                  : bar.root.musicTitle
+
+                Rectangle {
+                    id: musicPill
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.max(0, parent.width - 8)
+                    height: parent.height
+                    radius: height / 2
+                    color: bar.root.accent
+                    clip: true
+                    opacity: musicMouse.containsMouse ? 1.0 : 0.9
+                    Behavior on opacity { NumberAnimation { duration: 180 } }
+
+                    Row {
+                        id: musicRow
+                        anchors.centerIn: parent
+                        spacing: 5
+
+                        Text {
+                            id: musicIcon
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: bar.root.icoMusic
+                            color: bar.root.paper
+                            font.family: bar.root.mono
+                            font.pixelSize: 9
+                        }
+
+                        Text {
+                            id: musicLabel
+                            anchors.verticalCenter: parent.verticalCenter
+                            readonly property int maxChars:
+                                Math.max(2, Math.floor(140 / chMetric.advanceWidth))
+                            readonly property bool truncated:
+                                bar.root.musicTitle.length > maxChars
+                            text: truncated
+                                  ? bar.root.musicTitle.slice(0, maxChars - 2) + ".."
+                                  : bar.root.musicTitle
+                            color: bar.root.paper
+                            font.family: bar.root.mono
+                            font.pixelSize: 10
+                            font.weight: Font.Medium
+
+                            TextMetrics {
+                                id: chMetric
+                                font: musicLabel.font
+                                text: "0"
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: parent.height
+                        width: 40
+                        radius: parent.radius
+                        visible: musicLabel.truncated
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: Qt.rgba(bar.root.accent.r, bar.root.accent.g, bar.root.accent.b, 0) }
+                            GradientStop { position: 0.6; color: bar.root.accent }
+                            GradientStop { position: 1.0; color: bar.root.accent }
+                        }
+                    }
+                }
+
+                Timer {
+                    id: musicTipDelay
+                    interval: 320
+                    onTriggered: {
+                        const p = musicItem.mapToItem(null, musicItem.width / 2, musicItem.height / 2);
+                        bar.root.showTooltip(musicItem.tipText, p.x, p.y);
+                    }
+                }
+
+                MouseArea {
+                    id: musicMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton | Qt.XButton1 | Qt.XButton2
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: musicTipDelay.restart()
+                    onExited:  { musicTipDelay.stop(); bar.root.hideTooltip(musicItem.tipText); }
+                    onClicked: (e) => {
+                        musicTipDelay.stop();
+                        bar.root.hideTooltip(musicItem.tipText);
+                        if (e.button === Qt.RightButton)       bar.root.musicNext();
+                        else if (e.button === Qt.MiddleButton) bar.root.musicPrev();
+                        else if (e.button === Qt.XButton1)     bar.root.musicPrev();
+                        else if (e.button === Qt.XButton2)     bar.root.musicNext();
+                        else                                    bar.root.musicToggle();
+                    }
+                    onWheel: (wheel) => {
+                        if (wheel.angleDelta.y > 0) bar.root.musicNextSource();
+                        else if (wheel.angleDelta.y < 0) bar.root.musicPrevSource();
+                    }
+                }
             }
 
             Separator { root: bar.root }
@@ -536,6 +486,7 @@ PanelWindow {
                 onActivated: bar.root.run("pavucontrol")
                 onMiddleActivated: bar.root.run("pamixer -t")
                 onRightActivated: bar.root.run("~/.config/waybar/scripts/pulse_switch.sh")
+                onWheelActivated: (delta) => bar.root.run(delta > 0 ? "~/.config/quickshell/scripts/volume +5" : "~/.config/quickshell/scripts/volume -5")
             }
 
             // Surfaces only when omarchy-update-available exits 0. Sits

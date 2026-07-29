@@ -7,24 +7,14 @@ import "Data.js" as Data
 import "omni" as Omni
 import "omni/Tiles.js" as Tiles
 
-// Omni-menu palette. Fuses installed apps (.desktop scan) with every
+// Locus palette. Fused installed apps (.desktop scan) with every
 // `omarchy-menu` action, scored against title, category, and per-entry
 // synonyms (so "wallpaper" finds Background, "reboot" finds Restart).
 // Drill-down rows pivot the list to a category, fd file search, gh repo
 // search, processes, or themes. Toggle via:
-//   qs -c desktop ipc call palette toggle
+//   qs -c desktop ipc call locus toggle
 //
-// Source layout: this file is the entry and keeps all state (search
-// index, scoring, mode flags, IPC, shortcuts, the keyboard handler,
-// and the panel chrome). Visual subtrees live alongside in `omni/`:
-//   omni/HeaderBar.qml       title + count + hint
-//   omni/SearchInput.qml     prompt glyph + query text + caret
-//   omni/QuickContainer.qml  quick-mode tile grid + detail panel
-//   omni/ResultList.qml      ListView + row delegate
-//   omni/PreviewPane.qml     preview header + body for all modes
-//   omni/Footer.qml          exec line for the selected item
-//   omni/Format.js           markdown formatters (tldr, chat)
-//   omni/Tiles.js            quick-tile static data + dyn builder
+// A sibling of OmniMenu.qml: same engine, no header bar.
 Item {
     id: root
 
@@ -84,12 +74,11 @@ Item {
     // activating a category nav row; cleared by Esc / Backspace-on-empty.
     property string categoryFilter: ""
 
-    // File and GitHub search drills reuse the category machinery: the
-    // Files/GitHub nav rows set categoryFilter to one of Data's sentinels,
-    // filteredItems pivots to the matching results array, and goUp/Esc
-    // unwind via the same path as any other category.
+    // File search drill reuses the category machinery: the Files nav row
+    // sets categoryFilter to Data's fileCategory sentinel, filteredItems
+    // pivots to fd results, and goUp/Esc unwind via the same path as any
+    // other category.
     readonly property bool fileMode: root.categoryFilter === Data.fileCategory
-    readonly property bool ghMode:   root.categoryFilter === Data.ghCategory
     readonly property bool favMode:  root.categoryFilter === Data.favCategory
     readonly property bool histMode: root.categoryFilter === Data.histCategory
     readonly property bool procMode:  root.categoryFilter === Data.procCategory
@@ -205,20 +194,6 @@ Item {
         runner.running = true;
     }
 
-    // gh CLI-backed repo search + README preview.
-    GhSearch {
-        id: ghSearch
-        query: root.query
-        active: root.ghMode && !root.tldrMode && !root.llmMode
-        selectedItem: root.filteredItems[root.selectedIndex] || null
-    }
-    readonly property alias ghReady:        ghSearch.ready
-    readonly property alias ghItems:        ghSearch.items
-    readonly property alias ghRunning:      ghSearch.running
-    readonly property alias previewRepo:    ghSearch.previewRepo
-    readonly property alias previewRepoUrl: ghSearch.previewRepoUrl
-    readonly property alias previewReadme:  ghSearch.previewReadme
-
     readonly property string sectionIcon: {
         if (root.categoryFilter === "") return "";
         for (let i = 0; i < Data.categoryNav.length; i++) {
@@ -290,7 +265,7 @@ Item {
     readonly property alias chatSubmitted: ollamaChat.submitted
     readonly property alias chatModel:     ollamaChat.model_
 
-    readonly property bool previewActive: root.tldrMode || root.llmMode || root.fileMode || root.ghMode || root.procMode || root.themeMode
+    readonly property bool previewActive: root.tldrMode || root.llmMode || root.fileMode || root.procMode || root.themeMode
     readonly property bool previewHasContent: {
         if (root.tldrMode) return root.tldrPreview !== "";
         if (root.llmMode) {
@@ -303,8 +278,8 @@ Item {
             if (!root.chatSubmitted) return false;
             return root.chatPreview !== "";
         }
-        if (root.fileMode || root.ghMode)
-            return root.previewPath !== "" || root.previewRepoUrl !== "";
+        if (root.fileMode)
+            return root.previewPath !== "";
         if (root.procMode) return processes.previewPid !== "";
         if (root.themeMode) {
             const it = root.filteredItems[root.selectedIndex];
@@ -343,10 +318,9 @@ Item {
     }
 
     // Entering or leaving file mode resets fd state. Other category drills
-    // share the same handler — clearing both is a free no-op for other drills.
+    // share the same handler — clearing is a free no-op for other drills.
     onCategoryFilterChanged: {
         fileSearch.clear();
-        ghSearch.clear();
         tldrSearch.clear();
         ollamaChat.clear();
         // Processes/Themes own their own clear()-on-deactivate via their
@@ -493,6 +467,23 @@ Item {
             root.close();
             return;
         }
+        // Aether toggle — in-process since Locus and Navbar share the
+        // same QML context; no need to fork a process at all.
+        if (item.exec === "qs -c desktop ipc call aether toggle") {
+            if (root.navbar) root.navbar.openAether();
+            root.close();
+            return;
+        }
+        // IPC calls to the running quickshell — run as a direct child
+        // Process instead of setsid/uwsm-app detach, so the IPC socket
+        // is reachable and the shell isn't sourced unnecessarily.
+        if (item.exec && item.exec.indexOf("qs ") === 0 && item.exec.indexOf("ipc call") >= 0) {
+            runner.command = item.exec.split(" ");
+            runner.running = false;
+            runner.running = true;
+            root.close();
+            return;
+        }
         bookmarks.record(item);
         // TUI commands need a real terminal — fzf, sudo prompts, and bash
         // `read` fail when launched detached. `item.tui` holds the wrapper
@@ -563,12 +554,7 @@ Item {
         return q.length === 0 ? [] : q.split(/\s+/);
     }
 
-    // Cached at root-level so it isn't reallocated on every keystroke.
-    // Only depends on `nav` and `ghReady`, so re-evaluates once when the
-    // auth probe finishes.
-    readonly property var navRows: root.ghReady
-        ? root.nav
-        : root.nav.filter(it => it.target !== Data.ghCategory)
+    readonly property var navRows: root.nav
 
     readonly property var filteredItems: {
         // tldr mode owns the query entirely — its synthetic row is the
@@ -577,10 +563,9 @@ Item {
         // LLM modes are the other query-shape modes; same one-row
         // pivot for both chat (`?`) and command (`$`).
         if (root.llmMode) return root.chatItems;
-        // File and GitHub modes are their own worlds: fd and gh already
-        // did the filtering, so we just pass their results through.
+        // File mode is its own world: fd already did the filtering,
+        // so we just pass the results through.
         if (root.fileMode) return root.fileItems;
-        if (root.ghMode)   return root.ghItems;
 
         const tokens = root.queryTokens;
         const filter = root.categoryFilter;
@@ -697,12 +682,12 @@ Item {
 
     Component.onCompleted: {
         root.omarchy = Data.annotate(Data.omarchyItems);
-        root.nav     = Data.annotate(Data.categoryNav);
+        root.nav = Data.annotate(Data.categoryNav);
     }
 
     // ---------- IPC ----------
     IpcHandler {
-        target: "palette"
+        target: "locus"
         function toggle(): void { root.toggle() }
         function open(): void { root.open() }
         function close(): void { root.close() }
@@ -722,18 +707,18 @@ Item {
     // SUPER+SPACE no longer pays for a fresh `qs` client process (the
     // dominant ~50-150ms of perceived "boot" before any pixel changes).
     // Bind in Hyprland with:
-    //   bind = SUPER, SPACE, global, quickshell:palette-toggle
-    //   bind = ALT,   SPACE, global, quickshell:palette-quick
+    //   bind = SUPER, J, global, quickshell:locus-toggle
+    //   bind = ALT,   J, global, quickshell:locus-quick
     GlobalShortcut {
         appid: "quickshell"
-        name: "palette-toggle"
-        description: "Toggle omni-menu palette"
+        name: "locus-toggle"
+        description: "Toggle locus palette"
         onPressed: root.toggle()
     }
     GlobalShortcut {
         appid: "quickshell"
-        name: "palette-quick"
-        description: "Open omni-menu pivoted to Quick"
+        name: "locus-quick"
+        description: "Open locus pivoted to Quick"
         onPressed: { root.open(); root.categoryFilter = "Quick"; }
     }
 
@@ -745,7 +730,7 @@ Item {
         anchors { top: true; bottom: true; left: true; right: true }
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "omni-menu"
+        WlrLayershell.namespace: "locus-menu"
         WlrLayershell.keyboardFocus: root.visible_ ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
         property real reveal: root.visible_ ? 1 : 0
@@ -788,7 +773,7 @@ Item {
             // Cap the card so it never exceeds the screen even on small
             // displays; cardCol implicitHeight covers the search + list +
             // footer block.
-            height: Math.min(cardCol.implicitHeight + 34, parent.height * 0.72)
+            height: parent.height * 0.72
             color: root.bg
             border.color: root.sep
             border.width: 1
@@ -1024,16 +1009,6 @@ Item {
                 anchors.margins: 17
                 spacing: 12
 
-                Omni.HeaderBar {
-                    id: headerBar
-                    omni: root
-                    processes: processes
-                    themes: themes
-                    bookmarks: bookmarks
-                }
-
-                Rectangle { width: parent.width; height: 1; color: root.sep }
-
                 Omni.QuickContainer {
                     id: quickContainer
                     omni: root
@@ -1058,7 +1033,7 @@ Item {
                     visible: !root.quickMode
                     width: parent.width
                     height: visible
-                        ? Math.max(60, card.height - 34 - headerBar.height - 34 - 12 * 4)
+                        ? Math.max(60, card.height - 34 - 34 - 12 * 4)
                         : 0
                     clip: true
 

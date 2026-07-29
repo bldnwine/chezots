@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 
 // Power detail panel — six native actions, no omarchy-menu indirection.
-// Lock uses hyprlock directly; the rest go through systemctl (login +
+// Lock uses loginctl; the rest go through systemctl (login +
 // power) and Hyprland's IPC for logout. Keyboard: arrows / Tab cycle
 // the buttons, Enter activates the focused one.
 Item {
@@ -17,10 +17,10 @@ Item {
 
     property int kbdIndex: 0
     readonly property var _actions: [
-        { glyph: "󰌾", label: "LOCK",      cmd: "hyprlock" },
+        { glyph: "󰌾", label: "LOCK",      cmd: "loginctl lock-session" },
         { glyph: "󰤄", label: "SUSPEND",   cmd: "systemctl suspend" },
         { glyph: "󰋊", label: "HIBERNATE", cmd: "systemctl hibernate" },
-        { glyph: "󰗽", label: "LOGOUT",    cmd: "hyprctl dispatch exit" },
+        { glyph: "󰗽", label: "LOGOUT",    cmd: "uwsm stop" },
         { glyph: "󰜉", label: "REBOOT",    cmd: "systemctl reboot" },
         { glyph: "󰐥", label: "SHUTDOWN",  cmd: "systemctl poweroff" }
     ]
