@@ -7,7 +7,7 @@ CardWindow {
 
     theme: root
     revealed: root.locusfavsVisible
-    cardWidth: 200
+    cardWidth: 175
     layerNamespace: "omarchy-locusfavs"
     title: "QUICK NAV"
 

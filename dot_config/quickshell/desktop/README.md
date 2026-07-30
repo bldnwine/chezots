@@ -7,67 +7,62 @@ A Quickshell config that runs the navbar and omni-menu command palette in a sing
 ## Quick start
 
 ```sh
-git clone https://github.com/bjarneo/quickshell ~/.config/quickshell
-
-# disable omarchy's waybar (also bound to SUPER + SHIFT + SPACE)
-omarchy toggle waybar
-
-# autostart on every Hyprland session
-install -m 755 ~/.config/quickshell/desktop/contrib/post-boot.d/quickshell-desktop \
-  ~/.config/omarchy/hooks/post-boot.d/quickshell-desktop
-
-# launch once now
 qs -n -d -c desktop
 ```
 
-Reload the Hyprland session (or run `omarchy-hook post-boot`) and the bar appears with the palette one keybind away.
+See `~/.config/hypr/hyprland.lua` for the autostart entry.
 
 ## Surfaces
 
-The palette ships two `GlobalShortcut`s, registered as `quickshell:palette-toggle` and `quickshell:palette-quick` (bind them globally in Hyprland to skip the `qs` client fork on the hot path). `palette-quick` opens pre-pivoted to the Quick-mode tile grid (battery, audio, wifi, bluetooth, weather, display, aether, cpu, calendar, screenshots, videos, power).
+The palette ships two `GlobalShortcut`s, registered as `quickshell:locus-toggle` and `quickshell:locus-quick` (bind them globally in Hyprland to skip the `qs` client fork on the hot path). `locus-quick` opens pre-pivoted to the Quick-mode tile grid (battery, audio, wifi, bluetooth, weather, display, aether, cpu, calendar, screenshots, videos, power).
 
 Everything else goes through IPC:
 
 ```sh
-qs -c desktop ipc call palette toggle        # omni-menu
-qs -c desktop ipc call palette openCategory Quick  # palette pinned to Quick mode
-qs -c desktop ipc call screenshots toggle    # screenshots browser
-qs -c desktop ipc call videos toggle         # video browser
-qs -c desktop ipc call display toggle        # display sliders
-qs -c desktop ipc call weather toggle        # weather popup
-qs -c desktop ipc call aether toggle         # aether blueprint picker
-qs -c desktop ipc call calendar toggle       # calendar
+qs -c desktop ipc call locus toggle            # command palette
+qs -c desktop ipc call locus openCategory Quick # palette pinned to Quick mode
+qs -c desktop ipc call screenshots toggle      # screenshots browser
+qs -c desktop ipc call videos toggle           # video browser
+qs -c desktop ipc call display toggle          # display sliders
+qs -c desktop ipc call weather toggle          # weather popup
+qs -c desktop ipc call aether toggle           # aether blueprint picker
+qs -c desktop ipc call calendar toggle         # calendar
+qs -c desktop ipc call system toggle           # system popup (cpu, mem, btop)
+qs -c desktop ipc call nightlight toggle       # warmth/brightness night mode
+qs -c desktop ipc call bar toggle              # hide/show bar
+qs -c desktop ipc call screenrecord toggle     # screen recording controls
+qs -c desktop ipc call wireproton toggle       # VPN wireguard connect/disconnect
+qs -c desktop ipc call locusfavs toggle        # folder bookmarks
+qs -c desktop ipc call hyprland toggle         # hyprland keybind viewer
 ```
 
-The navbar omarchy/menu button calls `toggle()` on the sibling palette in-process, no IPC round-trip or subprocess.
+The navbar menu button calls `toggle()` on the sibling palette in-process, no IPC round-trip or subprocess.
 
 ## What's inside
 
 | Component | What it does |
 | --- | --- |
 | Bar | Kanji workspace markers, telemetry (cpu, mem, bt, wifi, audio, battery), centred clock, click-through popups for calendar, screenshots, videos, display, weather, aether blueprints. |
-| Omni-menu | Full-screen command palette over installed apps and the omarchy-menu (Style, Setup, Install, Remove, Update, System, Toggle, Trigger, Capture, Share, Learn), file search, GitHub repo search, processes, theme picker, plus Quick-mode tile grid, tldr lookup (`$`), and local Ollama chat (`?`). |
-| Theme | Shared live palette sourced from `~/.config/omarchy/current/theme/colors.toml`. Drift animation runs on theme swap so bar + palette breathe in sync. |
+| Locus | Full-screen command palette over installed apps and the omarchy-menu (Style, Setup, Install, Remove, Update, System, Toggle, Trigger, Capture, Share, Learn), file search, GitHub repo search, processes, theme picker, plus Quick-mode tile grid, tldr lookup (`$`), and local Ollama chat (`?`). |
+| Theme | Shared live palette sourced from `~/.config/aether/theme/colors.toml`. Drift animation runs on theme swap so bar + palette breathe in sync. |
 
 ## Bar layout
 
 ```
-left   | omarchy | sep | ws1..ws10 |
+left   | ws1..ws10 |
 center | HH:MM |
-right  | weather | display | camera | filmstrip | sep | cpu | bt | wifi | audio | battery | edge |
+right  | music | sep | weather | cpu | bt | wifi | audio | update | battery | recording | edge |
 ```
 
-- Click the omarchy glyph to toggle the omni-menu palette. Right-click runs `xdg-terminal-exec`.
 - Click the clock to open the calendar popup.
 - Click a kanji to `hyprctl dispatch workspace N`.
 - Click weather for the forecast popup. Right-click force-refreshes.
-- Click display for warmth, brightness, gamma sliders + presets.
-- Click camera to browse `~/Pictures/screenshot-*.png`. Right-click captures a new one.
-- Click filmstrip to browse recent videos in `~/Videos`. Right-click opens the folder.
-- Click audio for `omarchy-launch-audio`. Right-click toggles mute.
+- Click cpu for the system popup (cpu, mem, btop).
+- Click audio for `pavucontrol`. Right-click toggles mute. Scroll for volume.
 - Click battery for the power menu.
+- Click recording for the screen record popup.
 - Click the edge arrow to cycle the bar between top, right, bottom, left.
-- Cycle bar faces with `qs -c desktop ipc call bar toggle`; jump to the plain White Rose face with `qs -c desktop ipc call bar whiterose`.
+- Toggle bar visibility with `qs -c desktop ipc call bar toggle`.
 
 ## Palette
 
@@ -125,11 +120,11 @@ Top 250 sorted by score, nav-rows-first on ties, then alpha.
 
 ### Drill-downs
 
-At root the first rows are category navigators (`Apps >`, `Style >`, `Files >`, `GitHub >`, `Processes >`, `Themes >`, ...). Activating one filters the list and updates the header breadcrumb. Files and GitHub drills pivot to fd / gh CLI output; Processes drills into a kill list; Themes drills into the omarchy theme switcher with swatch + preview pane.
+At root the first rows are category navigators (`Apps >`, `Style >`, `Files >`, `GitHub >`, `Processes >`, `Themes >`, ...). Activating one filters the list and updates the header breadcrumb. Files and GitHub drills pivot to fd / gh CLI output; Processes drills into a kill list; Themes drills into the aether theme switcher with swatch + preview pane.
 
 ## Theme
 
-Reads `~/.config/omarchy/current/theme/colors.toml` and remaps:
+Reads `~/.config/aether/theme/colors.toml` and remaps:
 
 | toml key | role | maps to |
 | --- | --- | --- |
@@ -147,30 +142,11 @@ Parsing lives in `Palette.js`:
 - `parse(text)` is `parseAll` + `mapKeys`, a one-shot convenience.
 - `apply(theme, palette)` writes a parsed palette onto the live `Theme` instance.
 
-### Hook-driven refresh
+### Push via aether
 
-`omarchy theme set <name>` rewrites `colors.toml` atomically (`rm -rf` + `mv` of the whole theme directory), which breaks inotify-style watching. The desktop instead relies on omarchy's `~/.config/omarchy/hooks/theme-set` hook to push a fully-parsed palette via DBus and Quickshell IPC. Listeners never have to touch `colors.toml` themselves.
+`aether --apply-blueprint <name>` (or the aether GUI) writes `colors.toml` to the theme directory, then runs `~/.config/quickshell/desktop/scripts/aether-push-theme.sh` which parses the file and calls `qs -c desktop ipc call theme apply` with a JSON payload. The `Theme.qml` `IpcHandler` dispatches it to `Palette.apply()`, which updates the live colour properties.
 
-```sh
-# ~/.config/omarchy/hooks/theme-set
-
-# (whatever else the hook does — cava reload, etc.)
-
-# Parse colors.toml once into JSON and push to every listener.
-# tomlq ships with the `yq` package; same jq syntax, TOML input.
-theme_name="$(cat "$HOME/.config/omarchy/current/theme.name" 2>/dev/null)"
-colors_file="$HOME/.config/omarchy/current/theme/colors.toml"
-
-payload="$(tomlq -c --arg name "$theme_name" \
-    '{name: $name, colors: (with_entries(.key |= ascii_downcase))}' \
-    "$colors_file" 2>/dev/null)"
-
-if [ -n "$payload" ]; then
-    dbus-send --session --type=signal /org/omarchy/Theme \
-        org.omarchy.Theme.Changed "string:${payload}" 2>/dev/null || true
-    qs -c desktop ipc call theme apply "${payload}" 2>/dev/null || true
-fi
-```
+Additionally, the `FileView` in `Theme.qml` watches `colors.toml` with `watchChanges: true` as a fallback — if the file changes on disk, it re-parses and applies automatically.
 
 On apply, `seal` saturation rides a 200ms rise and 2.8s taper (`driftDelay` + `driftAnim` in `Theme.qml`), so a theme swap reads as a deliberate breath rather than a hard cut.
 
@@ -210,7 +186,7 @@ dbus-monitor --session "type='signal',interface='org.omarchy.Theme',member='Chan
 
 ## IPC
 
-`toggle`, `open`, `close`, and (where relevant) `refresh`, `reset`, `blank` are exposed on each target. `palette` also exposes `openCategory <name>` to pivot the palette into a drill-down on open. `qs -c desktop ipc show` lists everything. See [Surfaces](#surfaces) above for the common verbs.
+`toggle`, `open`, `close`, and (where relevant) `refresh`, `reset`, `blank` are exposed on each target. `locus` also exposes `openCategory <name>` to pivot the palette into a drill-down on open. `qs -c desktop ipc show` lists everything. See [Surfaces](#surfaces) above for the common verbs.
 
 ## Weather location
 
@@ -275,22 +251,15 @@ Quickshell hot-reloads on save, so edits show up live.
 
 ## Autostart
 
-`desktop/contrib/post-boot.d/quickshell-desktop` is a drop-in for omarchy's hook system. It runs at session start with:
-
-```sh
-#!/bin/bash
-qs -n -d -c desktop
-```
-
-`-d` daemonizes, `-n` makes it idempotent.
+`qs -n -d -c desktop` in `hyprland.conf` via `exec-once`. `-d` daemonizes, `-n` makes it idempotent.
 
 ## Requirements
 
 | Package | Why |
 | --- | --- |
 | quickshell | Runtime. |
-| hyprland | Workspace state, keybinds, autostart hook. |
-| omarchy | Live theme palette and the `omarchy-menu <verb>` dispatcher. |
+| hyprland | Workspace state, keybinds, autostart. |
+| aether | Live theme palette generation and application. |
 | python3 | Parses `.desktop` files. |
 | uwsm | `uwsm-app` scope wrapper for spawned apps. |
 | pamixer | Audio mute query. |
@@ -299,7 +268,6 @@ qs -n -d -c desktop
 | brightnessctl | Backlight slider in the display popup. |
 | hyprsunset | Color temperature and gamma in the display popup. |
 | jq, curl | Weather popup data fetch from wttr.in. |
-| yq | Provides `tomlq` for the theme-set hook's TOML-to-JSON pass. |
 | fd, gh | File search and GitHub repo search drill-downs (optional). |
 | dragon-drop | Drag-and-drop hand-off for the videos popup (optional, AUR). |
 
@@ -308,8 +276,8 @@ qs -n -d -c desktop
 | Symptom | Fix |
 | --- | --- |
 | `Could not open config file at "desktop"` | Use `-c desktop`, not `-p desktop`. `-c` resolves to `~/.config/quickshell/desktop/shell.qml`. |
-| Palette doesn't appear on SUPER + SPACE | Confirm the keybind targets `qs -c desktop ipc call palette toggle`, not the old `omni-menu/toggle.sh`. |
-| Theme colours don't update on `omarchy theme set` | Check `~/.config/omarchy/current/theme.name` exists and is being rewritten. The desktop uses it as the reload trigger. |
+| Palette doesn't appear on SUPER + SPACE | Confirm the keybind targets `qs -c desktop ipc call locus toggle`. |
+| Theme colours don't update on theme swap | Check that aether is generating `~/.config/aether/theme/colors.toml` and the push script at `~/.config/quickshell/desktop/scripts/aether-push-theme.sh` runs without error. |
 | Workspace switch feels laggy | Bump `wsProbe`'s `Timer { interval: ... }` from 500ms down to 150ms in `Navbar.qml`, or wire it to Hyprland's IPC socket. |
 | Qt version mismatch warning | `quickshell` was built against an older Qt minor. Rebuild the package against your current Qt. |
 

@@ -38,6 +38,7 @@ PanelWindow {
     // Popups read these at open time, so whoever is mapped must own them.
     onVisibleChanged: if (visible) {
         bar.root.calendarAnchorItem = clockItem;
+        bar.root.displayAnchorItem = clockItem;
         bar.root.weatherAnchorItem = weatherMod;
     }
 
@@ -404,6 +405,7 @@ PanelWindow {
             Module {
                 root: bar.root
                 glyph: "󰍛"
+                fontSize: 14
                 tooltip: "CPU " + Math.round(bar.root.cpuVal) + "% · MEM " + Math.round(bar.root.memVal) + "%"
                 color: bar.root.cpuVal > 80 ? bar.root.seal : bar.root.ink
                 Component.onCompleted: bar.root.systemAnchorItem = this
@@ -430,6 +432,7 @@ PanelWindow {
                 id: netMod
                 root: bar.root
                 glyph: bar.root.netIcon
+                fontSize: 12
                 color: bar.root.wireprotonActiveIface.length > 0 ? bar.root.accent : bar.root.ink
                 tooltip: {
                     if (bar.root.netKind === "eth") return "Ethernet";
@@ -495,21 +498,6 @@ PanelWindow {
                 onMiddleActivated: bar.root.run("pamixer -t")
                 onRightActivated: bar.root.run("~/.config/waybar/scripts/pulse_switch.sh")
                 onWheelActivated: (delta) => bar.root.run(delta > 0 ? "~/.config/quickshell/desktop/scripts/volume +5" : "~/.config/quickshell/desktop/scripts/volume -5")
-            }
-
-            // Surfaces only when omarchy-update-available exits 0. Sits
-            // beside the battery so it shares the system-status cluster's
-            // line of sight without disturbing the existing icon cadence.
-            Module {
-                root: bar.root
-                visible: bar.root.omarchyUpdateAvailable
-                glyph: bar.root.icoUpdate
-                tooltip: bar.root.omarchyLatestTag
-                         ? "Omarchy update available · " + bar.root.omarchyLatestTag
-                         : "Omarchy update available"
-                color: bar.root.seal
-                fontSize: 10
-                onActivated: bar.root.openOmarchyUpdate()
             }
 
             Module {

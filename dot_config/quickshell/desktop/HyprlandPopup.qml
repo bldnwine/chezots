@@ -7,7 +7,7 @@ CardWindow {
 
     theme: root
     revealed: root.hyprlandVisible
-    cardWidth: 260
+    cardWidth: 170
     layerNamespace: "omarchy-hyprland"
     title: "HYPRLAND"
     subtitle: "LAYOUT"
