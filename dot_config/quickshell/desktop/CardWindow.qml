@@ -87,16 +87,16 @@ PanelWindow {
 
         x: {
             if (!card._anchored) return (parent.width - width) / 2;
-            if (card.anchorEdge === "left")  return card.theme.barHeight + card.anchorGap;
-            if (card.anchorEdge === "right") return parent.width - card.theme.barHeight - width - card.anchorGap;
+            if (card.anchorEdge === "left")  return card.theme.barHeight + card.theme.barExtraThickness + card.anchorGap;
+            if (card.anchorEdge === "right") return parent.width - card.theme.barHeight - card.theme.barExtraThickness - width - card.anchorGap;
             return Math.max(card.anchorGap,
                             Math.min(parent.width - width - card.anchorGap,
                                      card.anchorBarX - width / 2));
         }
         y: {
             if (!card._anchored) return (parent.height - height) / 2;
-            if (card.anchorEdge === "top")    return card.theme.barHeight + card.anchorGap;
-            if (card.anchorEdge === "bottom") return parent.height - card.theme.barHeight - height - card.anchorGap;
+            if (card.anchorEdge === "top")    return card.theme.barHeight + card.theme.barExtraThickness + card.anchorGap;
+            if (card.anchorEdge === "bottom") return parent.height - card.theme.barHeight - card.theme.barExtraThickness - height - card.anchorGap;
             return Math.max(card.anchorGap,
                             Math.min(parent.height - height - card.anchorGap,
                                      card.anchorBarY - height / 2));

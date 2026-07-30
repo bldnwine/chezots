@@ -126,8 +126,8 @@ hl.config({
 	},
 
 	decoration = {
-		rounding = 0,
-		rounding_power = 2,
+		rounding = 9,
+		rounding_power = 5,
 		active_opacity = 0.97,
 		inactive_opacity = 0.90,
 		fullscreen_opacity = 1.0,
@@ -260,7 +260,7 @@ hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + J", hl.dsp.exec_cmd("qs -c desktop ipc call locus toggle"))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
-hl.bind(mainMod .. " + H", hl.dsp.exec_cmd("killall -SIGUSR1 waybar"))
+hl.bind(mainMod .. " + H", hl.dsp.exec_cmd("qs -c desktop ipc call bar toggle"))
 hl.bind(mainMod .. " + SHIFT + H", hl.dsp.exec_cmd("wayt"))
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd(launch("power.sh")))
 hl.bind(mainMod .. " + TAB", hl.dsp.exec_cmd(terminal .. " -e sh -c 'btop; exec sh'"))
@@ -291,7 +291,14 @@ hl.bind(mainMod .. " + SHIFT + G", function()
 		hl.config({ general = { gaps_in = 1, gaps_out = 7 } })
 	end
 end)
-
+hl.bind(mainMod .. " + CONTROL + G", function()
+	local rounding = hl.get_config("decoration.rounding")
+	if rounding == 0 then
+		hl.config({ decoration = { rounding = 9} })
+	else
+		hl.config({ decoration = { rounding = 0} })
+	end
+end)
 --hl.bind("ALT + F", hl.dsp.exec_cmd(launch("helium-browser")))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(launch("zen-browser -P default")))
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(launch("zen-browser --private-window")))

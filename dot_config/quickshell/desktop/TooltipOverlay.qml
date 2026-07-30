@@ -43,15 +43,15 @@ PanelWindow {
         // labels don't fall off-screen).
         x: {
             const r = tooltipOverlay.root;
-            if (r.barEdge === "left")  return r.barHeight + gap;
-            if (r.barEdge === "right") return parent.width - r.barHeight - width - gap;
+            if (r.barEdge === "left")  return r.barHeight + r.barExtraThickness + gap;
+            if (r.barEdge === "right") return parent.width - r.barHeight - r.barExtraThickness - width - gap;
             const center = r.tooltipBarX;
             return Math.max(4, Math.min(parent.width - width - 4, center - width / 2));
         }
         y: {
             const r = tooltipOverlay.root;
-            if (r.barEdge === "top")    return r.barHeight + gap;
-            if (r.barEdge === "bottom") return parent.height - r.barHeight - height - gap;
+            if (r.barEdge === "top")    return r.barHeight + r.barExtraThickness + gap;
+            if (r.barEdge === "bottom") return parent.height - r.barHeight - r.barExtraThickness - height - gap;
             const center = r.tooltipBarY;
             return Math.max(4, Math.min(parent.height - height - 4, center - height / 2));
         }

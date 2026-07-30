@@ -133,6 +133,7 @@ PanelWindow {
             id: clockItem
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter:   parent.verticalCenter
+            anchors.verticalCenterOffset: bar.cloudMode ? (bar.innerSign === 1 ? 2 : -2) : 0
             z: 10
             Component.onCompleted: bar.root.calendarAnchorItem = clockItem
 

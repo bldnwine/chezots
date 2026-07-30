@@ -65,6 +65,7 @@ Item {
     readonly property string icoHeadphone: String.fromCodePoint(0xf025)
 
     readonly property int barHeight: 26
+    readonly property int barExtraThickness: round && isHorizontal ? 11 : 0
     readonly property string aetherBin: "/home/bldnwine/aethergo/build/bin/aether"
     readonly property string pushThemeScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/aether-push-theme.sh"
 
@@ -94,6 +95,7 @@ Item {
     readonly property string barVariantStatePath:
         Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-variant"
     property string barVariant: "zen"
+    property bool  barHidden: false
 
     function setBarVariant(name) {
         const want = root.barVariants.indexOf(name) !== -1 ? name : "zen";
@@ -1875,7 +1877,7 @@ Item {
     }
 
     // ---------- Surfaces ----------
-    Bar              { root: root; visible: root.barVariant === "zen" }
+    Bar              { root: root; visible: !root.barHidden && root.barVariant === "zen" }
     TooltipOverlay   { root: root }
     SystemPopup      { root: root }
     CalendarPopup    { root: root }
@@ -2006,6 +2008,9 @@ Item {
         target: "bar"
         function set(name: string): void { root.setBarVariant(name); }
         function zen(): void       { root.setBarVariant("zen"); }
+        function toggle(): void    { root.barHidden = !root.barHidden; }
+        function hide(): void      { root.barHidden = true; }
+        function show(): void      { root.barHidden = false; }
     }
 
     IpcHandler {

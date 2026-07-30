@@ -24,4 +24,4 @@ JSON=$(awk -F '=' '
   }
 ' "$COLORS_FILE")
 
-exec quickshell ipc call theme apply "{\"colors\":$JSON}"
+exec qs -c desktop ipc call theme apply "{\"colors\":$JSON}"
