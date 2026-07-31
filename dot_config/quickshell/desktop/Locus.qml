@@ -682,6 +682,14 @@ Item {
             root.open();
             root.categoryFilter = cat;
         }
+        function toggleCategory(cat: string): void {
+            if (root.visible_ && root.categoryFilter === cat) {
+                root.close();
+            } else {
+                root.open();
+                root.categoryFilter = cat;
+            }
+        }
     }
 
     // ---------- Global shortcuts ----------

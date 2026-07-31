@@ -146,11 +146,11 @@ Item {
                 } catch (_) { arr = []; }
 
                 if (source._appendNext) {
-                    // Dedupe by id — wallhaven's toplist can return
-                    // overlapping pages near the cutoff.
                     const seen = {};
                     for (const e of source.items) seen[e.id] = true;
-                    source.items = source.items.concat(arr.filter(e => !seen[e.id]));
+                    let merged = source.items.concat(arr.filter(e => !seen[e.id]));
+                    if (merged.length > 50) merged = merged.slice(merged.length - 50);
+                    source.items = merged;
                 } else {
                     source.items = arr;
                     source.selectedIndex = arr.length > 0 ? 0 : -1;

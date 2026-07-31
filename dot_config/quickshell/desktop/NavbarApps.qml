@@ -2,7 +2,7 @@ import QtQuick
 import "Data.js" as Data
 
 // Surfaces the navbar's popup widgets (weather/display/calendar under
-// Toggle; screenshots/videos under Capture) as palette rows. Since the
+// Toggle) as palette rows. Since the
 // merge into a single shell they're always registered, so the list is
 // static; no IPC probe needed.
 Item {
@@ -17,10 +17,6 @@ Item {
           keywords: "calendar date month day year week schedule planner today" },
         { target: "system",      title: "System",      icon: "󰍛", category: "Toggle",
           keywords: "system cpu memory mem load pressure btop process monitor" },
-        { target: "screenshots", title: "Screenshots", icon: "󰄀", category: "Capture",
-          keywords: "screenshots browse view gallery thumbnails recent" },
-        { target: "videos",      title: "Videos",      icon: "󰕧", category: "Capture",
-          keywords: "videos browse view gallery thumbnails recordings recent screen record" },
         { target: "bar",         title: "Bar Style",   icon: "󰍜", category: "Toggle", verb: "toggle",
           keywords: "bar style navbar variant switch toggle hackerman zen whiterose white rose plain monochrome black white terminal hacker mr robot jack ryan tactical theme face" }
     ]

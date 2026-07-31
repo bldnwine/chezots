@@ -533,6 +533,12 @@ Item {
         root.locusfavsVisible = true;
     }
 
+    // ---------- App menu state ----------
+    property bool appMenuVisible: false
+    function openAppMenu() {
+        root.appMenuVisible = true;
+    }
+
     // ---------- Videos popup state ----------
     property bool videosVisible: false
     property int videoPage: 0
@@ -1843,12 +1849,55 @@ Item {
     TooltipOverlay   { root: root }
     SystemPopup      { root: root }
     CalendarPopup    { root: root }
-    AetherPopup      { root: root }
-    DisplayPopup     { root: root }
-    WeatherPopup     { root: root }
-    HyprlandPopup    { root: root }
-    ScreenRecordPopup { root: root }
-    WireprotonPopup   { root: root }
+    Loader { id: aetherLoader }
+    onAetherVisibleChanged: {
+        if (root.aetherVisible) aetherLoader.setSource("AetherPopup.qml", { root: root });
+        else keepAether.restart();
+    }
+    Timer { id: keepAether; interval: 250; onTriggered: aetherLoader.source = "" }
+
+    Loader { id: displayLoader }
+    onDisplayVisibleChanged: {
+        if (root.displayVisible) displayLoader.setSource("DisplayPopup.qml", { root: root });
+        else keepDisplay.restart();
+    }
+    Timer { id: keepDisplay; interval: 250; onTriggered: displayLoader.source = "" }
+
+    Loader { id: weatherLoader }
+    onWeatherVisibleChanged: {
+        if (root.weatherVisible) weatherLoader.setSource("WeatherPopup.qml", { root: root });
+        else keepWeather.restart();
+    }
+    Timer { id: keepWeather; interval: 250; onTriggered: weatherLoader.source = "" }
+
+    Loader { id: hyprlandLoader }
+    onHyprlandVisibleChanged: {
+        if (root.hyprlandVisible) hyprlandLoader.setSource("HyprlandPopup.qml", { root: root });
+        else keepHyprland.restart();
+    }
+    Timer { id: keepHyprland; interval: 250; onTriggered: hyprlandLoader.source = "" }
+
+    Loader { id: screenRecordLoader }
+    onScreenRecordVisibleChanged: {
+        if (root.screenRecordVisible) screenRecordLoader.setSource("ScreenRecordPopup.qml", { root: root });
+        else keepScreenRecord.restart();
+    }
+    Timer { id: keepScreenRecord; interval: 250; onTriggered: screenRecordLoader.source = "" }
+
+    Loader { id: wireprotonLoader }
+    onWireprotonVisibleChanged: {
+        if (root.wireprotonVisible) wireprotonLoader.setSource("WireprotonPopup.qml", { root: root });
+        else keepWireproton.restart();
+    }
+    Timer { id: keepWireproton; interval: 250; onTriggered: wireprotonLoader.source = "" }
+
+    Loader { id: appMenuLoader }
+    onAppMenuVisibleChanged: {
+        if (root.appMenuVisible) appMenuLoader.setSource("AppMenu.qml", { navbar: root });
+        else keepAppMenu.restart();
+    }
+    Timer { id: keepAppMenu; interval: 250; onTriggered: appMenuLoader.source = "" }
+
     Locusfavs    { root: root }
     Osd              { root: root }
     NotificationOverlay { root: root }
@@ -2011,6 +2060,16 @@ Item {
         }
         function open(): void  { root.openLocusfavs(); }
         function close(): void { root.locusfavsVisible = false; }
+    }
+
+    IpcHandler {
+        target: "appmenu"
+        function toggle(): void {
+            if (root.appMenuVisible) root.appMenuVisible = false;
+            else root.openAppMenu();
+        }
+        function open(): void  { root.openAppMenu(); }
+        function close(): void { root.appMenuVisible = false; }
     }
 
     // ---------- MPRIS (now playing) ----------

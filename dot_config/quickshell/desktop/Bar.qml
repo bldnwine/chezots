@@ -39,7 +39,6 @@ PanelWindow {
     onVisibleChanged: if (visible) {
         bar.root.calendarAnchorItem = clockItem;
         bar.root.displayAnchorItem = clockItem;
-        bar.root.weatherAnchorItem = weatherMod;
     }
 
     // In cloud mode the slab bg is replaced by a single rounded backdrop
@@ -200,14 +199,19 @@ PanelWindow {
                 id: clockMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
                 onEntered: { clockBloom.fire(mouseX, mouseY); clockTipDelay.restart(); }
                 onExited:  { clockTipDelay.stop(); bar.root.hideTooltip("Calendar"); }
-                onClicked: {
+                onClicked: function(mouse) {
                     clockTipDelay.stop();
                     bar.root.hideTooltip("Calendar");
-                    if (bar.root.calendarVisible) bar.root.calendarVisible = false;
-                    else bar.root.openCalendar();
+                    if (mouse.button === Qt.RightButton) {
+                        bar.root.paletteToggleRequested();
+                    } else {
+                        if (bar.root.calendarVisible) bar.root.calendarVisible = false;
+                        else bar.root.openCalendar();
+                    }
                 }
             }
         }
@@ -364,32 +368,6 @@ PanelWindow {
                         else if (wheel.angleDelta.y < 0) bar.root.musicPrevSource();
                     }
                 }
-            }
-
-            Separator { root: bar.root }
-
-            // Pop-up / overlay openers sit on the inside of the right
-            // cluster — weather, display tweaks, screenshots browser.
-            Module {
-                id: weatherMod
-                root: bar.root
-                Component.onCompleted: bar.root.weatherAnchorItem = weatherMod
-                // Muted middle dot stands in until the first wttr fetch
-                // lands; a "?" marks an unreachable network.
-                glyph: bar.root.weatherUnavailable ? "?"
-                       : (bar.root.weatherLoaded ? bar.root.weatherIcon : "·")
-                tooltip: bar.root.weatherUnavailable
-                         ? "Weather offline"
-                         : (bar.root.weatherLoaded
-                            ? bar.root.weatherTempC + "°C"
-                            : "Weather…")
-                color: bar.root.weatherUnavailable ? bar.root.inkDeep : bar.root.ink
-                fontSize: 13
-                onActivated: {
-                    if (bar.root.weatherVisible) bar.root.weatherVisible = false;
-                    else bar.root.openWeather();
-                }
-                onRightActivated: bar.root.refreshWeather()
             }
 
             // Aether / Display / Screenshots / Videos moved into the
