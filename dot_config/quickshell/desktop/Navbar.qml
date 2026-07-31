@@ -100,7 +100,7 @@ Item {
     function setBarVariant(name) {
         const want = root.barVariants.indexOf(name) !== -1 ? name : "zen";
         root.barVariant = want;
-        barVariantWriter.command = ["bash", "-lc",
+        barVariantWriter.command = ["bash", "-c",
             "mkdir -p " + JSON.stringify(root.barVariantStatePath.replace(/\/[^/]+$/, ""))
             + " && printf '%s' " + JSON.stringify(want)
             + " > " + JSON.stringify(root.barVariantStatePath)];
@@ -209,12 +209,16 @@ Item {
     property int    wifiSignal: 0
 
     // Wi-Fi scan state for the Quick panel. `wifiNetworks` is a list of
-    // {ssid, signal, security, inUse} sorted desc by signal. Driven by
-    // nmcli; populated on demand by refreshWifi().
+    // {ssid, signal, security, inUse, known} sorted by inUse then signal.
+    // Backend is iwd (iwctl); populated on demand by refreshWifi().
     property var    wifiNetworks: []
     property bool   wifiRadioOn: true
     property bool   wifiScanning: false
+    property bool   wifiBusy: false          // one iwctl action in flight
     property string _wifiNetworksSer: ""
+    property string _wifiActionSsid: ""
+    property bool   _wifiIsConnect: false
+    signal wifiConnectResult(string ssid, bool ok)
 
     // iwd-based: omarchy uses iwctl, not nmcli. The probe detects the
     // first station-mode device dynamically so multi-radio laptops work.
@@ -224,20 +228,38 @@ Item {
         wifiScanProbe.running = false;
         wifiScanProbe.running = true;
     }
-    function connectWifi(ssid) {
-        if (!ssid) return;
-        // Saved networks reconnect silently. New networks need a passphrase
-        // which we can't prompt for inside Quickshell — for those, the user
-        // has to run `iwctl` once manually. After a successful connect the
-        // post-action timer re-probes so the inUse flag flips.
-        root.run("DEV=$(iwctl --dont-ask device list 2>/dev/null"
-                 + " | sed 's/\\x1b\\[[0-9;]*m//g'"
-                 + " | awk '/station/{print $1; exit}');"
-                 + " [ -n \"$DEV\" ] && iwctl --dont-ask station \"$DEV\" connect "
-                 + JSON.stringify(ssid));
-        wifiPostConnectTimer.restart();
+    function wifiConnect(ssid, passphrase) {
+        if (!ssid || root.wifiBusy) return;
+        // Known networks reconnect silently; unknown/stale ones get the
+        // passphrase via iwctl 3.x's --passphrase. Runs through
+        // wifiActionProbe so the exit code reaches the panel.
+        const devSel = "DEV=$(iwctl --dont-ask device list 2>/dev/null"
+                     + " | sed 's/\\x1b\\[[0-9;]*m//g'"
+                     + " | awk '/station/{print $1; exit}');";
+        let iwctlArgs = "iwctl --dont-ask";
+        if (passphrase) iwctlArgs += " --passphrase " + JSON.stringify(passphrase);
+        root._wifiActionSsid = ssid;
+        root._wifiIsConnect = true;
+        root.wifiBusy = true;
+        wifiActionProbe.command = ["bash", "-c",
+            devSel
+            + " [ -n \"$DEV\" ] && " + iwctlArgs
+            + " station \"$DEV\" connect " + JSON.stringify(ssid)];
+        wifiActionProbe.running = false;
+        wifiActionProbe.running = true;
+    }
+    function forgetWifi(ssid) {
+        if (!ssid || root.wifiBusy) return;
+        root._wifiActionSsid = ssid;
+        root._wifiIsConnect = false;
+        root.wifiBusy = true;
+        wifiActionProbe.command = ["bash", "-c",
+            "iwctl --dont-ask known-networks " + JSON.stringify(ssid) + " forget"];
+        wifiActionProbe.running = false;
+        wifiActionProbe.running = true;
     }
     function disconnectWifi() {
+        if (root.wifiBusy) return;
         root.run("DEV=$(iwctl --dont-ask device list 2>/dev/null"
                  + " | sed 's/\\x1b\\[[0-9;]*m//g'"
                  + " | awk '/station/{print $1; exit}');"
@@ -252,6 +274,18 @@ Item {
                  + " | awk '/^[[:space:]]+[a-z][a-z0-9]+/{print $1; exit}');"
                  + " [ -n \"$DEV\" ] && iwctl --dont-ask device \"$DEV\" set-property Powered " + target);
         wifiPostConnectTimer.restart();
+    }
+    // Serializes connect/forget so a fire-and-forget disconnect can't race
+    // the next connect and wedge iwd's state machine.
+    Process {
+        id: wifiActionProbe
+        running: false
+        onExited: function(exitCode, exitStatus) {
+            const ok = exitStatus === 0 && exitCode === 0;
+            if (root._wifiIsConnect) root.wifiConnectResult(root._wifiActionSsid, ok);
+            root.wifiBusy = false;
+            wifiPostConnectTimer.restart();
+        }
     }
     Timer {
         id: wifiPostConnectTimer
@@ -686,7 +720,7 @@ Item {
 
     function applyAetherBlueprint(name) {
         if (!name) return;
-        themeApplier.command = ["bash", "-lc",
+        themeApplier.command = ["bash", "-c",
             root.aetherBin + " --apply-blueprint " + JSON.stringify(name)
             + " && " + root.pushThemeScript];
         themeApplier.running = false;
@@ -947,7 +981,7 @@ Item {
     Process {
         id: displayProbe
         running: false
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "m=$(hyprctl monitors -j 2>/dev/null"
             + " | jq -r '.[0] | [.name,(\"\\(.width)x\\(.height)\"),(.refreshRate|tostring),(.scale|tostring)] | join(\"|\")' 2>/dev/null);"
             + " b=$(brightnessctl get 2>/dev/null);"
@@ -1098,7 +1132,7 @@ Item {
     Process {
         id: weatherProbe
         running: false
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "URL=" + JSON.stringify(root.weatherUrl) + ";"
             + " j=$(curl -fsS --max-time 5 \"$URL\" 2>/dev/null);"
             + " if [ -z \"$j\" ]; then printf 'ERR'; exit 0; fi;"
@@ -1189,7 +1223,7 @@ Item {
     Process {
         id: systemProbe
         running: false
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "read _ a b c d iowait irq softirq steal _ < <(grep '^cpu ' /proc/stat); "
             + "sleep 2; "
             + "read _ e f g h iowait2 irq2 softirq2 steal2 _ < <(grep '^cpu ' /proc/stat); "
@@ -1215,7 +1249,7 @@ Item {
     Process {
         id: tel
         running: false
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "bat=0; bst=Unknown; pwr=0; batFound=0; "
             + "if [ -d /sys/class/power_supply/BAT0 ]; then "
             + "  bat=$(cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo 0); "
@@ -1254,7 +1288,7 @@ Item {
     Process {
         id: netProbe
         running: false
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "type=none; "
             + "if ip -o addr show | grep -qE '^[0-9]+: (en|eth)[^ ]*.*inet '; then type=eth; fi; "
             + "if [ \"$type\" = none ]; then "
@@ -1365,7 +1399,7 @@ Item {
     Process {
         id: btProbe
         running: false
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "if command -v bt-adapter >/dev/null 2>&1; then"
             + "  p=$(bt-adapter --info 2>/dev/null | awk '/Powered:/{print $2; exit}');"
             + "  [ \"$p\" = 1 ] && echo on || echo off;"
@@ -1394,7 +1428,7 @@ Item {
     Process {
         id: audioProbe
         running: false
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "v=$(pamixer --get-volume 2>/dev/null || echo 0); "
             + "m=$(pamixer --get-mute 2>/dev/null || echo false); "
             + "d=$(pactl get-default-sink 2>/dev/null); "
@@ -1442,7 +1476,7 @@ Item {
     Process {
         id: btDevicesProbe
         running: false
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "macs=$(bt-device -l 2>/dev/null | tail -n +2 | sed -n 's/.*(\\([0-9A-F:]\\{17\\}\\))$/\\1/p');"
             + " [ -z \"$macs\" ] && macs=$(bluetoothctl devices 2>/dev/null | sed -n 's/^Device \\([0-9A-F:]\\{17\\}\\) .*/\\1/p');"
             + " for m in $macs; do"
@@ -1499,7 +1533,7 @@ Item {
     Process {
         id: wifiScanProbe
         running: false
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "DEV=$(iwctl --dont-ask device list 2>/dev/null"
             + "   | sed 's/\\x1b\\[[0-9;]*m//g'"
             + "   | awk '/station/{print $1; exit}');"
@@ -1522,17 +1556,33 @@ Item {
             + "         sub(/[ ]+$/, \"\", line);"
             + "         if (match(line, /^(.*[^ ])  +([^ ]+)  +(-?[0-9]+)$/, m))"
             + "           printf \"%d\\t%s\\t%s\\t%s\\n\", conn, m[1], m[2], m[3];"
-            + "       }'"]
+            + "       }';"
+            + " echo '---KNOWN';"
+            + " iwctl --dont-ask known-networks list 2>/dev/null"
+            + "   | sed 's/\\x1b\\[[0-9;]*m//g'"
+            + "   | awk '!hdr && /Name/ { idx = index($0, \"Security\"); hdr = 1; next }"
+            + "       hdr && /^[[:space:]]*-/ { next }"
+            + "       hdr { line = $0; name = substr(line, 1, idx - 1);"
+            + "             gsub(/^[ \\t]+|[ \\t]+$/, \"\", name);"
+            + "             if (name != \"\") print \"KNOWN|\" name }'"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const lines = this.text.split("\n").filter(s => s.length > 0);
                 let radioOn = false;
+                const known = {};
                 const networks = [];
+                // Known-networks lines arrive after the scan rows, so collect
+                // them first and annotate in a second pass.
                 for (const line of lines) {
                     if (line.startsWith("RADIO|")) {
                         radioOn = line.slice(6) === "on";
                         continue;
                     }
+                    if (line.startsWith("KNOWN|")) known[line.slice(6)] = true;
+                }
+                for (const line of lines) {
+                    if (line.startsWith("RADIO|") || line.startsWith("---")
+                        || line.startsWith("KNOWN|")) continue;
                     const f = line.split("\t");
                     if (f.length < 4) continue;
                     // dBm tenths -> dBm -> 0-100%. -50dBm or stronger pegs at 100%.
@@ -1542,7 +1592,8 @@ Item {
                         inUse: f[0] === "1",
                         ssid: f[1],
                         signal: pct,
-                        security: f[2]
+                        security: f[2],
+                        known: known[f[1]] === true
                     });
                 }
                 networks.sort((a, b) => (b.inUse - a.inUse) || (b.signal - a.signal));
@@ -1569,7 +1620,7 @@ Item {
         // separately so we don't pick up Sources, Filters, or Video's
         // Sinks. Section header lines start with `├─` or `└─`; the Audio
         // section ends at the next top-level label (Video / Settings).
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "wpctl status 2>/dev/null | awk '"
             + "  /^Audio$/                                    {sec=\"audio\"; sub=\"\"; next}"
             + "  /^[A-Z][a-zA-Z]+$/                           {sec=\"\";      sub=\"\"; next}"
@@ -1618,7 +1669,7 @@ Item {
     Process {
         id: powerProfileProbe
         running: false
-        command: ["bash", "-lc",
+        command: ["bash", "-c",
             "cur=$(powerprofilesctl get 2>/dev/null); "
             + "if [ -z \"$cur\" ]; then echo '|'; exit 0; fi; "
             + "list=$(powerprofilesctl list 2>/dev/null | awk -F: '/^[ *]+[a-z-]+:/{gsub(/^[ *]+|:$/,\"\",$1); print $1}' | paste -sd,); "

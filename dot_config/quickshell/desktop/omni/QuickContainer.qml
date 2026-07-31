@@ -122,7 +122,7 @@ Item {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        onPositionChanged: qc.omni.selectedIndex = tileSlot.index
+                        onPositionChanged: if (qc.omni.mouseMovedSinceReset) qc.omni.selectedIndex = tileSlot.index
                         onClicked: (e) => {
                             qc.omni.selectedIndex = tileSlot.index;
                             if (e.button === Qt.RightButton) {

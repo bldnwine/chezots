@@ -73,6 +73,17 @@ Item {
     // searchable); any other value pins the list to that category. Set by
     // activating a category nav row; cleared by Esc / Backspace-on-empty.
     property string categoryFilter: ""
+    // Hover-selection guard. Mouse hover only drives selectedIndex after
+    // the cursor has physically moved >3px since the last view reset
+    // (open, drill-in, search, keyboard nav). Prevents the menu from
+    // mapping under a stationary cursor and immediately stealing the
+    // top-item highlight.
+    property bool mouseMovedSinceReset: false
+    property var lastMousePos: null
+    function resetMouseGuard() {
+        root.mouseMovedSinceReset = false;
+        root.lastMousePos = null;
+    }
 
     // File search drill reuses the category machinery: the Files nav row
     // sets categoryFilter to Data's fileCategory sentinel, filteredItems
@@ -294,11 +305,13 @@ Item {
         root.query = "";
         root.selectedIndex = 0;
         root.categoryFilter = "";
+        root.resetMouseGuard();
         root.visible_ = true;
         navbarApps.probe();
     }
     function close() {
         root.visible_ = false;
+        root.resetMouseGuard();
         // Cancel any in-flight stream and zero chat state so the next
         // session starts fresh. The ollama daemon itself is left
         // running — we don't manage its lifecycle, only our use of it.
@@ -312,6 +325,7 @@ Item {
             root.categoryFilter = "";
             root.query = "";
             root.selectedIndex = 0;
+            root.resetMouseGuard();
             return true;
         }
         return false;
@@ -320,6 +334,7 @@ Item {
     // Entering or leaving file mode resets fd state. Other category drills
     // share the same handler — clearing is a free no-op for other drills.
     onCategoryFilterChanged: {
+        root.resetMouseGuard();
         fileSearch.clear();
         tldrSearch.clear();
         ollamaChat.clear();
@@ -327,6 +342,11 @@ Item {
         // `active` binding, so the shell doesn't have to nudge them when
         // the filter changes — they react automatically.
     }
+
+    // Query rescoring recycles list delegates; re-arm the hover guard so
+    // a delegate freshly mapped under a stationary cursor can't steal the
+    // selection mid-type.
+    onQueryChanged: root.resetMouseGuard()
 
     // ---------- Icon resolution ----------
     // `.desktop` Icon field is either an absolute path or an icon-theme
@@ -379,7 +399,7 @@ Item {
         if (item.isTheme) {
             const ab = root.navbar ? root.navbar.aetherBin || "aether" : "aether";
             const ps = root.navbar ? root.navbar.pushThemeScript || "" : "";
-            runner.command = ["bash", "-lc",
+            runner.command = ["bash", "-c",
                 ab + " --apply-blueprint " + JSON.stringify(item.themeName)
                 + (ps ? " && " + ps : "")];
             runner.running = false;
@@ -650,6 +670,7 @@ Item {
         next = wrap ? ((next % n) + n) % n
                     : Math.max(0, Math.min(n - 1, next));
         root.selectedIndex = next;
+        root.resetMouseGuard();
         resultListInstance.list.positionViewAtIndex(next, ListView.Contain);
     }
 
@@ -661,6 +682,7 @@ Item {
         if (n === 0) return;
         const next = Math.max(0, Math.min(n - 1, root.selectedIndex + delta));
         root.selectedIndex = next;
+        root.resetMouseGuard();
     }
 
     Component.onCompleted: {
@@ -761,10 +783,17 @@ Item {
             Behavior on width {
                 NumberAnimation { duration: 60; easing.type: Easing.OutCubic }
             }
+            Behavior on height {
+                NumberAnimation { duration: 60; easing.type: Easing.OutCubic }
+            }
             // Cap the card so it never exceeds the screen even on small
             // displays; cardCol implicitHeight covers the search + list +
             // footer block.
-            height: parent.height * 0.72
+            // Quick mode sizes to the tile grid (+ expanded detail panel)
+            // instead of the static list-mode height.
+            height: root.quickMode
+                ? Math.min(parent.height * 0.72, 34 + quickContainer.height)
+                : parent.height * 0.72
             color: root.bg
             border.color: root.sep
             border.width: 1
@@ -773,7 +802,24 @@ Item {
             scale: panel.reveal
 
             // Swallow clicks so the underlying dismiss MouseArea doesn't fire.
-            MouseArea { anchors.fill: parent }
+            // Also doubles as the hover-movement sensor: while the guard is
+            // armed it tracks cursor displacement and only lifts the guard
+            // once the cursor has physically moved >3px from where it was
+            // when the view last reset.
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onPositionChanged: (mouse) => {
+                    if (root.mouseMovedSinceReset) return;
+                    if (root.lastMousePos === null) {
+                        root.lastMousePos = { x: mouse.x, y: mouse.y };
+                        return;
+                    }
+                    const dx = mouse.x - root.lastMousePos.x;
+                    const dy = mouse.y - root.lastMousePos.y;
+                    if (dx * dx + dy * dy > 9) root.mouseMovedSinceReset = true;
+                }
+            }
 
             focus: root.visible_
             Keys.onPressed: function(event) {
@@ -914,10 +960,12 @@ Item {
                     event.accepted = true;
                 } else if (e2.key === Qt.Key_Home) {
                     root.selectedIndex = 0;
+                    root.resetMouseGuard();
                     resultListInstance.list.positionViewAtIndex(0, ListView.Beginning);
                     event.accepted = true;
                 } else if (e2.key === Qt.Key_End) {
                     root.selectedIndex = Math.max(0, root.filteredItems.length - 1);
+                    root.resetMouseGuard();
                     resultListInstance.list.positionViewAtIndex(root.selectedIndex, ListView.End);
                     event.accepted = true;
                 } else if (e2.key === Qt.Key_Return || e2.key === Qt.Key_Enter) {

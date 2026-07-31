@@ -22,7 +22,7 @@ Item {
     function setCorners(mode) {
         const want = (mode === "round" || mode === true || mode === 6) ? 6 : 0;
         theme.cornerRadius = want;
-        cornerWriter.command = ["bash", "-lc",
+        cornerWriter.command = ["bash", "-c",
             "mkdir -p " + JSON.stringify(theme.cornerStatePath.replace(/\/[^/]+$/, ""))
             + " && printf '%s' " + JSON.stringify(want === 6 ? "round" : "sharp")
             + " > " + JSON.stringify(theme.cornerStatePath)];

@@ -169,7 +169,10 @@ Item {
                 // movement; onEntered would also fire when rows shift
                 // under a stationary cursor (after a query change,
                 // drill-in, or rescore), stealing keyboard focus.
-                onPositionChanged: rl.omni.selectedIndex = row.index
+                // The root's mouseMovedSinceReset guard keeps a freshly
+                // opened/re-rendered menu from stealing the index-0
+                // highlight while the cursor just happens to rest on a row.
+                onPositionChanged: if (rl.omni.mouseMovedSinceReset) rl.omni.selectedIndex = row.index
                 onClicked: rl.omni.activate(row.modelData)
             }
         }
