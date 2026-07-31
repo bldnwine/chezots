@@ -9,6 +9,7 @@ Item {
     required property var root
 
     property bool opened: false
+    property bool doNotDisturb: false
     property var currentNotif: null
 
     property real _opacity: 0
@@ -55,6 +56,10 @@ Item {
         imageSupported: true
         persistenceSupported: true
         onNotification: function(notification) {
+            if (root.doNotDisturb) {
+                notification.tracked = false;
+                return;
+            }
             notification.tracked = true;
             root.showNotif(notification);
         }
@@ -65,6 +70,13 @@ Item {
         function close(): string { root.close(); return "ok"; }
         function ping(): string { return "ok"; }
         function state(): string { return root.opened ? "open" : "closed"; }
+        function toggleDnd(): string {
+            root.doNotDisturb = !root.doNotDisturb;
+            if (root.root) root.root.run("qs -c desktop ipc call -- osd show "
+                + JSON.stringify({ icon: "󰂛",
+                                   message: root.doNotDisturb ? "NOTIFICATIONS OFF" : "NOTIFICATIONS ON" }));
+            return root.doNotDisturb ? "on" : "off";
+        }
     }
 
     onOpenedChanged: root._opacity = root.opened ? 1 : 0

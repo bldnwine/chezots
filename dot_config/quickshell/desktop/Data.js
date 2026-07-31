@@ -117,7 +117,7 @@ const omarchyItems = [
 
     // ----- Toggle -----
     { title: "Toggle Nightlight",   icon: "󰔎", category: "Toggle", keywords: "toggle nightlight blue light filter warm color temperature hyprsunset",            exec: "qs -c desktop ipc call nightlight toggle" },
-    { title: "Toggle Notifications",icon: "󰂛", category: "Toggle", keywords: "toggle notifications silence mute mako dnd",                                       exec: "omarchy-toggle-notification-silencing" },
+    { title: "Toggle Notifications",icon: "󰂛", category: "Toggle", keywords: "toggle notifications silence mute mako dnd",                                       exec: "qs -c desktop ipc call notifications toggleDnd" },
     { title: "Toggle Touchpad",     icon: "󰟸", category: "Toggle", keywords: "toggle touchpad trackpad enable disable",                                          exec: "/home/bldnwine/.config/quickshell/desktop/scripts/touchpad-toggle" },
     { title: "Toggle Hyprland Menu",icon: "󰜮", category: "Toggle", keywords: "toggle hyprland layout dwindle master monocle scrolling config editor",             exec: "qs -c desktop ipc call hyprland toggle" },
     { title: "Toggle Proton VPN",   icon: "󰦝", category: "Toggle", keywords: "toggle proton vpn wireguard connect disconnect",                                     exec: "qs -c desktop ipc call wireproton toggle" },
