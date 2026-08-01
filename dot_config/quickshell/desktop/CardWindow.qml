@@ -70,7 +70,7 @@ PanelWindow {
     property real _reveal: revealed ? 1 : 0
     Behavior on _reveal {
         NumberAnimation {
-            duration: card.plain ? 0 : (card.revealed ? 220 : 140)
+            duration: card.plain ? 0 : (card.revealed ? 220 : 0)
             easing.type: card.revealed ? Easing.OutCubic : Easing.InCubic
         }
     }
@@ -91,16 +91,16 @@ PanelWindow {
 
         x: {
             if (!card._anchored) return (parent.width - width) / 2;
-            if (card.anchorEdge === "left")  return card.theme.barHeight + card.theme.barExtraThickness + card.anchorGap;
-            if (card.anchorEdge === "right") return parent.width - card.theme.barHeight - card.theme.barExtraThickness - width - card.anchorGap;
+            if (card.anchorEdge === "left")  return card.theme.barOffset + card.anchorGap;
+            if (card.anchorEdge === "right") return parent.width - card.theme.barOffset - width - card.anchorGap;
             return Math.max(card.anchorGap,
                             Math.min(parent.width - width - card.anchorGap,
                                      card.anchorBarX - width / 2));
         }
         y: {
             if (!card._anchored) return (parent.height - height) / 2;
-            if (card.anchorEdge === "top")    return card.theme.barHeight + card.theme.barExtraThickness + card.anchorGap;
-            if (card.anchorEdge === "bottom") return parent.height - card.theme.barHeight - card.theme.barExtraThickness - height - card.anchorGap;
+            if (card.anchorEdge === "top")    return card.theme.barOffset + card.anchorGap;
+            if (card.anchorEdge === "bottom") return parent.height - card.theme.barOffset - height - card.anchorGap;
             return Math.max(card.anchorGap,
                             Math.min(parent.height - height - card.anchorGap,
                                      card.anchorBarY - height / 2));

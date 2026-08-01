@@ -68,6 +68,9 @@ Item {
 
     readonly property int barHeight: 26
     readonly property int barExtraThickness: round && isHorizontal ? 11 : 0
+    // Effective strip the bar occupies along its edge; 0 when hidden so
+    // popups/osd/notifications hug the edge instead of a phantom gap.
+    readonly property int barOffset: barHidden ? 0 : (barHeight + barExtraThickness)
     readonly property string aetherBin: "/home/bldnwine/aethergo/build/bin/aether"
     readonly property string pushThemeScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/aether-push-theme.sh"
 
@@ -2071,71 +2074,89 @@ Item {
     // ---------- Surfaces ----------
     Bar              { root: root; visible: !root.barHidden && root.barVariant === "zen" }
     TooltipOverlay   { root: root }
-    SystemPopup      { root: root }
-    CalendarPopup    { root: root }
+
+    Loader { id: systemLoader }
+    onSystemVisibleChanged: {
+        if (root.systemVisible) { keepSystem.stop(); systemLoader.setSource("SystemPopup.qml", { root: root }); }
+        else keepSystem.restart();
+    }
+    Timer { id: keepSystem; interval: 400; onTriggered: systemLoader.source = "" }
+
+    Loader { id: calendarLoader }
+    onCalendarVisibleChanged: {
+        if (root.calendarVisible) { keepCalendar.stop(); calendarLoader.setSource("CalendarPopup.qml", { root: root }); }
+        else keepCalendar.restart();
+    }
+    Timer { id: keepCalendar; interval: 400; onTriggered: calendarLoader.source = "" }
 
     Loader { id: networkLoader }
     onNetworkVisibleChanged: {
-        if (root.networkVisible) networkLoader.setSource("NetworkPopup.qml", { root: root });
+        if (root.networkVisible) { keepNetwork.stop(); networkLoader.setSource("NetworkPopup.qml", { root: root }); }
         else keepNetwork.restart();
     }
-    Timer { id: keepNetwork; interval: 250; onTriggered: networkLoader.source = "" }
+    Timer { id: keepNetwork; interval: 400; onTriggered: networkLoader.source = "" }
     Loader { id: btLoader }
     onBtVisibleChanged: {
-        if (root.btVisible) btLoader.setSource("BluetoothPopup.qml", { root: root });
+        if (root.btVisible) { keepBt.stop(); btLoader.setSource("BluetoothPopup.qml", { root: root }); }
         else keepBt.restart();
     }
-    Timer { id: keepBt; interval: 250; onTriggered: btLoader.source = "" }
+    Timer { id: keepBt; interval: 400; onTriggered: btLoader.source = "" }
     Loader { id: aetherLoader }
     onAetherVisibleChanged: {
-        if (root.aetherVisible) aetherLoader.setSource("AetherPopup.qml", { root: root });
+        if (root.aetherVisible) { keepAether.stop(); aetherLoader.setSource("AetherPopup.qml", { root: root }); }
         else keepAether.restart();
     }
-    Timer { id: keepAether; interval: 250; onTriggered: aetherLoader.source = "" }
+    Timer { id: keepAether; interval: 400; onTriggered: aetherLoader.source = "" }
 
     Loader { id: displayLoader }
     onDisplayVisibleChanged: {
-        if (root.displayVisible) displayLoader.setSource("DisplayPopup.qml", { root: root });
+        if (root.displayVisible) { keepDisplay.stop(); displayLoader.setSource("DisplayPopup.qml", { root: root }); }
         else keepDisplay.restart();
     }
-    Timer { id: keepDisplay; interval: 250; onTriggered: displayLoader.source = "" }
+    Timer { id: keepDisplay; interval: 400; onTriggered: displayLoader.source = "" }
 
     Loader { id: weatherLoader }
     onWeatherVisibleChanged: {
-        if (root.weatherVisible) weatherLoader.setSource("WeatherPopup.qml", { root: root });
+        if (root.weatherVisible) { keepWeather.stop(); weatherLoader.setSource("WeatherPopup.qml", { root: root }); }
         else keepWeather.restart();
     }
-    Timer { id: keepWeather; interval: 250; onTriggered: weatherLoader.source = "" }
+    Timer { id: keepWeather; interval: 400; onTriggered: weatherLoader.source = "" }
 
     Loader { id: hyprlandLoader }
     onHyprlandVisibleChanged: {
-        if (root.hyprlandVisible) hyprlandLoader.setSource("HyprlandPopup.qml", { root: root });
+        if (root.hyprlandVisible) { keepHyprland.stop(); hyprlandLoader.setSource("HyprlandPopup.qml", { root: root }); }
         else keepHyprland.restart();
     }
-    Timer { id: keepHyprland; interval: 250; onTriggered: hyprlandLoader.source = "" }
+    Timer { id: keepHyprland; interval: 400; onTriggered: hyprlandLoader.source = "" }
 
     Loader { id: screenRecordLoader }
     onScreenRecordVisibleChanged: {
-        if (root.screenRecordVisible) screenRecordLoader.setSource("ScreenRecordPopup.qml", { root: root });
+        if (root.screenRecordVisible) { keepScreenRecord.stop(); screenRecordLoader.setSource("ScreenRecordPopup.qml", { root: root }); }
         else keepScreenRecord.restart();
     }
-    Timer { id: keepScreenRecord; interval: 250; onTriggered: screenRecordLoader.source = "" }
+    Timer { id: keepScreenRecord; interval: 400; onTriggered: screenRecordLoader.source = "" }
 
     Loader { id: wireprotonLoader }
     onWireprotonVisibleChanged: {
-        if (root.wireprotonVisible) wireprotonLoader.setSource("WireprotonPopup.qml", { root: root });
+        if (root.wireprotonVisible) { keepWireproton.stop(); wireprotonLoader.setSource("WireprotonPopup.qml", { root: root }); }
         else keepWireproton.restart();
     }
-    Timer { id: keepWireproton; interval: 250; onTriggered: wireprotonLoader.source = "" }
+    Timer { id: keepWireproton; interval: 400; onTriggered: wireprotonLoader.source = "" }
 
     Loader { id: appMenuLoader }
     onAppMenuVisibleChanged: {
-        if (root.appMenuVisible) appMenuLoader.setSource("AppMenu.qml", { navbar: root });
+        if (root.appMenuVisible) { keepAppMenu.stop(); appMenuLoader.setSource("AppMenu.qml", { navbar: root }); }
         else keepAppMenu.restart();
     }
-    Timer { id: keepAppMenu; interval: 250; onTriggered: appMenuLoader.source = "" }
+    Timer { id: keepAppMenu; interval: 400; onTriggered: appMenuLoader.source = "" }
 
-    Locusfavs    { root: root }
+    Loader { id: locusfavsLoader }
+    onLocusfavsVisibleChanged: {
+        if (root.locusfavsVisible) { keepLocusfavs.stop(); locusfavsLoader.setSource("Locusfavs.qml", { root: root }); }
+        else keepLocusfavs.restart();
+    }
+    Timer { id: keepLocusfavs; interval: 400; onTriggered: locusfavsLoader.source = "" }
+
     Osd              { root: root }
     NotificationOverlay { root: root }
 
