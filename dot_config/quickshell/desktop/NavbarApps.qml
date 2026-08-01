@@ -17,8 +17,8 @@ Item {
           keywords: "calendar date month day year week schedule planner today" },
         { target: "system",      title: "System",      icon: "󰍛", category: "Toggle",
           keywords: "system cpu memory mem load pressure btop process monitor" },
-        { target: "bar",         title: "Bar Style",   icon: "󰍜", category: "Toggle", verb: "toggle",
-          keywords: "bar style navbar variant switch toggle hackerman zen whiterose white rose plain monochrome black white terminal hacker mr robot jack ryan tactical theme face" }
+        { target: "bar",         title: "Toggle Bar Visibility", icon: "󰍜", category: "Toggle", verb: "toggle",
+          keywords: "bar visibility show hide navbar variant style toggle hidden clear unobscured unobstruct" }
     ]
 
     readonly property var items: Data.annotate(candidates.map(c => ({

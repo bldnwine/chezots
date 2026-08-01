@@ -106,6 +106,7 @@ const omarchyItems = [
     { title: "Aether Menu",      icon: "󰸌", category: "Style",   keywords: "aether theme blueprint palette swatch picker wallpaper generate full menu launcher",                  exec: "qs -c desktop ipc call aether toggle" },
     { title: "Round Corners",    icon: "󰘇", category: "Style",   keywords: "corners radius round soft rounded border edge shape navbar cloud popup",                              exec: "qs -c desktop ipc call corners round" },
     { title: "Sharp Corners",    icon: "󰝣", category: "Style",   keywords: "corners radius sharp square hard flat border edge shape navbar slab popup",                            exec: "qs -c desktop ipc call corners sharp" },
+    { title: "Transparent Bar",     icon: "󰚲", rawIcon: "/home/bldnwine/.config/quickshell/desktop/assets/transparentbar.ico", category: "Style", keywords: "toggle transparent bar opacity fade invisible ghost clear background navbar", exec: "qs -c desktop ipc call bar transparent" },
 
     // ----- System -----
     { title: "Lock Screen",         icon: "󰌾", category: "System", keywords: "lock screen security hyprlock password",                                            exec: "loginctl lock-session" },
@@ -119,7 +120,7 @@ const omarchyItems = [
     { title: "Toggle Nightlight",   icon: "󰔎", category: "Toggle", keywords: "toggle nightlight blue light filter warm color temperature hyprsunset",            exec: "qs -c desktop ipc call nightlight toggle" },
     { title: "Toggle Notifications",icon: "󰂛", category: "Toggle", keywords: "toggle notifications silence mute mako dnd",                                       exec: "qs -c desktop ipc call notifications toggleDnd" },
     { title: "Toggle Touchpad",     icon: "󰟸", category: "Toggle", keywords: "toggle touchpad trackpad enable disable",                                          exec: "/home/bldnwine/.config/quickshell/desktop/scripts/touchpad-toggle" },
-    { title: "Toggle Hyprland Menu",icon: "󰜮", category: "Toggle", keywords: "toggle hyprland layout dwindle master monocle scrolling config editor",             exec: "qs -c desktop ipc call hyprland toggle" },
+    { title: "Toggle Hyprland Menu",icon: "H", category: "Toggle", keywords: "toggle hyprland layout dwindle master monocle scrolling config editor",             exec: "qs -c desktop ipc call hyprland toggle" },
     { title: "Toggle Proton VPN",   icon: "󰦝", category: "Toggle", keywords: "toggle proton vpn wireguard connect disconnect",                                     exec: "qs -c desktop ipc call wireproton toggle" },
 
     // ----- Capture -----

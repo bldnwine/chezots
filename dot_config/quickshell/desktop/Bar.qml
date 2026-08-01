@@ -53,7 +53,7 @@ PanelWindow {
         width: parent.width - 2 * bar.cloudAir
         height: bar.root.barHeight + 2 * bar.cloudPad
         radius: bar.root.cornerRadius
-        color: bar.root.bg
+        color: bar.root.barTransparent ? "transparent" : bar.root.bg
         z: 0
         // Idle dim, slow 6s ease both ways. Driven by states/transitions rather
         // than a Behavior with an isIdle-bound duration: that bound duration is
@@ -84,7 +84,7 @@ PanelWindow {
     Rectangle {
         id: slabBg
         anchors.fill: parent
-        color: bar.cloudMode ? "transparent" : bar.root.bg
+        color: bar.cloudMode ? "transparent" : (bar.root.barTransparent ? "transparent" : bar.root.bg)
         // Slab-mode idle dim (cloud mode keeps this transparent + opaque; the
         // cloudBg rectangle above handles the dim there). Same states/transitions
         // approach as cloudBg, slow 6s ease in both directions.
@@ -115,7 +115,7 @@ PanelWindow {
             anchors.top:    bar.root.barEdge === "bottom" ? parent.top    : undefined
             anchors.bottom: bar.root.barEdge === "top"    ? parent.bottom : undefined
             height: 1
-            color: bar.root.sep
+            color: bar.root.barTransparent ? "transparent" : bar.root.sep
         }
         Rectangle {
             visible: !bar.cloudMode && !bar.root.isHorizontal
@@ -124,7 +124,7 @@ PanelWindow {
             anchors.right:  bar.root.barEdge === "left"  ? parent.right : undefined
             anchors.left:   bar.root.barEdge === "right" ? parent.left  : undefined
             width: 1
-            color: bar.root.sep
+            color: bar.root.barTransparent ? "transparent" : bar.root.sep
         }
 
         // Centre cluster: clock only, clickable. Horizontal bars show

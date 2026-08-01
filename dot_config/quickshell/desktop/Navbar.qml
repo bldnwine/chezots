@@ -128,6 +128,39 @@ Item {
         onExited: function(code) { if (code !== 0) root.barVariant = "zen"; }
     }
 
+    // ---------- Bar transparency ----------
+    // Background-only transparent bar (text/icons stay). Persisted to its
+    // own state file so the choice survives a relogin, same scheme as the
+    // bar-variant file above.
+    readonly property string barTransparentStatePath:
+        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-transparent"
+    property bool barTransparent: false
+
+    function setBarTransparent(on) {
+        root.barTransparent = on;
+        barTransparentWriter.command = ["bash", "-c",
+            "mkdir -p " + JSON.stringify(root.barTransparentStatePath.replace(/\/[^/]+$/, ""))
+            + " && printf '%s' " + JSON.stringify(on ? "1" : "0")
+            + " > " + JSON.stringify(root.barTransparentStatePath)];
+        barTransparentWriter.running = false;
+        barTransparentWriter.running = true;
+    }
+
+    Process { id: barTransparentWriter; running: false }
+    Process {
+        id: barTransparentReader
+        running: true
+        command: ["cat", root.barTransparentStatePath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const v = this.text.trim();
+                if (v === "1") root.barTransparent = true;
+            }
+        }
+        // Missing file -> keep the opaque default.
+        onExited: function(code) { if (code !== 0) root.barTransparent = false; }
+    }
+
     // ---------- Tooltips ----------
     // A single overlay panel reads these and renders the label near the
     // hovered icon. Positions are bar-window-local; the overlay translates
@@ -2299,6 +2332,7 @@ Item {
         function toggle(): void    { root.barHidden = !root.barHidden; }
         function hide(): void      { root.barHidden = true; }
         function show(): void      { root.barHidden = false; }
+        function transparent(): void { root.setBarTransparent(!root.barTransparent); }
     }
 
     IpcHandler {
