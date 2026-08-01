@@ -39,6 +39,20 @@ Item {
             body._activateAt(body.kbdIndex);
             return true;
         }
+        if (k === Qt.Key_T) {
+            const dev = body._visibleDevs[body.kbdIndex - body._headerCount];
+            if (dev && body.nav) body.nav.btToggleTrust(dev.mac);
+            return true;
+        }
+        if (k === Qt.Key_S) {
+            if (body.nav) body.nav.btToggleScan();
+            return true;
+        }
+        if (k === Qt.Key_U) {
+            const dev = body._visibleDevs[body.kbdIndex - body._headerCount];
+            if (dev && body.nav) body.nav.btUnpair(dev.mac);
+            return true;
+        }
         return false;
     }
 
@@ -105,6 +119,7 @@ Item {
                 required property var modelData
                 required property int index
                 readonly property bool kbdFocused: body.kbdIndex === (index + body._headerCount)
+                readonly property bool dimmed: !modelData.paired && !modelData.connected
                 width: col.width
                 height: 32
                 radius: body.root.cornerRadius
@@ -128,6 +143,7 @@ Item {
                     color: modelData.connected ? body.root.seal : body.root.ink
                     font.family: body.root.mono
                     font.pixelSize: 14
+                    opacity: dimmed ? 0.55 : 1
                 }
                 Text {
                     anchors.left: devIcon.right
@@ -141,26 +157,34 @@ Item {
                     font.family: body.root.mono
                     font.pixelSize: 11
                     font.weight: modelData.connected ? Font.Medium : Font.Normal
+                    opacity: dimmed ? 0.55 : 1
                 }
                 Text {
                     id: tag
                     anchors.right: parent.right
                     anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
-                    text: modelData.connected ? "CONNECTED"
-                           : modelData.paired ? "PAIRED"
-                                              : (modelData.trusted ? "TRUSTED" : "")
+                    text: (modelData.trusted ? "✓ " : "")
+                          + (modelData.connected ? "CONNECTED"
+                             : modelData.paired ? "PAIRED"
+                                                : "")
                     color: body.root.inkDeep
                     font.family: body.root.mono
                     font.pixelSize: 9
                     font.letterSpacing: 1.5
+                    opacity: dimmed ? 0.55 : 1
                 }
                 MouseArea {
                     id: devMouse
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: (mouse) => {
+                        if (mouse.button === Qt.RightButton) {
+                            if (body.nav) body.nav.btUnpair(modelData.mac);
+                            return;
+                        }
                         body._activateAt(index + body._headerCount);
                     }
                 }

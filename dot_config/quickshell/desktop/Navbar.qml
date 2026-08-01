@@ -258,6 +258,16 @@ Item {
         wifiActionProbe.running = false;
         wifiActionProbe.running = true;
     }
+    function wifiToggleAutoConnect(ssid) {
+        if (!ssid) return;
+        root.run("A=$(iwctl --dont-ask known-networks " + JSON.stringify(ssid)
+            + " show 2>/dev/null"
+            + " | sed 's/\\x1b\\[[0-9;]*m//g'"
+            + " | awk '/AutoConnect/{print $NF; exit}');"
+            + " iwctl --dont-ask known-networks " + JSON.stringify(ssid)
+            + " set-property AutoConnect $([ \"$A\" = yes ] && echo no || echo yes)");
+        wifiPostConnectTimer.restart();
+    }
     function disconnectWifi() {
         if (root.wifiBusy) return;
         root.run("DEV=$(iwctl --dont-ask device list 2>/dev/null"
@@ -301,45 +311,78 @@ Item {
     property var    btDevices: []
     property bool   btScanning: false
     property string _btDevicesSer: ""
+    property int    _btPostTicks: 0
 
     function refreshBluetooth() {
         if (btDevicesProbe.running) return;
         btDevicesProbe.running = false;
         btDevicesProbe.running = true;
     }
-    // bluez-tools path (omarchy ships bt-adapter / bt-device, not the
-    // bluetoothctl utility). Same semantics as before, different CLI.
+    // bluetoothctl path (bluez-tools' bt-device/bt-adapter aren't installed
+    // on this system; bluetoothd + bluetoothctl are the whole stack).
+    // Kick the post-action refresh loop after a connect/disconnect/power.
+    function btPostAction() {
+        root._btPostTicks = 0;
+        btPostActionTimer.restart();
+    }
     function btConnect(mac) {
         if (!mac) return;
-        root.run("bt-device --connect " + mac);
-        btPostActionTimer.restart();
+        // --timeout keeps bluetoothctl (and its agent) alive in non-interactive
+        // mode long enough to approve the async A2DP/HFP authorization, so
+        // audio connects even when the device isn't trusted.
+        root.run("setsid -f bluetoothctl --timeout 25 --agent NoInputNoOutput connect "
+            + mac + " >/dev/null 2>&1");
+        root.btPostAction();
     }
     function btDisconnect(mac) {
         if (!mac) return;
-        root.run("bt-device --disconnect " + mac);
-        btPostActionTimer.restart();
+        root.run("bluetoothctl disconnect " + mac + " >/dev/null 2>&1");
+        root.btPostAction();
     }
     function btTogglePower() {
         root.btPowered = !root.btPowered;
-        root.run("bt-adapter -s Powered " + (root.btPowered ? 1 : 0));
-        btPostActionTimer.restart();
+        root.run("bluetoothctl power " + (root.btPowered ? "on" : "off") + " >/dev/null 2>&1");
+        root.btPostAction();
     }
     function btToggleScan() {
-        root.btScanning = !root.btScanning;
-        // `bt-adapter -d --timeout N` blocks for N seconds while
-        // discovering, so fork it off and let the refresh probe pick up
-        // any new devices it surfaces.
-        if (root.btScanning) {
-            root.run("setsid -f bt-adapter -d --timeout 15 >/dev/null 2>&1");
-            btScanStopTimer.restart();
+        // The scan is forked (`setsid -f`) with no PID tracked, so it can't be
+        // stopped early; --timeout 15 self-terminates it and stops discovery.
+        // Guard against a bogus toggle-off mid-scan.
+        if (root.btScanning) return;
+        root.btScanning = true;
+        root.run("setsid -f bluetoothctl --timeout 15 scan on >/dev/null 2>&1");
+        btScanStopTimer.restart();
+        root.btPostAction();
+    }
+    function btToggleTrust(mac) {
+        if (!mac) return;
+        const devs = root.btDevices;
+        let trusted = false;
+        for (let i = 0; i < devs.length; i++) {
+            if (devs[i].mac === mac) { trusted = devs[i].trusted; break; }
         }
-        btPostActionTimer.restart();
+        root.run("bluetoothctl " + (trusted ? "untrust" : "trust")
+            + " " + mac + " >/dev/null 2>&1");
+        root.btPostAction();
+    }
+    function btUnpair(mac) {
+        if (!mac) return;
+        root.run("bluetoothctl remove " + mac + " >/dev/null 2>&1");
+        root.btPostAction();
     }
     Timer {
         id: btPostActionTimer
-        interval: 600
-        repeat: false
-        onTriggered: root.refreshBluetooth()
+        interval: 1500
+        repeat: true
+        // Poll for a few seconds after connect/disconnect/power so the panel
+        // reflects bluetoothd's settled state even when the async connect
+        // takes a few seconds. Extra ticks are cheap: the probe's serialized
+        // equality guard keeps QML from churning.
+        onTriggered: {
+            if (root._btPostTicks >= 8) { root._btPostTicks = 0; stop(); return; }
+            root._btPostTicks++;
+            root.refreshBluetooth();
+        }
     }
     Timer {
         // Clear the "scanning" flag once the bluetoothctl --timeout expires.

@@ -67,6 +67,15 @@ Item {
             body._activateAt(body.kbdIndex);
             return true;
         }
+        if (k === Qt.Key_T) {
+            const net = body._visibleNets[body.kbdIndex - body._headerCount];
+            if (net && net.known && body.nav) body.nav.wifiToggleAutoConnect(net.ssid);
+            return true;
+        }
+        if (k === Qt.Key_S) {
+            if (body.nav) body.nav.refreshWifi();
+            return true;
+        }
         return false;
     }
 
