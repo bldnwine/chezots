@@ -28,6 +28,8 @@ Item {
     readonly property color accent:  theme.accent
     readonly property color warn:    theme.warn
     readonly property color sep:     theme.sep
+    readonly property color rowHi:   theme.rowHi
+    readonly property color rowSel:  theme.rowSel
 
     readonly property string serif: theme.serif
     readonly property string mono:  theme.mono
@@ -158,6 +160,8 @@ Item {
     property Item weatherAnchorItem:  null
     property Item displayAnchorItem:  null
     property Item systemAnchorItem:   null
+    property Item networkAnchorItem:  null
+    property Item btAnchorItem:       null
 
     function anchorPopupTo(item) {
         const p = item.mapToItem(null, item.width / 2, item.height / 2);
@@ -292,7 +296,10 @@ Item {
         running: false
         onExited: function(exitCode, exitStatus) {
             const ok = exitStatus === 0 && exitCode === 0;
-            if (root._wifiIsConnect) root.wifiConnectResult(root._wifiActionSsid, ok);
+            if (root._wifiIsConnect) {
+                root._wifiIsConnect = false;
+                root.wifiConnectResult(root._wifiActionSsid, ok);
+            }
             root.wifiBusy = false;
             wifiPostConnectTimer.restart();
         }
@@ -950,6 +957,20 @@ Item {
         root.systemVisible = true;
     }
 
+    // ---------- Network popup state ----------
+    property bool networkVisible: false
+    function openNetwork() {
+        if (root.networkAnchorItem) root.anchorPopupTo(root.networkAnchorItem);
+        root.networkVisible = true;
+    }
+
+    // ---------- Bluetooth popup state ----------
+    property bool btVisible: false
+    function openBluetooth() {
+        if (root.btAnchorItem) root.anchorPopupTo(root.btAnchorItem);
+        root.btVisible = true;
+    }
+
     function refreshSystemStats() {
         if (systemProbe.running) return;
         systemProbe.running = false;
@@ -1418,6 +1439,115 @@ Item {
         onTriggered: { netBurstProbe.running = false; netBurstProbe.running = true; } }
     Timer { id: burstCooldown; interval: 2000; repeat: false
         onTriggered: root.burstArmed = true }
+
+    // ---------- Network details (popup) ----------
+    // Ported from omarchy's network panel: one sample per poll of the
+    // active route's interface, throughput as byte deltas, ping latency
+    // as a rolling window (null = lost packet → packet-loss %).
+    property var    netInfo: ({})
+    property real   netPrevRx: 0
+    property real   netPrevTx: 0
+    property real   netPrevSampleTime: 0
+    property string netPrevIface: ""
+    property real   netDownloadRate: 0
+    property real   netUploadRate: 0
+    property string netPingIface: ""
+    property var    netRouterPingSamples: []
+    property var    netInternetPingSamples: []
+    property real   netRouterPing: -1
+    property real   netInternetPing: -1
+    property int    netPacketLoss: 0
+    readonly property int netPingWindow: 24
+    readonly property int netPingAvg: 5
+
+    function updateNetDetails(text) {
+        const kv = {};
+        const lines = String(text || "").split("\n");
+        for (const line of lines) {
+            const i = line.indexOf("\t");
+            if (i > -1) kv[line.slice(0, i)] = line.slice(i + 1).trim();
+        }
+        root.netInfo = kv;
+        const iface = kv.iface || "";
+        const now = Date.now() / 1000;
+        const rx = parseFloat(kv.rx_bytes) || 0;
+        const tx = parseFloat(kv.tx_bytes) || 0;
+        if (iface !== root.netPrevIface || root.netPrevSampleTime === 0) {
+            root.netPrevIface = iface; root.netPrevRx = rx; root.netPrevTx = tx;
+            root.netPrevSampleTime = now; root.netDownloadRate = 0; root.netUploadRate = 0;
+        } else {
+            const dt = now - root.netPrevSampleTime;
+            if (dt > 0) {
+                root.netDownloadRate = Math.max(0, (rx - root.netPrevRx) / dt);
+                root.netUploadRate = Math.max(0, (tx - root.netPrevTx) / dt);
+            }
+            root.netPrevRx = rx; root.netPrevTx = tx; root.netPrevSampleTime = now;
+        }
+        if (iface !== root.netPingIface) {
+            root.netPingIface = iface;
+            root.netRouterPingSamples = [];
+            root.netInternetPingSamples = [];
+        }
+        function pushSample(samples, raw) {
+            const v = parseFloat(raw);
+            samples.push(isFinite(v) && v >= 0 ? v : null);
+            return samples.slice(-root.netPingWindow);
+        }
+        root.netRouterPingSamples = pushSample(root.netRouterPingSamples.slice(), kv.router_ping_ms);
+        root.netInternetPingSamples = pushSample(root.netInternetPingSamples.slice(), kv.internet_ping_ms);
+        function avg(samples) {
+            let total = 0, count = 0;
+            for (let i = Math.max(0, samples.length - root.netPingAvg); i < samples.length; i++) {
+                if (typeof samples[i] === "number") { total += samples[i]; count++; }
+            }
+            return count > 0 ? total / count : -1;
+        }
+        function loss(samples) {
+            if (samples.length === 0) return 0;
+            let lost = 0;
+            for (const s of samples) if (s === null) lost++;
+            return Math.round((lost / samples.length) * 100);
+        }
+        root.netRouterPing = avg(root.netRouterPingSamples);
+        root.netInternetPing = avg(root.netInternetPingSamples);
+        root.netPacketLoss = loss(root.netInternetPingSamples);
+    }
+
+    function fmtBytes(n) {
+        n = Number(n) || 0;
+        if (n < 1024) return Math.round(n) + " B";
+        if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+        if (n < 1073741824) return (n / 1048576).toFixed(1) + " MB";
+        return (n / 1073741824).toFixed(2) + " GB";
+    }
+    function fmtRate(bytesPerSec) { return root.fmtBytes(bytesPerSec) + "/s"; }
+    function fmtPing(ms) {
+        const v = parseFloat(ms);
+        if (!isFinite(v) || v < 0) return "TIMEOUT";
+        return v.toFixed(v > 0 && v < 10 ? 1 : 0) + " MS";
+    }
+    function fmtLoss(pct) { return (parseInt(pct) || 0) + "%"; }
+
+    Process {
+        id: netDetailsProbe
+        running: false
+        command: ["bash", "-c",
+            "IF=$(ip route get 8.8.8.8 2>/dev/null | sed -n 's/.* dev \\([^ ]*\\).*/\\1/p');"
+            + " [ -z \"$IF\" ] && { echo 'iface'; exit 0; };"
+            + " ip=$(ip -o -4 addr show \"$IF\" 2>/dev/null | awk '{split($4,a,\"/\"); print a[1]; exit}');"
+            + " gw=$(ip route show default 2>/dev/null | awk '/via/{print $3; exit}');"
+            + " rx=$(awk -v f=\"$IF:\" '$1==f{print $2}' /proc/net/dev);"
+            + " tx=$(awk -v f=\"$IF:\" '$1==f{print $10}' /proc/net/dev);"
+            + " rp=$(ping -c1 -W1 \"$gw\" 2>/dev/null | awk -F'/' '/rtt/{print $5; exit}');"
+            + " ipg=$(ping -c1 -W1 1.1.1.1 2>/dev/null | awk -F'/' '/rtt/{print $5; exit}');"
+            + " printf 'iface\\t%s\\nip\\t%s\\ngateway\\t%s\\nrx_bytes\\t%s\\ntx_bytes\\t%s\\nrouter_ping_ms\\t%s\\ninternet_ping_ms\\t%s\\n'"
+            + " \"$IF\" \"$ip\" \"$gw\" \"$rx\" \"$tx\" \"$rp\" \"$ipg\""]
+        stdout: StdioCollector {
+            onStreamFinished: root.updateNetDetails(this.text)
+        }
+    }
+    Timer { interval: 1500; running: root.networkVisible; repeat: true; triggeredOnStart: true
+        onTriggered: { if (!netDetailsProbe.running) { netDetailsProbe.running = false; netDetailsProbe.running = true; } } }
 
     // ---------- Idle dim ----------
     // Wayland ext-idle-notify-v1 via Quickshell. The compositor counts
@@ -1943,6 +2073,19 @@ Item {
     TooltipOverlay   { root: root }
     SystemPopup      { root: root }
     CalendarPopup    { root: root }
+
+    Loader { id: networkLoader }
+    onNetworkVisibleChanged: {
+        if (root.networkVisible) networkLoader.setSource("NetworkPopup.qml", { root: root });
+        else keepNetwork.restart();
+    }
+    Timer { id: keepNetwork; interval: 250; onTriggered: networkLoader.source = "" }
+    Loader { id: btLoader }
+    onBtVisibleChanged: {
+        if (root.btVisible) btLoader.setSource("BluetoothPopup.qml", { root: root });
+        else keepBt.restart();
+    }
+    Timer { id: keepBt; interval: 250; onTriggered: btLoader.source = "" }
     Loader { id: aetherLoader }
     onAetherVisibleChanged: {
         if (root.aetherVisible) aetherLoader.setSource("AetherPopup.qml", { root: root });
@@ -2102,6 +2245,27 @@ Item {
         function open(): void  { root.openSystem(); }
         function close(): void { root.systemVisible = false; }
         function btop(): void  { root.run("omarchy-launch-or-focus-tui btop"); }
+    }
+
+    // bind = SUPER, N, exec, qs ipc call network toggle
+    IpcHandler {
+        target: "network"
+        function toggle(): void {
+            if (root.networkVisible) root.networkVisible = false;
+            else root.openNetwork();
+        }
+        function open(): void  { root.openNetwork(); }
+        function close(): void { root.networkVisible = false; }
+    }
+
+    IpcHandler {
+        target: "bluetooth"
+        function toggle(): void {
+            if (root.btVisible) root.btVisible = false;
+            else root.openBluetooth();
+        }
+        function open(): void  { root.openBluetooth(); }
+        function close(): void { root.btVisible = false; }
     }
 
     // Bar face switch. Toggle from a keybind, or jump straight to one:

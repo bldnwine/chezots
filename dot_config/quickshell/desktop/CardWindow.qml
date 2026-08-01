@@ -53,6 +53,10 @@ PanelWindow {
     signal dismiss()
     signal keyPressed(var event)
 
+    // Give keyboard focus back to the card surface after an inner TextInput
+    // closes (e.g. an inline passphrase field) so nav keys resume working.
+    function refocus() { surface.forceActiveFocus(); }
+
     default property alias bodyData: bodyContainer.data
 
     visible: revealed || _reveal > 0.001

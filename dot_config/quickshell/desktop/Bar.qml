@@ -403,7 +403,11 @@ PanelWindow {
                     if (conn.length === 0) return "Bluetooth on";
                     return conn.map(d => d.name + (d.battery > 0 ? " " + d.battery + "%" : "")).join("\n");
                 }
-                onActivated: bar.root.run("ghostty --title='Bluetooth Manager' -e bluetui")
+                Component.onCompleted: bar.root.btAnchorItem = this
+                onActivated: {
+                    if (bar.root.btVisible) bar.root.btVisible = false;
+                    else bar.root.openBluetooth();
+                }
             }
 
             Module {
@@ -420,7 +424,11 @@ PanelWindow {
                     }
                     return "Offline";
                 }
-                onActivated: bar.root.run("ghostty --title=impala -e impala")
+                Component.onCompleted: bar.root.networkAnchorItem = this
+                onActivated: {
+                    if (bar.root.networkVisible) bar.root.networkVisible = false;
+                    else bar.root.openNetwork();
+                }
 
                 // Network-burst dot: traverses the wifi glyph's outermost
                 // arc once when a heavy rx+tx burst is detected.

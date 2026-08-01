@@ -165,7 +165,10 @@ Item {
                     anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     text: (modelData.trusted ? "✓ " : "")
-                          + (modelData.connected ? "CONNECTED"
+                          + (modelData.connected
+                             ? "CONNECTED" + (modelData.battery > 0
+                                              ? " · " + modelData.battery + "%"
+                                              : "")
                              : modelData.paired ? "PAIRED"
                                                 : "")
                     color: body.root.inkDeep
