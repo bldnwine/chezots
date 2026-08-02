@@ -17,8 +17,9 @@ Item {
     signal commit(real v)
     signal focusRequested()
 
+    readonly property bool dragging: sliderMouse.pressed
     readonly property real norm: maxV > minV
-                                 ? Math.max(0, Math.min(1, (value - minV) / (maxV - minV)))
+                                 ? Math.max(0, Math.min(1, ((dragging ? pendingValue : value) - minV) / (maxV - minV)))
                                  : 0
     property real pendingValue: 0
 
@@ -49,7 +50,7 @@ Item {
     Text {
         anchors.right: parent.right
         anchors.top: parent.top
-        text: Math.round(slider.value) + slider.unit
+        text: Math.round(slider.dragging ? slider.pendingValue : slider.value) + slider.unit
         color: slider.selected ? slider.root.ink : slider.root.inkDeep
         font.family: slider.root.mono
         font.pixelSize: 10
@@ -75,7 +76,7 @@ Item {
             color: slider.root.seal
             opacity: slider.selected ? 1.0 : 0.75
             antialiasing: true
-            Behavior on width { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+            Behavior on width { enabled: !slider.dragging; NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
             Behavior on opacity { NumberAnimation { duration: 140 } }
         }
 
@@ -88,10 +89,11 @@ Item {
             x: Math.max(0, Math.min(parent.width - width,
                         parent.width * slider.norm - width / 2))
             y: -4
-            Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+            Behavior on x { enabled: !slider.dragging; NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
         }
 
         MouseArea {
+            id: sliderMouse
             anchors.fill: parent
             anchors.margins: -6
             hoverEnabled: true

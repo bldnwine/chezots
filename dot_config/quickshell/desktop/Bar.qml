@@ -479,7 +479,7 @@ PanelWindow {
             Module {
                 root: bar.root
                 glyph: bar.root.audioIcon
-                tooltip: (bar.root.audioSinkDesc ? bar.root.audioSinkDesc + " " : "") + bar.root.audioVol + "%" + (bar.root.audioMuted ? " (muted)" : "")
+                tooltip: (bar.root.audioSinkDesc ? bar.root.audioSinkDesc + " " : "") + (bar.root.audioDevType !== "bt" && bar.root.audioPort ? "(" + bar.root.audioPort + ") " : "") + bar.root.audioVol + "%" + (bar.root.audioMuted ? " (muted)" : "")
                 onActivated: bar.root.run("pavucontrol")
                 onMiddleActivated: bar.root.run("pamixer -t")
                 onRightActivated: bar.root.run("~/.config/waybar/scripts/pulse_switch.sh")

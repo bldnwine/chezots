@@ -62,10 +62,7 @@ CardWindow {
             popup.kbdIndex = Math.min(popup.filteredFolders.length - 1, popup.kbdIndex + 1);
         } else if (k === Qt.Key_Return || k === Qt.Key_Enter) {
             const f = popup.filteredFolders[popup.kbdIndex];
-            if (f) popup.openYazi(f);
-        } else if (k === Qt.Key_E) {
-            const f = popup.filteredFolders[popup.kbdIndex];
-            if (f) popup.openNemo(f);
+            if (f) (event.modifiers & Qt.AltModifier) ? popup.openNemo(f) : popup.openYazi(f);
         } else if (t.length === 1 && t.charCodeAt(0) >= 32) {
             popup.searchQuery += t;
         } else { return; }

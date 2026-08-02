@@ -111,15 +111,8 @@ Item {
     function _onWifiResult(ssid, ok) {
         if (ok) { body.statusText = ""; return; }
         body.statusText = "CONNECT FAILED";
-        // Stale saved key or a typo: offer the passphrase field again.
-        for (let i = 0; i < netRepeater.count; i++) {
-            const d = netRepeater.itemAt(i);
-            if (d && d.modelData && d.modelData.ssid === ssid
-                && body._isProtected(d.modelData.security)) {
-                body._openPassphrase(ssid);
-                break;
-            }
-        }
+        const net = body._visibleNets.find(n => n && n.ssid === ssid);
+        if (net && body._isProtected(net.security)) body._openPassphrase(ssid);
     }
 
     Column {

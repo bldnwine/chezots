@@ -65,6 +65,7 @@ Item {
     readonly property string icoMusic:     String.fromCodePoint(0xf001)
     readonly property string icoPause:     String.fromCodePoint(0xf04c)
     readonly property string icoHeadphone: String.fromCodePoint(0xf025)
+    readonly property string icoSpeaker: String.fromCodePoint(0xf04c3)
 
     readonly property int barHeight: 26
     readonly property int barExtraThickness: round && isHorizontal ? 11 : 0
@@ -198,6 +199,7 @@ Item {
     property Item systemAnchorItem:   null
     property Item networkAnchorItem:  null
     property Item btAnchorItem:       null
+    property Item audioAnchorItem:    null
 
     function anchorPopupTo(item) {
         const p = item.mapToItem(null, item.width / 2, item.height / 2);
@@ -437,26 +439,98 @@ Item {
     property string audioIcon: ""
     property string audioDevType: "spk"
     property string audioSinkDesc: ""
+    property string audioPort: ""
     property int    audioVol: 0
     property bool   audioMuted: false
+    property int    audioInputVol: 0
+    property bool   audioInputMuted: false
     // List of PipeWire/Pulse output sinks with the current default flagged.
     // Each entry: { id, name, description, isDefault }. Populated by the
     // audioSinks probe on demand (refreshed when the Audio quick panel opens).
     property var    audioSinks: []
     property string audioDefaultSink: ""
     property string _audioSinksSer: ""
+    // List of PipeWire/Pulse input sources, mirror of audioSinks.
+    property var    audioSources: []
+    property string audioDefaultSource: ""
+    property string _audioSourcesSer: ""
+
+    property double _lastVolChangeTime: 0
+    property double _lastSinkChangeTime: 0
+
+    function refreshAudio() {
+        audioProbe.running = false;
+        audioProbe.running = true;
+    }
+
+    function setAudioVolume(pct) {
+        const v = Math.max(0, Math.min(100, Math.round(pct)));
+        root.audioVol = v;
+        root._lastVolChangeTime = Date.now();
+        root.run("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ " + v + "%");
+    }
+
+    function setInputVolume(pct) {
+        const v = Math.max(0, Math.min(100, Math.round(pct)));
+        root.audioInputVol = v;
+        root._lastVolChangeTime = Date.now();
+        root.run("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SOURCE@ " + v + "%");
+    }
 
     function setDefaultSink(id) {
         if (!id) return;
-        root.audioDefaultSink = id;
+        root.audioDefaultSink = String(id);
+        root._lastSinkChangeTime = Date.now();
+        if (root.audioSinks && root.audioSinks.length > 0) {
+            root.audioSinks = root.audioSinks.map(s => ({
+                id: s.id, name: s.name, isDefault: String(s.id) === String(id)
+            }));
+        }
         root.run("wpctl set-default " + id);
-        // Re-probe so the badge re-evaluates after wpctl applies.
         audioSinksProbe.running = false;
         audioSinksProbe.running = true;
     }
+
+    function setDefaultSource(id) {
+        if (!id) return;
+        root.audioDefaultSource = String(id);
+        root._lastSinkChangeTime = Date.now();
+        if (root.audioSources && root.audioSources.length > 0) {
+            root.audioSources = root.audioSources.map(s => ({
+                id: s.id, name: s.name, isDefault: String(s.id) === String(id)
+            }));
+        }
+        root.run("wpctl set-default " + id);
+        audioSourcesProbe.running = false;
+        audioSourcesProbe.running = true;
+    }
+
+    function toggleAudioMute() {
+        root.audioMuted = !root.audioMuted;
+        root.run("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle");
+        root.refreshAudio();
+    }
+
+    function toggleInputMute() {
+        root.audioInputMuted = !root.audioInputMuted;
+        root.run("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle");
+        root.refreshAudio();
+    }
+
+    function toggleAllMute() {
+        const any = root.audioMuted || root.audioInputMuted;
+        root.audioMuted = !any;
+        root.audioInputMuted = !any;
+        root.run("wpctl set-mute @DEFAULT_AUDIO_SINK@ " + (any ? "0" : "1"));
+        root.run("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ " + (any ? "0" : "1"));
+        root.refreshAudio();
+    }
+
     function refreshAudioSinks() {
         audioSinksProbe.running = false;
         audioSinksProbe.running = true;
+        audioSourcesProbe.running = false;
+        audioSourcesProbe.running = true;
     }
 
     // power-profiles-daemon's current profile, if available. Empty when
@@ -1007,6 +1081,13 @@ Item {
         root.btVisible = true;
     }
 
+    // ---------- Audio popup state ----------
+    property bool audioVisible: false
+    function openAudio() {
+        if (root.audioAnchorItem) root.anchorPopupTo(root.audioAnchorItem);
+        root.audioVisible = true;
+    }
+
     function refreshSystemStats() {
         if (systemProbe.running) return;
         systemProbe.running = false;
@@ -1061,7 +1142,7 @@ Item {
     function blankScreen() {
         // Wait out the close animation before the panel blanks, or the
         // reveal-out visibly stutters.
-        root.run("sleep 0.25 && hyprctl dispatch dpms off");
+        root.run("sleep 0.25 && hyprctl monitors -j | jq -e 'length > 1' >/dev/null && hyprctl dispatch dpms off");
         root.displayVisible = false;
     }
     function resetDisplay() {
@@ -1641,25 +1722,39 @@ Item {
             "v=$(pamixer --get-volume 2>/dev/null || echo 0); "
             + "m=$(pamixer --get-mute 2>/dev/null || echo false); "
             + "d=$(pactl get-default-sink 2>/dev/null); "
-            +             "case \"$d\" in *bluez*|*bluetooth*) t=\"bt\" ;; *hdmi*|*dp*|*displayport*) t=\"hdmi\" ;; *headphone*|*headset*|*hp*) t=\"hp\" ;; *) t=\"spk\" ;; esac; "
+            +             "p=$(pactl list sinks 2>/dev/null | awk -v w=\"$d\" '$0==\"\\tName: \" w {f=1} f && /Active Port:/ {print $3; exit}'); "
+            +             "case \"$d\" in *bluez*|*bluetooth*) case \"$p\" in *headset*|*headphone*|*hp*) t=\"hp\" ;; *) t=\"bt\" ;; esac ;; *hdmi*|*dp*|*displayport*) t=\"hdmi\" ;; *) case \"$p\" in *headphone*|*headset*|*hp*) t=\"hp\" ;; *) t=\"spk\" ;; esac ;; esac; "
             +             "desc=$(pactl list sinks 2>/dev/null | grep -A5 -F \"Name: $d\" | grep \"Description:\" | sed 's/.*Description: //'); "
-            + "printf '%s|%s|%s|%s' \"$v\" \"$m\" \"$t\" \"${desc:-}\""]
+            + "iv=$(pamixer --default-source --get-volume 2>/dev/null || echo 0); "
+            + "im=$(pamixer --default-source --get-mute 2>/dev/null || echo false); "
+            + "case \"$p\" in *headphone*|*headset*|*hp*) pl=\"Headphones\" ;; *speaker*) pl=\"Speakers\" ;; *) pl=\"$p\" ;; esac; "
+            + "printf '%s|%s|%s|%s|%s|%s|%s' \"$v\" \"$m\" \"$t\" \"${desc:-}\" \"$iv\" \"$im\" \"$pl\""]
         stdout: StdioCollector {
             onStreamFinished: {
                 const p = this.text.split("|");
-                if (p.length !== 4) return;
+                if (p.length !== 7) return;
                 const v = parseInt(p[0]);
                 const m = p[1].trim() === "true";
                 const t = p[2].trim();
                 const desc = p[3].trim();
-                root.audioVol = isNaN(v) ? 0 : v;
-                root.audioMuted = m;
+                const iv = parseInt(p[4]);
+                const im = p[5].trim() === "true";
+                const pl = p[6].trim();
+                if (Date.now() - root._lastVolChangeTime >= 700) {
+                    root.audioVol = isNaN(v) ? 0 : v;
+                    root.audioMuted = m;
+                    root.audioInputVol = isNaN(iv) ? 0 : iv;
+                    root.audioInputMuted = im;
+                }
                 root.audioDevType = t;
                 root.audioSinkDesc = desc;
+                root.audioPort = pl;
                 if (m) {
                     root.audioIcon = root.icoMute;
-                } else if (t === "hp" || t === "bt") {
+                } else if (t === "hp") {
                     root.audioIcon = root.icoHeadphone;
+                } else if (t === "bt") {
+                    root.audioIcon = root.icoSpeaker;
                 } else if (t === "hdmi") {
                     root.audioIcon = root.icoDisplay;
                 } else if (isNaN(v) || v <= 0) {
@@ -1831,11 +1926,11 @@ Item {
         // section ends at the next top-level label (Video / Settings).
         command: ["bash", "-c",
             "wpctl status 2>/dev/null | awk '"
-            + "  /^Audio$/                                    {sec=\"audio\"; sub=\"\"; next}"
-            + "  /^[A-Z][a-zA-Z]+$/                           {sec=\"\";      sub=\"\"; next}"
-            + "  /^[[:space:]]*[├└]─[[:space:]]*Sinks:/       {sub=\"sinks\"; next}"
-            + "  /^[[:space:]]*[├└]─/                          {sub=\"\";      next}"
-            + "  sec==\"audio\" && sub==\"sinks\" {"
+            + "  /^Audio$/                                    {sec=\"audio\"; subsec=\"\"; next}"
+            + "  /^[A-Z][a-zA-Z]+$/                           {sec=\"\";      subsec=\"\"; next}"
+            + "  /^[[:space:]]*[├└]─[[:space:]]*Sinks:/       {subsec=\"sinks\"; next}"
+            + "  /^[[:space:]]*[├└]─/                          {subsec=\"\";      next}"
+            + "  sec==\"audio\" && subsec==\"sinks\" {"
             + "    star=(index($0,\"*\")>0 && index($0,\"*\")<index($0,\".\")) ? 1 : 0;"
             + "    line=$0;"
             + "    sub(/^[ │├─└*]+/, \"\", line);"
@@ -1856,12 +1951,58 @@ Item {
                     };
                 });
                 const ser = JSON.stringify(sinks);
-                if (ser !== root._audioSinksSer) {
+                if (ser !== root._audioSinksSer && Date.now() - root._lastSinkChangeTime >= 700) {
                     root._audioSinksSer = ser;
                     root.audioSinks = sinks;
                 }
                 const def = sinks.find(s => s.isDefault);
-                if (def && root.audioDefaultSink !== def.id) root.audioDefaultSink = def.id;
+                if (def && root.audioDefaultSink !== def.id && Date.now() - root._lastSinkChangeTime >= 700) {
+                    root.audioDefaultSink = def.id;
+                }
+            }
+        }
+    }
+
+    // ---------- Audio sources probe ----------
+    // Mirror of audioSinksProbe for the Sources subsection.
+    Process {
+        id: audioSourcesProbe
+        running: false
+        command: ["bash", "-c",
+            "wpctl status 2>/dev/null | awk '"
+            + "  /^Audio$/                                    {sec=\"audio\"; subsec=\"\"; next}"
+            + "  /^[A-Z][a-zA-Z]+$/                           {sec=\"\";      subsec=\"\"; next}"
+            + "  /^[[:space:]]*[├└]─[[:space:]]*Sources:/     {subsec=\"sources\"; next}"
+            + "  /^[[:space:]]*[├└]─/                          {subsec=\"\";      next}"
+            + "  sec==\"audio\" && subsec==\"sources\" {"
+            + "    star=(index($0,\"*\")>0 && index($0,\"*\")<index($0,\".\")) ? 1 : 0;"
+            + "    line=$0;"
+            + "    sub(/^[ │├─└*]+/, \"\", line);"
+            + "    if (match(line, /^([0-9]+)\\. (.+)\\[/, m)) {"
+            + "      gsub(/[ \\t]+$/, \"\", m[2]);"
+            + "      printf \"%s\\t%s\\t%d\\n\", m[1], m[2], star;"
+            + "    }"
+            + "  }'"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const lines = this.text.trim().split("\n").filter(s => s.length > 0);
+                const sources = lines.map(line => {
+                    const f = line.split("\t");
+                    return {
+                        id: f[0] || "",
+                        name: (f[1] || "").trim(),
+                        isDefault: f[2] === "1"
+                    };
+                });
+                const ser = JSON.stringify(sources);
+                if (ser !== root._audioSourcesSer && Date.now() - root._lastSinkChangeTime >= 700) {
+                    root._audioSourcesSer = ser;
+                    root.audioSources = sources;
+                }
+                const def = sources.find(s => s.isDefault);
+                if (def && root.audioDefaultSource !== def.id && Date.now() - root._lastSinkChangeTime >= 700) {
+                    root.audioDefaultSource = def.id;
+                }
             }
         }
     }
@@ -2134,6 +2275,18 @@ Item {
         else keepBt.restart();
     }
     Timer { id: keepBt; interval: 400; onTriggered: btLoader.source = "" }
+    Loader { id: audioLoader }
+    onAudioVisibleChanged: {
+        if (root.audioVisible) {
+            keepAudio.stop();
+            audioLoader.setSource("AudioPopup.qml", { root: root });
+            root.refreshAudioSinks();
+        }
+        else keepAudio.restart();
+    }
+    Timer { id: keepAudio; interval: 400; onTriggered: audioLoader.source = "" }
+    Timer { interval: 2000; running: root.audioVisible; repeat: true; triggeredOnStart: false
+        onTriggered: root.refreshAudioSinks() }
     Loader { id: aetherLoader }
     onAetherVisibleChanged: {
         if (root.aetherVisible) { keepAether.stop(); aetherLoader.setSource("AetherPopup.qml", { root: root }); }
@@ -2320,6 +2473,16 @@ Item {
         }
         function open(): void  { root.openBluetooth(); }
         function close(): void { root.btVisible = false; }
+    }
+
+    IpcHandler {
+        target: "audio"
+        function toggle(): void {
+            if (root.audioVisible) root.audioVisible = false;
+            else root.openAudio();
+        }
+        function open(): void  { root.openAudio(); }
+        function close(): void { root.audioVisible = false; }
     }
 
     // Bar face switch. Toggle from a keybind, or jump straight to one:

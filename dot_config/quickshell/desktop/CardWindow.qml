@@ -87,7 +87,7 @@ PanelWindow {
         color: card.theme.bg
         border.color: card.theme.sep
         border.width: 1
-        radius: card.plain ? 0 : card.theme.cornerRadius
+        radius: card.theme.cornerRadius
 
         x: {
             if (!card._anchored) return (parent.width - width) / 2;

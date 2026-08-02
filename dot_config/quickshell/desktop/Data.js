@@ -96,7 +96,7 @@ const omarchyItems = [
     { title: "Mute Audio",       icon: "󰝟", category: "Quick", keywords: "mute audio unmute silence toggle volume sound speaker pamixer quick",                  exec: "pamixer -t" },
     { title: "Reset Display",    icon: "󰜉", category: "Quick", keywords: "reset display brightness warmth gamma default daylight identity full restore",          exec: "qs -c desktop ipc call display reset" },
     { title: "Blank Screen",     icon: "󰹐", category: "Quick", keywords: "blank screen off dpms suspend display monitor sleep dark",                              exec: "qs -c desktop ipc call display blank" },
-    { title: "Audio Mixer",      icon: "󰕾", category: "Quick", keywords: "audio mixer pavucontrol pipewire pulse volume sink source device level",                exec: "omarchy-launch-audio" },
+    { title: "Audio Mixer",      icon: "󰕾", category: "Quick", keywords: "audio mixer pavucontrol pipewire pulse volume sink source device level",                exec: "pavucontrol" },
     { title: "Wi-Fi Picker",     icon: "󰖩", category: "Quick", keywords: "wifi wireless network connect picker chooser ssid signal nmcli",                       exec: "omarchy-launch-wifi" },
     { title: "Bluetooth Picker", icon: "󰂯", category: "Quick", keywords: "bluetooth bt pair connect device picker headset speaker keyboard mouse",                exec: "omarchy-launch-bluetooth" },
     { title: "System Monitor",   icon: "󰍛", category: "Quick", keywords: "cpu memory process monitor btop top htop performance load activity",                   exec: "omarchy-launch-or-focus-tui btop" },

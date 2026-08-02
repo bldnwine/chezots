@@ -29,39 +29,40 @@ CardWindow {
     property int kbdIndex: 2
     property string kbdMac: ""   // selected device; survives list re-sorts
 
-    // Keep kbdMac in sync whenever the cursor moves.
-    onKbdIndexChanged: btpopup._syncMac()
-    function _syncMac() {
-        const d = btpopup.visibleDevs[btpopup.kbdIndex - btpopup._headerCount];
+    readonly property int headerCount: 2
+    property var visibleDevs: root.btPowered
+                              ? root.btDevices.slice(0, 8)
+                              : []
+    readonly property int kbdMax: headerCount + visibleDevs.length
+
+    // Re-home the selection cursor whenever the device list changes
+    onVisibleDevsChanged: btpopup.rehome()
+
+    // Keep kbdMac in sync whenever the keyboard cursor moves
+    onKbdIndexChanged: btpopup.syncMac()
+
+    function syncMac() {
+        const d = btpopup.visibleDevs[btpopup.kbdIndex - btpopup.headerCount];
         btpopup.kbdMac = d ? d.mac : "";
     }
 
-    // Scan refreshes re-sort the list and trickle devices in; if the
-    // selected device is still present, re-home the cursor on it instead of
-    // letting a newcomer claim its row. If it vanished (unpaired), clamp.
-    onVisibleDevsChanged: btpopup._rehome()
-    function _rehome() {
+    function rehome() {
         if (btpopup.kbdMac !== "") {
             const devs = btpopup.visibleDevs;
             for (let i = 0; i < devs.length; i++) {
                 if (devs[i].mac === btpopup.kbdMac) {
-                    btpopup.kbdIndex = i + btpopup._headerCount;
+                    btpopup.kbdIndex = i + btpopup.headerCount;
                     return;
                 }
             }
         }
-        if (btpopup.kbdIndex >= btpopup._kbdMax)
-            btpopup.kbdIndex = Math.max(0, btpopup._kbdMax - 1);
+        if (btpopup.kbdIndex >= btpopup.kbdMax)
+            btpopup.kbdIndex = Math.max(0, btpopup.kbdMax - 1);
     }
-    readonly property int _headerCount: 2
-    property var visibleDevs: root.btPowered
-                              ? root.btDevices.slice(0, 8)
-                              : []
-    readonly property int _kbdMax: _headerCount + visibleDevs.length
 
     function kbdHandle(event) {
         const k = event.key;
-        const n = btpopup._kbdMax;
+        const n = btpopup.kbdMax;
         if (n === 0) return false;
         if (k === Qt.Key_Up || k === Qt.Key_Left) {
             btpopup.kbdIndex = Math.max(0, btpopup.kbdIndex - 1);
@@ -76,7 +77,7 @@ CardWindow {
             return true;
         }
         if (k === Qt.Key_T) {
-            const dev = btpopup.visibleDevs[btpopup.kbdIndex - btpopup._headerCount];
+            const dev = btpopup.visibleDevs[btpopup.kbdIndex - btpopup.headerCount];
             if (dev) root.btToggleTrust(dev.mac);
             return true;
         }
@@ -85,7 +86,7 @@ CardWindow {
             return true;
         }
         if (k === Qt.Key_U) {
-            const dev = btpopup.visibleDevs[btpopup.kbdIndex - btpopup._headerCount];
+            const dev = btpopup.visibleDevs[btpopup.kbdIndex - btpopup.headerCount];
             if (dev) root.btUnpair(dev.mac);
             return true;
         }
@@ -96,7 +97,7 @@ CardWindow {
         btpopup.kbdIndex = i;
         if (i === 0) { root.btTogglePower(); return; }
         if (i === 1) { root.btToggleScan(); return; }
-        const dev = btpopup.visibleDevs[i - btpopup._headerCount];
+        const dev = btpopup.visibleDevs[i - btpopup.headerCount];
         if (!dev) return;
         if (dev.connected) root.btDisconnect(dev.mac);
         else root.btConnect(dev.mac);
@@ -157,7 +158,7 @@ CardWindow {
             delegate: Rectangle {
                 required property var modelData
                 required property int index
-                readonly property bool kbdFocused: btpopup.kbdIndex === (index + btpopup._headerCount)
+                readonly property bool kbdFocused: btpopup.kbdIndex === (index + btpopup.headerCount)
                 readonly property bool dimmed: !modelData.paired && !modelData.connected
                 width: col.width
                 height: 32
