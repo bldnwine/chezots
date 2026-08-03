@@ -309,7 +309,7 @@ PanelWindow {
                 minWidth: 28
                 maxWidth: 28
                 onActivated: wr.root.run("pavucontrol")
-                onMiddleActivated: wr.root.run("pamixer -t")
+                onMiddleActivated: wr.root.run("pamixer -t && qs -c desktop ipc call audio refresh")
                 onRightActivated: wr.root.run("~/.config/waybar/scripts/pulse_switch.sh")
             }
             WhiteRoseCell {
@@ -489,7 +489,7 @@ PanelWindow {
             minWidth: 20
             fontSize: 9
             onActivated: wr.root.run("pavucontrol")
-            onMiddleActivated: wr.root.run("pamixer -t")
+            onMiddleActivated: wr.root.run("pamixer -t && qs -c desktop ipc call audio refresh")
             onRightActivated: wr.root.run("~/.config/waybar/scripts/pulse_switch.sh")
         }
         WhiteRoseCell {

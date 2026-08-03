@@ -30,3 +30,4 @@ port="${next##*:}"
 pactl set-default-sink "$sink"
 pactl set-sink-port "$sink" "$port"
 pactl list short sink-inputs | awk '{print $1}' | xargs -r -I{} pactl move-sink-input {} "$sink"
+qs -c desktop ipc call audio refresh >/dev/null 2>&1 || true

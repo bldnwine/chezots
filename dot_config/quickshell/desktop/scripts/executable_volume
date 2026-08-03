@@ -16,3 +16,4 @@ if grep -q MUTED <<<"$state" || [ "$percent" -eq 0 ]; then
   icon="volume-muted"; else icon="volume-high"
 fi
 qs -c desktop ipc call -- osd show "$(jq -cn --arg icon "$icon" --argjson value "$percent" '{icon:$icon,value:$value}')"
+qs -c desktop ipc call audio refresh >/dev/null 2>&1 || true

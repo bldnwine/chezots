@@ -126,7 +126,7 @@ CardWindow {
                          + (root.btCount > 0
                             ? "  ·  " + root.btCount + " CONN"
                             : "")
-                         + (root.btScanning ? "  ·  SCANNING" : ""))
+                                      )
                 color: root.inkDeep
                 font.family: root.mono
                 font.pixelSize: 10
@@ -228,7 +228,7 @@ CardWindow {
                             root.btUnpair(modelData.mac);
                             return;
                         }
-                        btpopup._activateAt(index + btpopup._headerCount);
+                        btpopup._activateAt(index + btpopup.headerCount);
                     }
                 }
             }

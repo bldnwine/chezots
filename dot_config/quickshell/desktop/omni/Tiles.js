@@ -9,7 +9,7 @@ var base = [
     { key: "battery",     keywords: "battery power charge plugged ac percent watt",
       action: "omarchy-menu power" },
     { key: "audio",       keywords: "audio sound speaker volume mute pulse pipewire",
-      action: "pavucontrol", longAction: "pamixer -t" },
+      action: "pavucontrol", longAction: "pamixer -t && qs -c desktop ipc call audio refresh" },
     { key: "network",     keywords: "wifi wireless network internet ssid signal ethernet eth",
       action: "omarchy-launch-wifi" },
     { key: "bluetooth",   keywords: "bluetooth bt pair device headset speaker keyboard",

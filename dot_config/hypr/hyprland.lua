@@ -6,7 +6,9 @@
 
 local f = io.open(os.getenv("HOME") .. "/.config/aether/theme/colors.toml")
 local accent = f and f:read("*a"):match('accent%s*=%s*"#(.-)"') or "4faa50"
-if f then f:close() end
+if f then
+	f:close()
+end
 
 ------------------
 ---- MONITORS ----
@@ -86,7 +88,7 @@ hl.on("hyprland.start", function()
 	-- hl.exec_cmd("systemctl --user start eclair.target")
 	-- hl.exec_cmd(launch("mako"))
 	hl.exec_cmd(launch("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"))
-	hl.exec_cmd(launch("wl-paste --watch cliphist store"))
+	-- hl.exec_cmd(launch("wl-paste --watch cliphist store"))
 	hl.exec_cmd(launch("playerctld"))
 	-- hl.exec_cmd(launch("hypridle"))
 	hl.exec_cmd("brightnessctl set 30%") -- one-shot, exits instantly
@@ -254,7 +256,7 @@ local mainMod = "SUPER"
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + CONTROL + M", hl.dsp.exec_cmd(launch("pavucontrol")))
-hl.bind(mainMod .. " + ALT + M", hl.dsp.exec_cmd(launch("~/.config/waybar/scripts/pulse_switch.sh")))
+hl.bind(mainMod .. " + ALT + M", hl.dsp.exec_cmd("~/.config/waybar/scripts/pulse_switch.sh"))
 hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + Y", hl.dsp.exec_cmd(terminal .. " -e yazi"))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
@@ -266,7 +268,7 @@ hl.bind(mainMod .. " + SHIFT + H", hl.dsp.exec_cmd("wayt"))
 hl.bind(mainMod .. " + SHIFT + J", hl.dsp.exec_cmd(launch("power.sh")))
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("qs -c desktop ipc call locus toggleCategory System"))
 hl.bind(mainMod .. " + TAB", hl.dsp.exec_cmd(terminal .. " -e sh -c 'btop; exec sh'"))
-hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(launch("~/.config/hypr/scripts/clipboard_menu.sh")))
+hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("qs -c desktop ipc call clipboard toggle"))
 hl.bind(mainMod .. " + CONTROL + B", hl.dsp.exec_cmd("qs -c desktop ipc call bluetooth toggle"))
 hl.bind(mainMod .. " + CONTROL + N", hl.dsp.exec_cmd("qs -c desktop ipc call network toggle"))
 --hl.bind(mainMod .. " + X", hl.dsp.exec_cmd(launch("waypaper")))
@@ -283,8 +285,18 @@ hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen_state({ action = "toggle", i
 --hl.bind("SUPER + F", hl.dsp.exec_cmd("toggle-tiled-fullscreen"))
 hl.bind(mainMod .. " + CONTROL + Y", hl.dsp.exec_cmd(launch("cmd-ocr")))
 --hl.bind(mainMod .. " + CONTROL + T", hl.dsp.exec_cmd(launch("qs -p ~/.config/quickshell/desktop/test-bp.qml")))
-hl.bind(mainMod .. " + CONTROL + T", hl.dsp.exec_cmd(launch("qs -c desktop ipc call aether toggle || qs -p ~/.config/quickshell/desktop/test-bp.qml --no-duplicate")))
-hl.bind(mainMod .. " + SHIFT + A", hl.dsp.exec_cmd(launch("qs -c desktop ipc call aether toggle || qs -p ~/.config/quickshell/desktop/test-bp.qml --no-duplicate")))
+hl.bind(
+	mainMod .. " + CONTROL + T",
+	hl.dsp.exec_cmd(
+		launch("qs -c desktop ipc call aether toggle || qs -p ~/.config/quickshell/desktop/test-bp.qml --no-duplicate")
+	)
+)
+hl.bind(
+	mainMod .. " + SHIFT + A",
+	hl.dsp.exec_cmd(
+		launch("qs -c desktop ipc call aether toggle || qs -p ~/.config/quickshell/desktop/test-bp.qml --no-duplicate")
+	)
+)
 hl.bind(mainMod .. " + SHIFT + G", function()
 	local gapsIn = hl.get_config("general.gaps_in")
 	if gapsIn.top == 1 then
@@ -296,17 +308,17 @@ end)
 hl.bind(mainMod .. " + CONTROL + G", function()
 	local rounding = hl.get_config("decoration.rounding")
 	if rounding == 0 then
-		hl.config({ decoration = { rounding = 9} })
+		hl.config({ decoration = { rounding = 9 } })
 	else
-		hl.config({ decoration = { rounding = 0} })
+		hl.config({ decoration = { rounding = 0 } })
 	end
 end)
 --hl.bind("ALT + F", hl.dsp.exec_cmd(launch("helium-browser")))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(launch("zen-browser -P default")))
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(launch("zen-browser --private-window")))
 hl.bind(mainMod .. " + ALT", hl.dsp.exec_cmd("sh -c 'killall -SIGUSR1 waybar'"))
-hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd('capture-screenshot smart slurp'))
-hl.bind(mainMod .. " + SHIFT + Z", hl.dsp.exec_cmd('capture-screenshot smart copy'))
+hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("capture-screenshot smart slurp"))
+hl.bind(mainMod .. " + SHIFT + Z", hl.dsp.exec_cmd("capture-screenshot smart copy"))
 hl.bind(mainMod .. " + ALT + Space", hl.dsp.exec_cmd("qs -c desktop ipc call locusfavs toggle"))
 hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd("qs -c desktop ipc call screenrecord toggle"))
 hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd("hyprpicker -f hex -a"))
@@ -324,15 +336,23 @@ hl.bind(mainMod .. " + Period", function()
 	end
 end)
 hl.bind("SUPER + CTRL + Z", function()
-  local zoom = hl.get_config("cursor.zoom_factor") or 1
-  hl.config({ cursor = { zoom_factor = zoom + 1 } })
+	local zoom = hl.get_config("cursor.zoom_factor") or 1
+	hl.config({ cursor = { zoom_factor = zoom + 1 } })
 end)
 
 hl.bind("SUPER + ALT + Z", function()
-  hl.config({ cursor = { zoom_factor = 1 } })
+	hl.config({ cursor = { zoom_factor = 1 } })
 end)
-hl.bind(mainMod .. " + CONTROL + up", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume +5"), {repeating = true})
-hl.bind(mainMod .. " + CONTROL + down", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume -5"), {repeating = true})
+hl.bind(
+	mainMod .. " + CONTROL + up",
+	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume +5"),
+	{ repeating = true }
+)
+hl.bind(
+	mainMod .. " + CONTROL + down",
+	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume -5"),
+	{ repeating = true }
+)
 hl.bind(mainMod .. " + G", hl.dsp.exec_cmd("qs -c desktop ipc call hyprland toggle"))
 hl.bind(mainMod .. " + CONTROL + 6", hl.dsp.exec_cmd("playerctl next"), { locked = true })
 hl.bind(mainMod .. " + CONTROL + 5", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
@@ -363,12 +383,28 @@ hl.bind(mainMod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume +5"), { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume -5"), { locked = true, repeating = true })
+hl.bind(
+	"XF86AudioRaiseVolume",
+	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume +5"),
+	{ locked = true, repeating = true }
+)
+hl.bind(
+	"XF86AudioLowerVolume",
+	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume -5"),
+	{ locked = true, repeating = true }
+)
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume mute"), { locked = true })
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/mic-mute"), { locked = true })
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/brightness +5"), { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/brightness -5"), { locked = true, repeating = true })
+hl.bind(
+	"XF86MonBrightnessUp",
+	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/brightness +5"),
+	{ locked = true, repeating = true }
+)
+hl.bind(
+	"XF86MonBrightnessDown",
+	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/brightness -5"),
+	{ locked = true, repeating = true }
+)
 
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd(launch("playerctl next")), { locked = true })
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd(launch("playerctl play-pause")), { locked = true })
@@ -443,19 +479,19 @@ hl.window_rule({
 })
 
 hl.window_rule({
-        name = "kew",
-        match = { class = "com.mitchellh.ghostty", title = "^(kew).*" },
-        float = true,
-        center = true,
+	name = "kew",
+	match = { class = "com.mitchellh.ghostty", title = "^(kew).*" },
+	float = true,
+	center = true,
 	size = { 1211, 821 },
 })
 
 hl.window_rule({
 	name = "Aether",
 	match = { class = "li.oever.aether", title = "Aether" },
-        size = { 1593, 953 },
+	size = { 1593, 953 },
 	float = true,
-	center = true
+	center = true,
 })
 
 hl.window_rule({
@@ -485,5 +521,5 @@ hl.window_rule({
 	match = { class = "zen", title = "Zen Browser" },
 	float = true,
 	center = true,
-	size = { 1447,1009 },
+	size = { 1447, 1009 },
 })

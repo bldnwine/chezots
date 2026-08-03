@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import Quickshell.Io
 import Quickshell.Services.Mpris
 import Quickshell.Hyprland
+import "ClipboardHistory.js" as ClipboardHistory
 
 // Omarchy top bar. Owns the per-bar state, probes, and IPC; per-feature
 // surfaces (Bar, *Popup, TooltipOverlay) and widgets (Module, Workspace,
@@ -200,6 +201,7 @@ Item {
     property Item networkAnchorItem:  null
     property Item btAnchorItem:       null
     property Item audioAnchorItem:    null
+    property Item clipboardAnchorItem: null
 
     function anchorPopupTo(item) {
         const p = item.mapToItem(null, item.width / 2, item.height / 2);
@@ -1088,6 +1090,81 @@ Item {
         root.audioVisible = true;
     }
 
+    // ---------- Clipboard state ----------
+    property bool clipboardVisible: false
+    function openClipboard() {
+        if (root.clipboardAnchorItem) root.anchorPopupTo(root.clipboardAnchorItem);
+        root.clipboardVisible = true;
+    }
+
+    property var clipboardHistory: []
+    readonly property int clipboardHistoryLimit: 300
+    readonly property string clipboardHistoryPath: Quickshell.env("HOME") + "/.local/state/quickshell-desktop/clipboard-history.json"
+    readonly property string clipboardCaptureScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/clipboard-capture.sh"
+
+    function clipboardAddEntry(entry) {
+        const normalized = ClipboardHistory.normalizeEntry(entry);
+        if (!normalized) return;
+        root.clipboardHistory = ClipboardHistory.addEntry(root.clipboardHistory, normalized, root.clipboardHistoryLimit);
+        root.clipboardSave();
+    }
+
+    function clipboardSave() {
+        clipboardHistoryFile.setText(JSON.stringify(root.clipboardHistory.slice(0, root.clipboardHistoryLimit), null, 2) + "\n");
+    }
+
+    function clipboardRemoveAt(index) {
+        root.clipboardHistory = ClipboardHistory.removeEntryAt(root.clipboardHistory, index);
+        root.clipboardSave();
+    }
+
+    function clipboardClearAll() {
+        root.clipboardHistory = [];
+        root.clipboardSave();
+    }
+
+    FileView {
+        id: clipboardHistoryFile
+        path: root.clipboardHistoryPath
+        watchChanges: true
+        atomicWrites: true
+        printErrors: false
+        onLoaded: root.clipboardHistory = ClipboardHistory.parseHistory(text())
+        onLoadFailed: root.clipboardHistory = []
+        onFileChanged: reload()
+    }
+
+    // Reap watchers left by a previous shell instance, then start our own.
+    // setpriv --pdeathsig TERM makes the kernel kill them on shell exit.
+    Process {
+        id: clipboardInitProc
+        command: ["pkill", "-f", "wl-paste .*--watch .*/clipboard-capture\\.sh"]
+        onExited: {
+            clipboardCurrentProc.running = true;
+            clipboardTextWatchProc.running = true;
+            clipboardImageWatchProc.running = true;
+        }
+    }
+    Process { id: clipboardCurrentProc
+        command: [root.clipboardCaptureScript]
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: root.clipboardAddEntry(ClipboardHistory.parseEntryJson(text))
+        }
+    }
+    Process { id: clipboardTextWatchProc
+        command: ["setpriv", "--pdeathsig", "TERM", "wl-paste", "--type", "text", "--watch", root.clipboardCaptureScript, "text"]
+        stdout: SplitParser {
+            onRead: function(data) { root.clipboardAddEntry(ClipboardHistory.parseEntryJson(data)) }
+        }
+    }
+    Process { id: clipboardImageWatchProc
+        command: ["setpriv", "--pdeathsig", "TERM", "wl-paste", "--type", "image/png", "--watch", root.clipboardCaptureScript, "image/png"]
+        stdout: SplitParser {
+            onRead: function(data) { root.clipboardAddEntry(ClipboardHistory.parseEntryJson(data)) }
+        }
+    }
+
     function refreshSystemStats() {
         if (systemProbe.running) return;
         systemProbe.running = false;
@@ -1121,6 +1198,7 @@ Item {
     function toggleMute() {
         root.audioMuted = !root.audioMuted;
         root.run("pamixer -t");
+        root.refreshAudio();
     }
     function setGamma(pct) {
         pct = Math.max(50, Math.min(150, Math.round(pct)));
@@ -2036,7 +2114,7 @@ Item {
             }
         }
     }
-    Component.onCompleted: refreshPowerProfile()
+    Component.onCompleted: { refreshPowerProfile(); clipboardInitProc.running = true; }
 
     // ---------- Screenshots list probe ----------
     // Cap at 60 entries (~5 pages) so a screenshot-heavy ~/Pictures
@@ -2343,6 +2421,13 @@ Item {
     }
     Timer { id: keepLocusfavs; interval: 400; onTriggered: locusfavsLoader.source = "" }
 
+    Loader { id: clipboardLoader }
+    onClipboardVisibleChanged: {
+        if (root.clipboardVisible) { keepClipboard.stop(); clipboardLoader.setSource("ClipboardPopup.qml", { root: root }); }
+        else keepClipboard.restart();
+    }
+    Timer { id: keepClipboard; interval: 400; onTriggered: clipboardLoader.source = "" }
+
     Osd              { root: root }
     NotificationOverlay { root: root }
 
@@ -2483,6 +2568,18 @@ Item {
         }
         function open(): void  { root.openAudio(); }
         function close(): void { root.audioVisible = false; }
+        function refresh(): void { root.refreshAudio(); }
+    }
+
+    // bind = SUPER, A, exec, qs -c desktop ipc call clipboard toggle
+    IpcHandler {
+        target: "clipboard"
+        function toggle(): void {
+            if (root.clipboardVisible) root.clipboardVisible = false;
+            else root.openClipboard();
+        }
+        function open(): void  { root.openClipboard(); }
+        function close(): void { root.clipboardVisible = false; }
     }
 
     // Bar face switch. Toggle from a keybind, or jump straight to one:

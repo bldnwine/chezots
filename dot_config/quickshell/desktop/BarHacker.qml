@@ -389,7 +389,7 @@ PanelWindow {
                          ? "Audio muted · " + hk.root.audioVol + "%"
                          : "Audio " + hk.root.audioVol + "%"
                 onActivated: hk.root.run("pavucontrol")
-                onMiddleActivated: hk.root.run("pamixer -t")
+                onMiddleActivated: hk.root.run("pamixer -t && qs -c desktop ipc call audio refresh")
                 onRightActivated: hk.root.run("~/.config/waybar/scripts/pulse_switch.sh")
             }
 
@@ -620,7 +620,7 @@ PanelWindow {
             font.pixelSize: 12
             MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor
                 acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                onClicked: (e) => { if (e.button === Qt.RightButton) hk.root.run("~/.config/waybar/scripts/pulse_switch.sh"); else if (e.button === Qt.MiddleButton) hk.root.run("pamixer -t"); else hk.root.run("pavucontrol"); } }
+                onClicked: (e) => { if (e.button === Qt.RightButton) hk.root.run("~/.config/waybar/scripts/pulse_switch.sh"); else if (e.button === Qt.MiddleButton) hk.root.run("pamixer -t && qs -c desktop ipc call audio refresh"); else hk.root.run("pavucontrol"); } }
         }
         // weather glyph (anchor target in vertical mode)
         Text {

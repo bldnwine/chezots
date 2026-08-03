@@ -33,6 +33,9 @@ PanelWindow {
     property string footer: ""
     property string layerNamespace: "omarchy-card"
     property bool plain: false
+    // Esc closes the card immediately. Popups that want to clear a search
+    // filter before dismissing set this false and handle Esc in keyPressed.
+    property bool escDismiss: true
     // Right-side header content (chevrons, refresh buttons, etc.). The
     // inline Component is instantiated as a Loader child; lexical scope
     // means ids declared in the popup file are reachable from inside.
@@ -128,7 +131,7 @@ PanelWindow {
 
         focus: card.revealed
         Keys.onPressed: function(event) {
-            if (event.key === Qt.Key_Escape) {
+            if (event.key === Qt.Key_Escape && card.escDismiss) {
                 card.dismiss();
                 event.accepted = true;
                 return;
