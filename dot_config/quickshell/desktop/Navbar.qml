@@ -1101,6 +1101,7 @@ Item {
     readonly property int clipboardHistoryLimit: 300
     readonly property string clipboardHistoryPath: Quickshell.env("HOME") + "/.local/state/quickshell-desktop/clipboard-history.json"
     readonly property string clipboardCaptureScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/clipboard-capture.sh"
+    readonly property string clipboardPruneScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/clipboard-prune.sh"
 
     function clipboardAddEntry(entry) {
         const normalized = ClipboardHistory.normalizeEntry(entry);
@@ -1114,11 +1115,16 @@ Item {
     }
 
     function clipboardRemoveAt(index) {
+        const entry = root.clipboardHistory[index];
+        if (entry && entry.type === "image" && entry.path) Quickshell.execDetached(["rm", "-f", entry.path]);
         root.clipboardHistory = ClipboardHistory.removeEntryAt(root.clipboardHistory, index);
         root.clipboardSave();
     }
 
     function clipboardClearAll() {
+        for (const entry of root.clipboardHistory) {
+            if (entry && entry.type === "image" && entry.path) Quickshell.execDetached(["rm", "-f", entry.path]);
+        }
         root.clipboardHistory = [];
         root.clipboardSave();
     }
@@ -2114,7 +2120,11 @@ Item {
             }
         }
     }
-    Component.onCompleted: { refreshPowerProfile(); clipboardInitProc.running = true; }
+    Component.onCompleted: {
+        refreshPowerProfile();
+        clipboardInitProc.running = true;
+        Quickshell.execDetached([root.clipboardPruneScript]);
+    }
 
     // ---------- Screenshots list probe ----------
     // Cap at 60 entries (~5 pages) so a screenshot-heavy ~/Pictures

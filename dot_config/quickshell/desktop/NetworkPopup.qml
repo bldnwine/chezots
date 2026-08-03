@@ -84,7 +84,6 @@ CardWindow {
         const net = netpopup._visibleNets[i - netpopup._headerCount];
         if (!net) return;
         if (net.inUse) { root.disconnectWifi(); return; }
-        if (!net.known && netpopup._isProtected(net.security)) { netpopup._openPassphrase(net.ssid); return; }
         root.wifiConnect(net.ssid);
     }
 

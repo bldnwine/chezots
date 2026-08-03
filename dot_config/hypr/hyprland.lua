@@ -271,6 +271,7 @@ hl.bind(mainMod .. " + TAB", hl.dsp.exec_cmd(terminal .. " -e sh -c 'btop; exec 
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("qs -c desktop ipc call clipboard toggle"))
 hl.bind(mainMod .. " + CONTROL + B", hl.dsp.exec_cmd("qs -c desktop ipc call bluetooth toggle"))
 hl.bind(mainMod .. " + CONTROL + N", hl.dsp.exec_cmd("qs -c desktop ipc call network toggle"))
+hl.bind(mainMod .. " + CONTROL + Q", hl.dsp.exec_cmd("qs -c desktop ipc call system toggle"))
 --hl.bind(mainMod .. " + X", hl.dsp.exec_cmd(launch("waypaper")))
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd(terminal .. " -e nvim"))
 hl.bind(mainMod .. " + ALT + N", hl.dsp.exec_cmd(terminal .. " -e nano"))

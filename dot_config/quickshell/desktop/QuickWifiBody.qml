@@ -87,7 +87,6 @@ Item {
         const net = body._visibleNets[i - body._headerCount];
         if (!net || !body.nav) return;
         if (net.inUse) { body.nav.disconnectWifi(); return; }
-        if (!net.known && body._isProtected(net.security)) { body._openPassphrase(net.ssid); return; }
         body.nav.wifiConnect(net.ssid);
     }
 

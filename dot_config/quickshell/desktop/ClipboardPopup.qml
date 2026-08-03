@@ -25,7 +25,7 @@ CardWindow {
 
     property string filterText: ""
     property int selectedIndex: 0
-    property bool cursorActive: false
+    property bool cursorActive: true
     property bool pointerArmed: false
 
     ListModel { id: displayModel }
@@ -33,7 +33,6 @@ CardWindow {
     Component.onCompleted: {
         popup.filterText = "";
         popup.selectedIndex = 0;
-        popup.cursorActive = false;
         popup.disarmPointer();
         popup.rebuildDisplay();
         armTimer.restart();
@@ -186,6 +185,13 @@ CardWindow {
             popup.setFilter(popup.filterText + event.text);
             event.accepted = true;
         }
+    }
+
+    onRevealedChanged: if (popup.revealed) {
+        popup.selectedIndex = 0;
+        popup.cursorActive = true;
+        popup.disarmPointer();
+        popup.rebuildDisplay();
     }
 
     onDismiss: root.clipboardVisible = false
