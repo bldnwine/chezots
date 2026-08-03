@@ -104,19 +104,6 @@ PanelWindow {
         anchors.fill: parent
         color: hk.deepBg
 
-        // Idle dim, same slow 6s states/transitions as the zen bar so the
-        // two faces breathe identically when the session goes quiet.
-        opacity: 1.0
-        states: State {
-            name: "idle"
-            when: hk.root.isIdle
-            PropertyChanges { target: bg; opacity: 0.72 }
-        }
-        transitions: [
-            Transition { to: "idle";   NumberAnimation { property: "opacity"; duration: 6000; easing.type: Easing.OutQuart } },
-            Transition { from: "idle"; NumberAnimation { property: "opacity"; duration: 6000; easing.type: Easing.OutQuad } }
-        ]
-
         // CRT scanlines: faint 1px rasters every 3px down the slab. Cheap
         // (~9 lines at 26px tall), clipped, barely-there opacity.
         Item {

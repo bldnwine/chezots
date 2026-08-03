@@ -69,16 +69,6 @@ PanelWindow {
         id: backplate
         anchors.fill: parent
         color: wr.bg
-        opacity: 1.0
-        states: State {
-            name: "idle"
-            when: wr.root.isIdle
-            PropertyChanges { target: backplate; opacity: 0.72 }
-        }
-        transitions: [
-            Transition { to: "idle";   NumberAnimation { property: "opacity"; duration: 6000; easing.type: Easing.OutQuart } },
-            Transition { from: "idle"; NumberAnimation { property: "opacity"; duration: 6000; easing.type: Easing.OutQuad } }
-        ]
 
         Rectangle {
             visible: wr.root.isHorizontal

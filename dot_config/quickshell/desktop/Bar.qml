@@ -55,27 +55,6 @@ PanelWindow {
         radius: bar.root.cornerRadius
         color: bar.root.barTransparent ? "transparent" : bar.root.bg
         z: 0
-        // Idle dim, slow 6s ease both ways. Driven by states/transitions rather
-        // than a Behavior with an isIdle-bound duration: that bound duration is
-        // re-evaluated in the same notify pass as the opacity write and lags one
-        // toggle behind, so each direction could inherit the other's speed.
-        // from/to pins each direction's duration.
-        opacity: 1.0
-        states: State {
-            name: "idle"
-            when: bar.root.isIdle
-            PropertyChanges { target: cloudBg; opacity: 0.7 }
-        }
-        transitions: [
-            Transition {
-                to: "idle"
-                NumberAnimation { property: "opacity"; duration: 6000; easing.type: Easing.OutQuart }
-            },
-            Transition {
-                from: "idle"
-                NumberAnimation { property: "opacity"; duration: 6000; easing.type: Easing.OutQuad }
-            }
-        ]
     }
 
     // Container for clock + modules + hairlines. In cloud mode the bg
@@ -85,25 +64,6 @@ PanelWindow {
         id: slabBg
         anchors.fill: parent
         color: bar.cloudMode ? "transparent" : (bar.root.barTransparent ? "transparent" : bar.root.bg)
-        // Slab-mode idle dim (cloud mode keeps this transparent + opaque; the
-        // cloudBg rectangle above handles the dim there). Same states/transitions
-        // approach as cloudBg, slow 6s ease in both directions.
-        opacity: 1.0
-        states: State {
-            name: "idle"
-            when: bar.root.isIdle && !bar.cloudMode
-            PropertyChanges { target: slabBg; opacity: 0.7 }
-        }
-        transitions: [
-            Transition {
-                to: "idle"
-                NumberAnimation { property: "opacity"; duration: 6000; easing.type: Easing.OutQuart }
-            },
-            Transition {
-                from: "idle"
-                NumberAnimation { property: "opacity"; duration: 6000; easing.type: Easing.OutQuad }
-            }
-        ]
 
 
         // Inner-edge hairline (facing the rest of the screen). Hidden in

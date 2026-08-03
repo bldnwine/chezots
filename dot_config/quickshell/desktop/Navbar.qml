@@ -1750,20 +1750,6 @@ Item {
     Timer { interval: 1500; running: root.networkVisible; repeat: true; triggeredOnStart: true
         onTriggered: { if (!netDetailsProbe.running) { netDetailsProbe.running = false; netDetailsProbe.running = true; } } }
 
-    // ---------- Idle dim ----------
-    // Wayland ext-idle-notify-v1 via Quickshell. The compositor counts
-    // pointer AND keyboard activity, so typing keeps the bar bright even
-    // when the mouse hasn't moved. Once idle the rectangle eases to 0.7
-    // opacity over 6s; the next input snaps it back over 60ms — slow
-    // fade reads ambient, fast restore reads responsive.
-    IdleMonitor {
-        id: idleMonitor
-        enabled: true
-        timeout: 60
-        respectInhibitors: true
-    }
-    readonly property bool isIdle: idleMonitor.isIdle
-
     // ---------- Bluetooth status ----------
     // bluez-tools path: bt-adapter --info for power state only — the
     // per-device connected count is updated by btDevicesProbe which
