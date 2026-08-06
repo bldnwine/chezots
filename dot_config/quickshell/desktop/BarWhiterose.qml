@@ -298,7 +298,11 @@ PanelWindow {
                 borderless: true
                 minWidth: 28
                 maxWidth: 28
-                onActivated: wr.root.run("pavucontrol")
+                Component.onCompleted: wr.root.audioAnchorItem = this
+                onActivated: {
+                    if (wr.root.audioVisible) wr.root.audioVisible = false;
+                    else wr.root.openAudio();
+                }
                 onMiddleActivated: wr.root.run("pamixer -t && qs -c desktop ipc call audio refresh")
                 onRightActivated: wr.root.run("~/.config/waybar/scripts/pulse_switch.sh")
             }

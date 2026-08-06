@@ -19,7 +19,7 @@ CardWindow {
               ? "MUTED"
               : (root.audioSinkDesc ? root.audioSinkDesc + " · " : "")
                 + root.audioVol + "%"
-    footer: "M MUTE · ENTER ACT · ESC CLOSE"
+    footer: "M MUTE · B MIXER · ENTER ACT · ESC CLOSE"
 
     anchorEdge: audioPopup.root.barEdge
     anchorBarX: audioPopup.root.popupAnchorX
@@ -97,14 +97,11 @@ CardWindow {
     function toggleInputMute() {
         audioPopup.root.toggleInputMute();
     }
-    function toggleAllMuted() {
-        audioPopup.root.toggleAllMute();
+    function setDefaultSink(id, port) {
+        if (id) audioPopup.root.setDefaultSink(id, port);
     }
-    function setDefaultSink(id) {
-        if (id) audioPopup.root.setDefaultSink(id);
-    }
-    function setDefaultSource(id) {
-        if (id) audioPopup.root.setDefaultSource(id);
+    function setDefaultSource(id, port) {
+        if (id) audioPopup.root.setDefaultSource(id, port);
     }
     function adjustFocused(delta) {
         const row = audioPopup.kbdRow;
@@ -113,16 +110,20 @@ CardWindow {
     }
     function activateFocused() {
         const row = audioPopup.kbdRow;
-        if (row.type === "hero") audioPopup.toggleAllMuted();
+        if (row.type === "hero") audioPopup.toggleOutputMute();
         else if (row.type === "outSlider") audioPopup.toggleOutputMute();
         else if (row.type === "inSlider") audioPopup.toggleInputMute();
-        else if (row.type === "sink") audioPopup.setDefaultSink(row.sink.id);
-        else if (row.type === "source") audioPopup.setDefaultSource(row.source.id);
+        else if (row.type === "sink") audioPopup.setDefaultSink(row.sink.id, row.sink.port);
+        else if (row.type === "source") audioPopup.setDefaultSource(row.source.id, row.source.port);
     }
     function muteFocused() {
         const row = audioPopup.kbdRow;
         if (row.type === "inSlider") audioPopup.toggleInputMute();
         else audioPopup.toggleOutputMute();
+    }
+    function openMixer() {
+        audioPopup.root.run("pavucontrol");
+        audioPopup.root.audioVisible = false;
     }
 
     onKeyPressed: function(event) {
@@ -141,6 +142,8 @@ CardWindow {
             audioPopup.activateFocused();
         } else if (k === Qt.Key_M) {
             audioPopup.muteFocused();
+        } else if (k === Qt.Key_B) {
+            audioPopup.openMixer();
         } else {
             return;
         }
@@ -177,9 +180,9 @@ CardWindow {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 root: audioPopup.root
-                label: (audioPopup.outputMuted || audioPopup.inputMuted) ? "UNMUTE" : "MUTE"
+                label: audioPopup.outputMuted ? "UNMUTE" : "MUTE"
                 selected: audioPopup.kbdRow.type === "hero"
-                onClicked: audioPopup.toggleAllMuted()
+                onClicked: audioPopup.toggleOutputMute()
             }
         }
 
@@ -219,7 +222,7 @@ CardWindow {
                     required property var modelData
                     required property int index
 
-                    readonly property bool active: audioPopup.root.audioDefaultSink === String(modelData.id)
+                    readonly property bool active: modelData.isActive
                     readonly property bool focused: audioPopup.sinkFocused(index)
 
                     width: parent.width
@@ -244,14 +247,14 @@ CardWindow {
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: audioPopup.deviceGlyph(modelData.name, "sink")
+                            text: audioPopup.deviceGlyph(modelData.name + " " + modelData.portLabel, "sink")
                             color: active ? audioPopup.root.seal : audioPopup.root.ink
                             font.family: audioPopup.root.mono
                             font.pixelSize: 13
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.name
+                            text: modelData.portLabel ? modelData.name + " · " + modelData.portLabel : modelData.name
                             elide: Text.ElideRight
                             width: parent.width - 21 - 8
                             color: active ? audioPopup.root.ink : audioPopup.root.fg
@@ -265,7 +268,7 @@ CardWindow {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: audioPopup.setDefaultSink(modelData.id)
+                        onClicked: audioPopup.setDefaultSink(modelData.id, modelData.port)
                     }
                 }
             }
@@ -325,7 +328,7 @@ CardWindow {
                     required property var modelData
                     required property int index
 
-                    readonly property bool active: audioPopup.root.audioDefaultSource === String(modelData.id)
+                    readonly property bool active: modelData.isActive
                     readonly property bool focused: audioPopup.sourceFocused(index)
 
                     width: parent.width
@@ -350,14 +353,14 @@ CardWindow {
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: audioPopup.deviceGlyph(modelData.name, "source")
+                            text: audioPopup.deviceGlyph(modelData.name + " " + modelData.portLabel, "source")
                             color: active ? audioPopup.root.seal : audioPopup.root.ink
                             font.family: audioPopup.root.mono
                             font.pixelSize: 13
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.name
+                            text: modelData.portLabel ? modelData.name + " · " + modelData.portLabel : modelData.name
                             elide: Text.ElideRight
                             width: parent.width - 21 - 8
                             color: active ? audioPopup.root.ink : audioPopup.root.fg
@@ -371,9 +374,56 @@ CardWindow {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: audioPopup.setDefaultSource(modelData.id)
+                        onClicked: audioPopup.setDefaultSource(modelData.id, modelData.port)
                     }
                 }
+            }
+        }
+
+        Rectangle { width: parent.width; height: 1; color: audioPopup.root.sep }
+
+        Item {
+            width: parent.width
+            height: 30
+
+            Rectangle {
+                anchors.fill: parent
+                color: mixerMouse.containsMouse
+                       ? Qt.rgba(audioPopup.root.ink.r, audioPopup.root.ink.g, audioPopup.root.ink.b, 0.06)
+                       : "transparent"
+                border.width: 1
+                border.color: mixerMouse.containsMouse ? audioPopup.root.ink : audioPopup.root.sep
+            }
+
+            Text {
+                anchors.left: parent.left
+                anchors.leftMargin: 9
+                anchors.verticalCenter: parent.verticalCenter
+                text: "OPEN PAVUCONTROL"
+                color: audioPopup.root.ink
+                font.family: audioPopup.root.mono
+                font.pixelSize: 10
+                font.letterSpacing: 2
+                font.weight: Font.Medium
+            }
+
+            Text {
+                anchors.right: parent.right
+                anchors.rightMargin: 9
+                anchors.verticalCenter: parent.verticalCenter
+                text: "DETAIL AUDIO MIXER"
+                color: audioPopup.root.inkDeep
+                font.family: audioPopup.root.mono
+                font.pixelSize: 10
+                font.letterSpacing: 1.2
+            }
+
+            MouseArea {
+                id: mixerMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: audioPopup.openMixer()
             }
         }
     }

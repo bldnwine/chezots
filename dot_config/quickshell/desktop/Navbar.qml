@@ -479,32 +479,36 @@ Item {
         root.run("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SOURCE@ " + v + "%");
     }
 
-    function setDefaultSink(id) {
-        if (!id) return;
-        root.audioDefaultSink = String(id);
+    function setDefaultSink(name, port) {
+        if (!name) return;
+        root.audioDefaultSink = name;
         root._lastSinkChangeTime = Date.now();
         if (root.audioSinks && root.audioSinks.length > 0) {
             root.audioSinks = root.audioSinks.map(s => ({
-                id: s.id, name: s.name, isDefault: String(s.id) === String(id)
+                id: s.id, name: s.name, port: s.port, portLabel: s.portLabel,
+                isDefault: s.id === name,
+                isActive: s.id === name && (!port || s.port === port)
             }));
         }
-        root.run("wpctl set-default " + id);
-        audioSinksProbe.running = false;
-        audioSinksProbe.running = true;
+        audioSwitchProc.command = ["bash", "-c", "pactl set-default-sink \"" + name + "\""
+            + (port ? "; pactl set-sink-port \"" + name + "\" \"" + port + "\"" : "")];
+        audioSwitchProc.running = true;
     }
 
-    function setDefaultSource(id) {
-        if (!id) return;
-        root.audioDefaultSource = String(id);
+    function setDefaultSource(name, port) {
+        if (!name) return;
+        root.audioDefaultSource = name;
         root._lastSinkChangeTime = Date.now();
         if (root.audioSources && root.audioSources.length > 0) {
             root.audioSources = root.audioSources.map(s => ({
-                id: s.id, name: s.name, isDefault: String(s.id) === String(id)
+                id: s.id, name: s.name, port: s.port, portLabel: s.portLabel,
+                isDefault: s.id === name,
+                isActive: s.id === name && (!port || s.port === port)
             }));
         }
-        root.run("wpctl set-default " + id);
-        audioSourcesProbe.running = false;
-        audioSourcesProbe.running = true;
+        audioSwitchProc.command = ["bash", "-c", "pactl set-default-source \"" + name + "\""
+            + (port ? "; pactl set-source-port \"" + name + "\" \"" + port + "\"" : "")];
+        audioSwitchProc.running = true;
     }
 
     function toggleAudioMute() {
@@ -516,15 +520,6 @@ Item {
     function toggleInputMute() {
         root.audioInputMuted = !root.audioInputMuted;
         root.run("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle");
-        root.refreshAudio();
-    }
-
-    function toggleAllMute() {
-        const any = root.audioMuted || root.audioInputMuted;
-        root.audioMuted = !any;
-        root.audioInputMuted = !any;
-        root.run("wpctl set-mute @DEFAULT_AUDIO_SINK@ " + (any ? "0" : "1"));
-        root.run("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ " + (any ? "0" : "1"));
         root.refreshAudio();
     }
 
@@ -1983,96 +1978,119 @@ Item {
     }
 
     // ---------- Audio sinks probe ----------
-    // wpctl status's structured form: lines like
-    //   "*    52. WH-1000XM4              [vol: 0.45]"
-    // The leading "*" flags the current default; we capture id, label, and
-    // default state. Skipped automatically when wireplumber isn't around.
+    // pactl JSON (pipewire-pulse supports -f json): each sink carries its
+    // ports + active port, so we flatten one row per port — a multi-port
+    // built-in (Speakers/Headphones) shows every port as a selectable row.
+    // The default sink name is tagged onto the end after a marker line.
+    // Skipped automatically when pipewire-pulse isn't around.
     Process {
         id: audioSinksProbe
         running: false
-        // Tracks the Audio top-level section AND the Sinks subsection
-        // separately so we don't pick up Sources, Filters, or Video's
-        // Sinks. Section header lines start with `├─` or `└─`; the Audio
-        // section ends at the next top-level label (Video / Settings).
         command: ["bash", "-c",
-            "wpctl status 2>/dev/null | awk '"
-            + "  /^Audio$/                                    {sec=\"audio\"; subsec=\"\"; next}"
-            + "  /^[A-Z][a-zA-Z]+$/                           {sec=\"\";      subsec=\"\"; next}"
-            + "  /^[[:space:]]*[├└]─[[:space:]]*Sinks:/       {subsec=\"sinks\"; next}"
-            + "  /^[[:space:]]*[├└]─/                          {subsec=\"\";      next}"
-            + "  sec==\"audio\" && subsec==\"sinks\" {"
-            + "    star=(index($0,\"*\")>0 && index($0,\"*\")<index($0,\".\")) ? 1 : 0;"
-            + "    line=$0;"
-            + "    sub(/^[ │├─└*]+/, \"\", line);"
-            + "    if (match(line, /^([0-9]+)\\. (.+)\\[/, m)) {"
-            + "      gsub(/[ \\t]+$/, \"\", m[2]);"
-            + "      printf \"%s\\t%s\\t%d\\n\", m[1], m[2], star;"
-            + "    }"
-            + "  }'"]
+            "d=$(pactl get-default-sink 2>/dev/null); "
+            + "j=$(amixer -c 0 contents 2>/dev/null | awk '/Headphone Mic Jack/{f=1} f && /: values=/{print substr($0, index($0, \": values=\")+9); exit}'); "
+            + "pactl -f json list sinks 2>/dev/null; "
+            + "printf '\\n__DEFAULT__%s\\n__HPJACK__%s\\n' \"$d\" \"$j\""]
         stdout: StdioCollector {
             onStreamFinished: {
-                const lines = this.text.trim().split("\n").filter(s => s.length > 0);
-                const sinks = lines.map(line => {
-                    const f = line.split("\t");
-                    return {
-                        id: f[0] || "",
-                        name: (f[1] || "").trim(),
-                        isDefault: f[2] === "1"
-                    };
-                });
-                const ser = JSON.stringify(sinks);
+                const raw = this.text;
+                const sep = raw.indexOf("__DEFAULT__");
+                let arr = [];
+                if (sep > 0) {
+                    try { arr = JSON.parse(raw.slice(0, sep)); } catch (e) { arr = []; }
+                }
+                const def = sep >= 0 ? raw.slice(sep + "__DEFAULT__".length, raw.indexOf("__HPJACK__") >= 0 ? raw.indexOf("__HPJACK__") : undefined).trim() : "";
+                const jackOff = raw.indexOf("__HPJACK__") >= 0
+                             && raw.slice(raw.indexOf("__HPJACK__") + "__HPJACK__".length).trim() === "off";
+                const rows = [];
+                for (const s of arr) {
+                    if (!s || !s.name) continue;
+                    const isDef = s.name === def;
+                    const ports = Array.isArray(s.ports) ? s.ports : [];
+                    if (ports.length === 0) {
+                        rows.push({ id: s.name, name: s.description || s.name, port: "", portLabel: "", isDefault: isDef, isActive: isDef });
+                    } else {
+                        for (const p of ports) {
+                            if (jackOff && p.name === "analog-output-headphones") continue;
+                            rows.push({ id: s.name, name: s.description || s.name, port: p.name, portLabel: p.description || p.name, isDefault: isDef, isActive: isDef && p.name === s.active_port });
+                        }
+                    }
+                }
+                const ser = JSON.stringify(rows);
                 if (ser !== root._audioSinksSer && Date.now() - root._lastSinkChangeTime >= 700) {
                     root._audioSinksSer = ser;
-                    root.audioSinks = sinks;
+                    root.audioSinks = rows;
                 }
-                const def = sinks.find(s => s.isDefault);
-                if (def && root.audioDefaultSink !== def.id && Date.now() - root._lastSinkChangeTime >= 700) {
-                    root.audioDefaultSink = def.id;
+                const active = rows.find(r => r.isActive);
+                if (active && root.audioDefaultSink !== active.id && Date.now() - root._lastSinkChangeTime >= 700) {
+                    root.audioDefaultSink = active.id;
                 }
             }
         }
     }
 
     // ---------- Audio sources probe ----------
-    // Mirror of audioSinksProbe for the Sources subsection.
+    // Mirror of audioSinksProbe for sources, skipping *.monitor entries.
     Process {
         id: audioSourcesProbe
         running: false
         command: ["bash", "-c",
-            "wpctl status 2>/dev/null | awk '"
-            + "  /^Audio$/                                    {sec=\"audio\"; subsec=\"\"; next}"
-            + "  /^[A-Z][a-zA-Z]+$/                           {sec=\"\";      subsec=\"\"; next}"
-            + "  /^[[:space:]]*[├└]─[[:space:]]*Sources:/     {subsec=\"sources\"; next}"
-            + "  /^[[:space:]]*[├└]─/                          {subsec=\"\";      next}"
-            + "  sec==\"audio\" && subsec==\"sources\" {"
-            + "    star=(index($0,\"*\")>0 && index($0,\"*\")<index($0,\".\")) ? 1 : 0;"
-            + "    line=$0;"
-            + "    sub(/^[ │├─└*]+/, \"\", line);"
-            + "    if (match(line, /^([0-9]+)\\. (.+)\\[/, m)) {"
-            + "      gsub(/[ \\t]+$/, \"\", m[2]);"
-            + "      printf \"%s\\t%s\\t%d\\n\", m[1], m[2], star;"
-            + "    }"
-            + "  }'"]
+            "d=$(pactl get-default-source 2>/dev/null); "
+            + "j=$(amixer -c 0 contents 2>/dev/null | awk '/Headphone Mic Jack/{f=1} f && /: values=/{print substr($0, index($0, \": values=\")+9); exit}'); "
+            + "pactl -f json list sources 2>/dev/null; "
+            + "printf '\\n__DEFAULT__%s\\n__HPJACK__%s\\n' \"$d\" \"$j\""]
         stdout: StdioCollector {
             onStreamFinished: {
-                const lines = this.text.trim().split("\n").filter(s => s.length > 0);
-                const sources = lines.map(line => {
-                    const f = line.split("\t");
-                    return {
-                        id: f[0] || "",
-                        name: (f[1] || "").trim(),
-                        isDefault: f[2] === "1"
-                    };
-                });
-                const ser = JSON.stringify(sources);
+                const raw = this.text;
+                const sep = raw.indexOf("__DEFAULT__");
+                let arr = [];
+                if (sep > 0) {
+                    try { arr = JSON.parse(raw.slice(0, sep)); } catch (e) { arr = []; }
+                }
+                const def = sep >= 0 ? raw.slice(sep + "__DEFAULT__".length, raw.indexOf("__HPJACK__") >= 0 ? raw.indexOf("__HPJACK__") : undefined).trim() : "";
+                const jackOff = raw.indexOf("__HPJACK__") >= 0
+                             && raw.slice(raw.indexOf("__HPJACK__") + "__HPJACK__".length).trim() === "off";
+                const rows = [];
+                for (const s of arr) {
+                    if (!s || !s.name || s.name.endsWith(".monitor")) continue;
+                    const isDef = s.name === def;
+                    const ports = Array.isArray(s.ports) ? s.ports : [];
+                    if (ports.length === 0) {
+                        rows.push({ id: s.name, name: s.description || s.name, port: "", portLabel: "", isDefault: isDef, isActive: isDef });
+                    } else {
+                        for (const p of ports) {
+                            if (p.name === "analog-input-headset-mic") continue;
+                            if (jackOff && p.name === "analog-input-headphone-mic") continue;
+                            rows.push({ id: s.name, name: s.description || s.name, port: p.name, portLabel: p.description || p.name, isDefault: isDef, isActive: isDef && p.name === s.active_port });
+                        }
+                    }
+                }
+                const ser = JSON.stringify(rows);
                 if (ser !== root._audioSourcesSer && Date.now() - root._lastSinkChangeTime >= 700) {
                     root._audioSourcesSer = ser;
-                    root.audioSources = sources;
+                    root.audioSources = rows;
                 }
-                const def = sources.find(s => s.isDefault);
-                if (def && root.audioDefaultSource !== def.id && Date.now() - root._lastSinkChangeTime >= 700) {
-                    root.audioDefaultSource = def.id;
+                const active = rows.find(r => r.isActive);
+                if (active && root.audioDefaultSource !== active.id && Date.now() - root._lastSinkChangeTime >= 700) {
+                    root.audioDefaultSource = active.id;
                 }
+            }
+        }
+    }
+
+    // Runs a sink/source default switch to completion, THEN refreshes the
+    // volume/mute probe. Without the sequencing the refresh races the pactl
+    // command and can sample the old default's volume until the 2s tick.
+    Process {
+        id: audioSwitchProc
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.refreshAudio();
+                audioSinksProbe.running = false;
+                audioSinksProbe.running = true;
+                audioSourcesProbe.running = false;
+                audioSourcesProbe.running = true;
             }
         }
     }
@@ -2355,6 +2373,7 @@ Item {
             keepAudio.stop();
             audioLoader.setSource("AudioPopup.qml", { root: root });
             root.refreshAudioSinks();
+            root.refreshAudio();
         }
         else keepAudio.restart();
     }

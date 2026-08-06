@@ -108,7 +108,7 @@ CardWindow {
         if (ok) { netpopup.statusText = ""; return; }
         netpopup.statusText = "CONNECT FAILED";
         const net = netpopup._visibleNets.find(n => n && n.ssid === ssid);
-        if (net && netpopup._isProtected(net.security)) netpopup._openPassphrase(ssid);
+        if (net && !net.known && netpopup._isProtected(net.security)) netpopup._openPassphrase(ssid);
     }
 
     function _copy(value) {

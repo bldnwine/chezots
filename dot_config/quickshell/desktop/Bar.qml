@@ -440,7 +440,11 @@ PanelWindow {
                 root: bar.root
                 glyph: bar.root.audioIcon
                 tooltip: (bar.root.audioSinkDesc ? bar.root.audioSinkDesc + " " : "") + (bar.root.audioDevType !== "bt" && bar.root.audioPort ? "(" + bar.root.audioPort + ") " : "") + bar.root.audioVol + "%" + (bar.root.audioMuted ? " (muted)" : "")
-                onActivated: bar.root.run("pavucontrol")
+                Component.onCompleted: bar.root.audioAnchorItem = this
+                onActivated: {
+                    if (bar.root.audioVisible) bar.root.audioVisible = false;
+                    else bar.root.openAudio();
+                }
                 onMiddleActivated: bar.root.run("pamixer -t && qs -c desktop ipc call audio refresh")
                 onRightActivated: bar.root.run("~/.config/waybar/scripts/pulse_switch.sh")
                 onWheelActivated: (delta) => bar.root.run(delta > 0 ? "~/.config/quickshell/desktop/scripts/volume +5" : "~/.config/quickshell/desktop/scripts/volume -5")

@@ -50,7 +50,7 @@ Item {
                 return true;
             }
             const sink = body._sinks[body.kbdIndex - body._headerCount];
-            if (sink && body.nav) body.nav.setDefaultSink(sink.id);
+            if (sink && body.nav) body.nav.setDefaultSink(sink.id, sink.port);
             return true;
         }
         return false;
@@ -137,12 +137,12 @@ Item {
                             width: parent.width
                             height: 30
                             radius: body.root.cornerRadius
-                            color: modelData.isDefault || kbdFocused
+                            color: modelData.isActive || kbdFocused
                                    ? body.root.rowSel
                                    : sinkMouse.containsMouse
                                        ? body.root.rowHi
                                        : "transparent"
-                            border.color: modelData.isDefault || kbdFocused ? body.root.seal : body.root.sep
+                            border.color: modelData.isActive || kbdFocused ? body.root.seal : body.root.sep
                             border.width: kbdFocused ? 2 : 1
                             Behavior on color { ColorAnimation { duration: 120 } }
                             Behavior on border.color { ColorAnimation { duration: 120 } }
@@ -152,7 +152,7 @@ Item {
                                 anchors.left: parent.left
                                 anchors.leftMargin: 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: modelData.isDefault ? "✓" : " "
+                                text: modelData.isActive ? "✓" : " "
                                 color: body.root.seal
                                 font.family: body.root.mono
                                 font.pixelSize: 11
@@ -164,9 +164,9 @@ Item {
                                 anchors.leftMargin: 26
                                 anchors.rightMargin: 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: modelData.name
+                                text: modelData.portLabel ? modelData.name + " · " + modelData.portLabel : modelData.name
                                 elide: Text.ElideRight
-                                color: modelData.isDefault ? body.root.ink : body.root.fg
+                                color: modelData.isActive ? body.root.ink : body.root.fg
                                 font.family: body.root.mono
                                 font.pixelSize: 11
                             }
@@ -177,7 +177,7 @@ Item {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
                                     body.kbdIndex = index + body._headerCount;
-                                    if (body.nav) body.nav.setDefaultSink(modelData.id);
+                                    if (body.nav) body.nav.setDefaultSink(modelData.id, modelData.port);
                                 }
                             }
                         }

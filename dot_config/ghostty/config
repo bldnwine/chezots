@@ -20,7 +20,7 @@
 # Control + Shift + comma on other platforms). Not all config options can be
 # reloaded while running; some only apply to new windows and others may require
 # a full restart to take effect.
-
+clipboard-paste-protection = false
 # Aether Theme
 theme = /home/bldnwine/.config/aether/theme/ghostty.conf
 confirm-close-surface = false
@@ -30,7 +30,7 @@ keybind = ctrl+comma=open_config
 # # The config file consists of simple key-value pairs,
 # # separated by equals signs.
 font-family = "JetBrainsMono Nerd Font"
-font-size = 12
+font-size = 11
 # window-padding-x = 2
 #
 # # Spacing around the equals sign does not matter.

@@ -111,7 +111,7 @@ Item {
         if (ok) { body.statusText = ""; return; }
         body.statusText = "CONNECT FAILED";
         const net = body._visibleNets.find(n => n && n.ssid === ssid);
-        if (net && body._isProtected(net.security)) body._openPassphrase(ssid);
+        if (net && !net.known && body._isProtected(net.security)) body._openPassphrase(ssid);
     }
 
     Column {

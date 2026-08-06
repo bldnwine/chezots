@@ -375,7 +375,11 @@ PanelWindow {
                 tooltip: hk.root.audioMuted
                          ? "Audio muted · " + hk.root.audioVol + "%"
                          : "Audio " + hk.root.audioVol + "%"
-                onActivated: hk.root.run("pavucontrol")
+                Component.onCompleted: hk.root.audioAnchorItem = this
+                onActivated: {
+                    if (hk.root.audioVisible) hk.root.audioVisible = false;
+                    else hk.root.openAudio();
+                }
                 onMiddleActivated: hk.root.run("pamixer -t && qs -c desktop ipc call audio refresh")
                 onRightActivated: hk.root.run("~/.config/waybar/scripts/pulse_switch.sh")
             }

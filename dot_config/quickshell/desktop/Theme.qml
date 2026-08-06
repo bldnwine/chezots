@@ -48,7 +48,7 @@ Item {
     )
 
     readonly property string serif: "serif"
-    readonly property string mono:  "JetBrainsMono Nerd Font"
+    readonly property string mono:  "CaskaydiaCove Nerd Font"
 
     readonly property color bg:     Qt.rgba(paper.r, paper.g, paper.b, 0.94)
     readonly property color fg:     ink

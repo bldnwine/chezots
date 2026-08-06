@@ -113,10 +113,33 @@ hl.env("HYPRCURSOR_SIZE", "24")
 ---- LOOK AND FEEL ----
 -----------------------
 
+local state_dir = os.getenv("HOME") .. "/.local/state/hypr"
+local look_state = state_dir .. "/look.lua"
+local look = { gaps_in = 1, gaps_out = 7, rounding = 0 }
+
+local fn = loadfile(look_state)
+if fn then
+	local ok, loaded = pcall(fn)
+	if ok and type(loaded) == "table" then
+		if loaded.gaps_in ~= nil then look.gaps_in = loaded.gaps_in end
+		if loaded.gaps_out ~= nil then look.gaps_out = loaded.gaps_out end
+		if loaded.rounding ~= nil then look.rounding = loaded.rounding end
+	end
+end
+
+local function save_look()
+	os.execute("mkdir -p " .. state_dir)
+	local f = io.open(look_state, "w")
+	if f then
+		f:write(string.format("return { gaps_in = %d, gaps_out = %d, rounding = %d }\n", look.gaps_in, look.gaps_out, look.rounding))
+		f:close()
+	end
+end
+
 hl.config({
 	general = {
-		gaps_in = 1,
-		gaps_out = 7,
+		gaps_in = look.gaps_in,
+		gaps_out = look.gaps_out,
 		border_size = 0,
 		col = {
 			active_border = "rgb(" .. accent .. ")",
@@ -128,7 +151,7 @@ hl.config({
 	},
 
 	decoration = {
-		rounding = 9,
+		rounding = look.rounding,
 		rounding_power = 5,
 		active_opacity = 0.97,
 		inactive_opacity = 0.90,
@@ -255,7 +278,7 @@ local mainMod = "SUPER"
 
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
-hl.bind(mainMod .. " + CONTROL + M", hl.dsp.exec_cmd(launch("pavucontrol")))
+hl.bind(mainMod .. " + CONTROL + M", hl.dsp.exec_cmd("qs -c desktop ipc call audio toggle"))
 hl.bind(mainMod .. " + ALT + M", hl.dsp.exec_cmd("~/.config/waybar/scripts/pulse_switch.sh"))
 hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + Y", hl.dsp.exec_cmd(terminal .. " -e yazi"))
@@ -287,32 +310,30 @@ hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen_state({ action = "toggle", i
 hl.bind(mainMod .. " + CONTROL + Y", hl.dsp.exec_cmd(launch("cmd-ocr")))
 --hl.bind(mainMod .. " + CONTROL + T", hl.dsp.exec_cmd(launch("qs -p ~/.config/quickshell/desktop/test-bp.qml")))
 hl.bind(
-	mainMod .. " + CONTROL + T",
-	hl.dsp.exec_cmd(
-		launch("qs -c desktop ipc call aether toggle || qs -p ~/.config/quickshell/desktop/test-bp.qml --no-duplicate")
-	)
-)
-hl.bind(
 	mainMod .. " + SHIFT + A",
 	hl.dsp.exec_cmd(
 		launch("qs -c desktop ipc call aether toggle || qs -p ~/.config/quickshell/desktop/test-bp.qml --no-duplicate")
 	)
 )
 hl.bind(mainMod .. " + SHIFT + G", function()
-	local gapsIn = hl.get_config("general.gaps_in")
-	if gapsIn.top == 1 then
-		hl.config({ general = { gaps_in = 0, gaps_out = 0 } })
+	if look.gaps_in > 0 or look.gaps_out > 0 then
+		look.gaps_in = 0
+		look.gaps_out = 0
 	else
-		hl.config({ general = { gaps_in = 1, gaps_out = 7 } })
+		look.gaps_in = 1
+		look.gaps_out = 7
 	end
+	hl.config({ general = { gaps_in = look.gaps_in, gaps_out = look.gaps_out } })
+	save_look()
 end)
 hl.bind(mainMod .. " + CONTROL + G", function()
-	local rounding = hl.get_config("decoration.rounding")
-	if rounding == 0 then
-		hl.config({ decoration = { rounding = 9 } })
+	if look.rounding == 0 then
+		look.rounding = 9
 	else
-		hl.config({ decoration = { rounding = 0 } })
+		look.rounding = 0
 	end
+	hl.config({ decoration = { rounding = look.rounding } })
+	save_look()
 end)
 --hl.bind("ALT + F", hl.dsp.exec_cmd(launch("helium-browser")))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(launch("zen-browser -P default")))
@@ -325,17 +346,6 @@ hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd("qs -c desktop ipc call scree
 hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd("hyprpicker -f hex -a"))
 hl.bind(mainMod .. " + ALT + T", hl.dsp.exec_cmd("notification-time"))
 hl.bind(mainMod .. " + ALT + G", hl.dsp.exec_cmd("hyprland-transparency"))
-hl.bind(mainMod .. " + Period", function()
-	local handle = io.popen("pactl get-default-sink")
-	local current = handle:read("*a"):gsub("%s+", "")
-	handle:close()
-
-	if current == "alsa_output.pci-0000_00_1b.0.analog-stereo" then
-		hl.exec_cmd(launch("pactl set-default-sink bluez_output.04_F4_D8_49_FB_7C.1"))
-	else
-		hl.exec_cmd(launch("pactl set-default-sink alsa_output.pci-0000_00_1b.0.analog-stereo"))
-	end
-end)
 hl.bind("SUPER + CTRL + Z", function()
 	local zoom = hl.get_config("cursor.zoom_factor") or 1
 	hl.config({ cursor = { zoom_factor = zoom + 1 } })
