@@ -1,0 +1,166 @@
+#!/bin/bash
+
+# Desktop reminder manager — systemd user timer & notify-send backend
+set -euo pipefail
+
+REMINDER_DIR="${XDG_RUNTIME_DIR:-/tmp}/desktop-reminders"
+mkdir -p "$REMINDER_DIR"
+
+format_remaining() {
+  local seconds=$1
+  local minutes=$((seconds / 60))
+  local remainder=$((seconds % 60))
+
+  if ((minutes > 0 && remainder > 0)); then
+    echo "${minutes}m ${remainder}s"
+  elif ((minutes > 0)); then
+    echo "${minutes}m"
+  else
+    echo "${remainder}s"
+  fi
+}
+
+active_reminder_timers() {
+  local now=${1:-$(date +%s)}
+  local timer next
+
+  while IFS=$'\t' read -r timer next; do
+    [[ -z $timer || -z $next ]] && continue
+    next=$((next / 1000000))
+    ((next <= now)) && continue
+    printf "%s\t%s\n" "$timer" "$next"
+  done < <(systemctl --user list-timers --all --output=json "reminder-*.timer" 2>/dev/null | jq -r '.[] | [.unit, .next] | @tsv')
+}
+
+show_json() {
+  local timer next remaining reminder reminder_minutes unit reminder_message label item_json reminders_json="[]"
+  local now=$(date +%s)
+  local count=0
+
+  while IFS=$'\t' read -r timer next; do
+    count=$((count + 1))
+    unit=${timer%.timer}
+    reminder=${unit#reminder-}
+    reminder_minutes=${reminder%%m-*}
+    [[ ! $reminder_minutes =~ ^[0-9]+$ ]] && reminder_minutes=0
+    remaining=$((next - now))
+    reminder_message=""
+    [[ -f $REMINDER_DIR/$unit.message ]] && reminder_message=$(<"$REMINDER_DIR/$unit.message")
+
+    if [[ -n $reminder_message ]]; then
+      label=$reminder_message
+    else
+      label="${reminder_minutes}-min reminder"
+    fi
+
+    item_json=$(jq -cn \
+      --arg unit "$unit" \
+      --arg timer "$timer" \
+      --arg label "$label" \
+      --arg message "$reminder_message" \
+      --arg remaining "$(format_remaining "$remaining")" \
+      --arg atTime "$(date -d "@$next" +%-H:%M)" \
+      --argjson minutes "$reminder_minutes" \
+      --argjson at "$next" \
+      --argjson remainingSeconds "$remaining" \
+      '{unit:$unit,timer:$timer,minutes:$minutes,message:$message,label:$label,remaining:$remaining,remainingSeconds:$remainingSeconds,at:$at,atTime:$atTime}')
+    reminders_json=$(jq -cn --argjson reminders "$reminders_json" --argjson item "$item_json" '$reminders + [$item]')
+  done < <(active_reminder_timers "$now")
+
+  jq -cn --argjson count "$count" --argjson reminders "$reminders_json" '{count:$count,active:($count > 0),reminders:$reminders}'
+}
+
+show_reminders() {
+  local timer next remaining reminder reminder_minutes body=""
+  local reminder_message=""
+  local now=$(date +%s)
+
+  while IFS=$'\t' read -r timer next; do
+    remaining=$((next - now))
+    reminder=${timer%.timer}
+    reminder=${reminder#reminder-}
+    reminder_minutes=${reminder%%m-*}
+    reminder_message=""
+    [[ -f $REMINDER_DIR/${timer%.timer}.message ]] && reminder_message=$(<"$REMINDER_DIR/${timer%.timer}.message")
+
+    if [[ -n $reminder_message ]]; then
+      body+="$reminder_message in $(format_remaining $remaining) ($(date -d "@$next" +%-H:%M))"$'\n'
+    else
+      body+="${reminder_minutes}-min reminder in $(format_remaining $remaining) ($(date -d "@$next" +%-H:%M))"$'\n'
+    fi
+  done < <(active_reminder_timers "$now")
+
+  if [[ -z $body ]]; then
+    notify-send -i alarm-symbolic "Upcoming Reminders" "No active reminders"
+  else
+    notify-send -i alarm-symbolic "Upcoming Reminders" "${body%$'\n'}"
+  fi
+}
+
+clear_reminders() {
+  local target_unit=${1:-}
+  if [[ -n $target_unit ]]; then
+    systemctl --user stop "${target_unit}.timer" 2>/dev/null || true
+    rm -f "$REMINDER_DIR/$target_unit.message" 2>/dev/null || true
+    notify-send -i alarm-symbolic "Reminder Cancelled" "Removed $target_unit"
+    exit 0
+  fi
+
+  local units
+  units=$(systemctl --user list-timers --all --no-legend --no-pager "reminder-*.timer" 2>/dev/null | awk '{ print $(NF - 1), $NF }')
+  if [[ -n $units ]]; then
+    xargs -r systemctl --user stop <<<"$units" || true
+  fi
+
+  rm -f "$REMINDER_DIR"/reminder-*.message 2>/dev/null || true
+  notify-send -i alarm-symbolic "Reminders Cleared" "All active reminders cancelled"
+}
+
+case ${1:-} in
+show | list)
+  case ${2:-} in
+  -j | --json)
+    show_json
+    ;;
+  *)
+    show_reminders
+    ;;
+  esac
+  exit 0
+  ;;
+clear)
+  clear_reminders "${2:-}"
+  exit 0
+  ;;
+esac
+
+minutes=${1:-}
+shift || true
+message="$*"
+custom_message="$message"
+
+if [[ -z $minutes ]] || [[ ! $minutes =~ ^[0-9]+$ ]] || ((minutes == 0)); then
+  echo "Usage: reminder <minutes> [message] | show [--json] | clear [unit]"
+  exit 1
+fi
+
+if [[ -z $message ]]; then
+  message="Your ${minutes} minute reminder is up!"
+fi
+
+set_at=$(date +%s)
+remind_at=$(date -d "+${minutes} minutes" +%H:%M)
+unit="reminder-${minutes}m-$set_at"
+message_file="$REMINDER_DIR/$unit.message"
+confirmation="You'll be reminded at $remind_at"
+confirmation_title="Reminder set for ${minutes} minutes"
+
+if [[ -n $custom_message ]]; then
+  printf "%s" "$custom_message" >"$message_file"
+  confirmation_title="$custom_message in ${minutes} minutes"
+fi
+
+systemd-run --user --quiet --collect --on-active="${minutes}m" --unit="$unit" \
+  bash -c 'notify-send -u critical -i alarm-symbolic "Reminder" "$1"; rm -f "$2"' bash "$message" "$message_file"
+
+notify-send -i alarm-symbolic "$confirmation_title" "$confirmation"

@@ -1085,6 +1085,13 @@ Item {
         root.audioVisible = true;
     }
 
+    // ---------- Reminder popup state ----------
+    property bool reminderVisible: false
+    function openReminder() {
+        if (root.calendarAnchorItem) root.anchorPopupTo(root.calendarAnchorItem);
+        root.reminderVisible = true;
+    }
+
     // ---------- Clipboard state ----------
     property bool clipboardVisible: false
     function openClipboard() {
@@ -2443,8 +2450,25 @@ Item {
     }
     Timer { id: keepClipboard; interval: 400; onTriggered: clipboardLoader.source = "" }
 
+    Loader { id: reminderLoader }
+    onReminderVisibleChanged: {
+        if (root.reminderVisible) { keepReminder.stop(); reminderLoader.setSource("ReminderPopup.qml", { root: root }); }
+        else keepReminder.restart();
+    }
+    Timer { id: keepReminder; interval: 400; onTriggered: reminderLoader.source = "" }
+
     Osd              { root: root }
     NotificationOverlay { root: root }
+
+    IpcHandler {
+        target: "reminder"
+        function toggle(): void {
+            if (root.reminderVisible) root.reminderVisible = false;
+            else root.openReminder();
+        }
+        function open(): void  { root.openReminder(); }
+        function close(): void { root.reminderVisible = false; }
+    }
 
     // ---------- IPC ----------
     // Lets external keybinds drive the screenshots popup. Wire up in

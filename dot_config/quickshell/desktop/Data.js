@@ -131,11 +131,11 @@ const omarchyItems = [
     { title: "Notes",               icon: "󰍔", category: "Capture", keywords: "notes note markdown scratchpad journal nano ghostty editor write text",  exec: "ghostty -e nano" },
 
     // ----- Trigger -----
-    { title: "Set Reminder",        icon: "󰔛", category: "Trigger", keywords: "reminder alarm timer notify wake notification",                                    exec: "omarchy-menu reminder-set" },
-    { title: "Show Reminders",      icon: "󰔛", category: "Trigger", keywords: "reminders show list pending",                                                       exec: "omarchy-reminder show" },
-    { title: "Clear Reminders",     icon: "󰔛", category: "Trigger", keywords: "reminders clear delete remove all",                                                 exec: "omarchy-reminder clear" },
+    { title: "Reminders",           icon: "󰔛", category: "Trigger", keywords: "reminder reminders alarm timer notify wake notification show list pending set create", exec: "qs -c desktop ipc call reminder open" },
+    { title: "Clear Reminders",     icon: "󰔛", category: "Trigger", keywords: "reminders clear delete remove all cancel stop",                                    exec: "bash -c '$HOME/.config/quickshell/desktop/scripts/reminder clear'" },
     { title: "Transcode Media",     icon: "󰧸", category: "Trigger", keywords: "transcode media video audio convert compress mp4 mp3",                              exec: "omarchy-transcode" },
-
+    { title: "DMSS",                icon: "󰄀", category: "Trigger", keywords: "launch dmss in browser",                                        exec: "dmcams"},
+    
     { title: "Neovim Keymaps",      icon: "󰕷", category: "Learn", keywords: "neovim nvim keymaps shortcuts lazyvim reference",                                      exec: "omarchy-launch-webapp 'https://www.lazyvim.org/keymaps'" },
     { title: "Bash Cheatsheet",     icon: "󱆃", category: "Learn", keywords: "bash shell cheatsheet reference scripting",                                            exec: "omarchy-launch-webapp 'https://devhints.io/bash'" }
 ];
