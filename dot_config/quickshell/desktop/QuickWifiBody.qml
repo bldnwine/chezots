@@ -155,7 +155,7 @@ Item {
                 QuickButton {
                     root: body.root
                     glyph: body.nav ? body.nav.icoRefresh : ""
-                    label: "SCAN"
+                    label: body.nav && body.nav.wifiScanning ? "SCANNING…" : "SCAN"
                     selected: body.kbdIndex === 1
                     onClicked: if (body.nav && !body.nav.wifiBusy) body.nav.refreshWifi()
                 }

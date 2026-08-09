@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Copy a clipboard-history entry back to the clipboard by index.
+#   clipboard-copy <index>
+
+set -euo pipefail
+
+history_path="$HOME/.local/state/quickshell-desktop/clipboard-history.json"
+index="${1:-}"
+[[ "$index" =~ ^[0-9]+$ ]] || exit 1
+[[ -r $history_path ]] || exit 1
+
+type=$(jq -er --argjson index "$index" '.[$index].type' "$history_path") || exit 1
+
+case "$type" in
+  image)
+    mime=$(jq -er --argjson index "$index" '.[$index].mime // "image/png"' "$history_path") || exit 1
+    path=$(jq -er --argjson index "$index" '.[$index].path' "$history_path") || exit 1
+    [[ -r $path ]] || exit 1
+    wl-copy --type "$mime" < "$path"
+    ;;
+  text)
+    jq -j --argjson index "$index" '.[$index].text' "$history_path" | wl-copy
+    ;;
+  *) exit 1 ;;
+esac

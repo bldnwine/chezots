@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Open a clipboard-history entry in its default app.
+#   clipboard-open <index>
+
+set -euo pipefail
+
+history_path="$HOME/.local/state/quickshell-desktop/clipboard-history.json"
+index="${1:-}"
+[[ "$index" =~ ^[0-9]+$ ]] || exit 1
+[[ -r $history_path ]] || exit 1
+
+type=$(jq -er --argjson index "$index" '.[$index].type' "$history_path") || exit 1
+
+open_text() {
+  local text="$1"
+  local urls file
+
+  # file:// URIs -> open each path.
+  local paths=()
+  while IFS= read -r line; do
+    [[ $line == file://* ]] && paths+=("${line#file://}")
+  done <<<"$text"
+  if [[ ${#paths[@]} -gt 0 ]]; then
+    for p in "${paths[@]}"; do xdg-open "$p" & done
+    wait
+    return
+  fi
+
+  urls=$(grep -Eom1 'https?://[^[:space:]]+' <<<"$text" || true)
+  if [[ -n $urls ]]; then
+    xdg-open "$urls"
+    return
+  fi
+
+  local dir file
+  dir="${XDG_STATE_HOME:-$HOME/.local/state}/quickshell-desktop/clipboard-open"
+  mkdir -p "$dir"
+  file=$(mktemp --tmpdir="$dir" clipboard.XXXXXX.txt)
+  printf '%s' "$text" > "$file"
+  if command -v "${EDITOR:-}" >/dev/null 2>&1; then "${EDITOR}" "$file"
+  elif command -v editor >/dev/null 2>&1; then editor "$file"
+  else xdg-open "$file"; fi
+}
+
+case "$type" in
+  image)
+    path=$(jq -er --argjson index "$index" '.[$index].path' "$history_path") || exit 1
+    [[ -r $path ]] || exit 1
+    xdg-open "$path"
+    ;;
+  text)
+    text=$(jq -er --argjson index "$index" '.[$index].text' "$history_path") || exit 1
+    open_text "$text"
+    ;;
+  *) exit 1 ;;
+esac

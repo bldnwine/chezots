@@ -17,10 +17,11 @@ CardWindow {
     layerNamespace: "omarchy-network"
     title: "NETWORK"
     subtitle: {
-        if (root.netKind === "eth") return "ETHERNET";
-        if (root.netKind === "wifi")
-            return (root.wifiSsid || "(hidden)") + " · " + root.wifiSignal + "%";
-        return "OFFLINE";
+        let base = root.netKind === "eth" ? "ETHERNET"
+                 : root.netKind === "wifi" ? ((root.wifiSsid || "(hidden)") + " · " + root.wifiSignal + "%")
+                 : "OFFLINE";
+        if (root.wifiScanning) base += " · SCANNING";
+        return base;
     }
     footer: "T AUTOCONNECT · S SCAN · U FORGET · ESC CLOSE"
 
@@ -186,7 +187,7 @@ CardWindow {
                 QuickButton {
                     root: netpopup.root
                     glyph: root.icoRefresh
-                    label: "SCAN"
+                    label: root.wifiScanning ? "SCANNING…" : "SCAN"
                     selected: netpopup.kbdIndex === 1
                     onClicked: if (!root.wifiBusy) root.refreshWifi()
                 }

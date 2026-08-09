@@ -12,7 +12,12 @@ const themeCategory = "Themes";
 // aren't always gitignored.
 const fdExcludes = [
     "node_modules", "target", "dist", "build", ".cache",
-    ".venv", "__pycache__", ".tox", ".next", ".nuxt"
+    ".venv", "__pycache__", ".tox", ".next", ".nuxt",
+    ".git", ".cargo", ".rustup", ".npm", ".gnupg",
+    ".mozilla", ".thunderbird", "Android", "proton", "go/pkg",
+    ".var", ".gradle", ".m2", ".wine", ".steam", "venv",
+    ".direnv", ".flatpak-builder", ".local/share/Steam",
+    ".local/share/Trash", ".local/share/flatpak", ".local/share/containers"
 ];
 
 const imageExts = [

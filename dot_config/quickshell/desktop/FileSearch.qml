@@ -68,7 +68,7 @@ Item {
     }
 
     function buildFdArgs(tokens) {
-        const args = ["--type", "f", "--max-results", "200"];
+        const args = ["--type", "f", "--type", "d", "--max-depth", "8", "--max-results", "200"];
         const excludes = Data.fdExcludes;
         for (let i = 0; i < excludes.length; i++) {
             args.push("--exclude");
@@ -112,12 +112,14 @@ Item {
                 for (let i = 0; i < lines.length; i++) {
                     const path = lines[i];
                     const dirShort = Data.tildify(Data.dirname(path), home);
+                    const extIcon = Data.fileIcon(path);
+                    const icon = extIcon && extIcon.length > 0 ? extIcon : "󰉋";
                     out[i] = {
                         title: Data.basename(path),
                         comment: dirShort,
                         keywords: "",
                         category: dirShort,
-                        icon: Data.fileIcon(path),
+                        icon: icon,
                         path: path,
                         exec: Data.openUrl(path),
                         rawCategory: true
