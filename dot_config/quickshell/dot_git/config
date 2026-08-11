@@ -6,3 +6,6 @@
 [remote "origin"]
 	url = https://github.com/bldnwine/quickshelldots.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "mediapopup"]
+	remote = origin
+	merge = refs/heads/mediapopup

@@ -223,6 +223,8 @@ PanelWindow {
                 property real openW: present ? contentW + 8 : 0
                 Behavior on openW { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
+                Component.onCompleted: bar.root.musicAnchorItem = musicItem
+
                 visible: present || openW > 0.5
                 Layout.preferredWidth: openW
                 Layout.preferredHeight: 16
@@ -318,7 +320,7 @@ PanelWindow {
                         musicTipDelay.stop();
                         bar.root.hideTooltip(musicItem.tipText);
                         if (e.button === Qt.RightButton)       bar.root.musicNext();
-                        else if (e.button === Qt.MiddleButton) bar.root.musicPrev();
+                        else if (e.button === Qt.MiddleButton) bar.root.openMedia();
                         else if (e.button === Qt.XButton1)     bar.root.musicPrev();
                         else if (e.button === Qt.XButton2)     bar.root.musicNext();
                         else                                    bar.root.musicToggle();

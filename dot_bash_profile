@@ -7,3 +7,7 @@
 if uwsm check may-start; then
   exec uwsm start hyprland.desktop
 fi
+
+
+# Added by Antigravity CLI installer
+export PATH="/home/bldnwine/.local/bin:$PATH"

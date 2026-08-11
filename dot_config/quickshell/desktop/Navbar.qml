@@ -1092,6 +1092,15 @@ Item {
         root.reminderVisible = true;
     }
 
+    // ---------- Media popup state ----------
+    property bool mediaVisible: false
+    property var  musicAnchorItem: null
+    function openMedia() {
+        if (root.musicAnchorItem) root.anchorPopupTo(root.musicAnchorItem);
+        else if (root.calendarAnchorItem) root.anchorPopupTo(root.calendarAnchorItem);
+        root.mediaVisible = true;
+    }
+
     // ---------- Clipboard state ----------
     property bool clipboardVisible: false
     function openClipboard() {
@@ -2458,17 +2467,34 @@ Item {
     }
     Timer { id: keepReminder; interval: 400; onTriggered: reminderLoader.source = "" }
 
+    Loader { id: mediaLoader }
+    onMediaVisibleChanged: {
+        if (root.mediaVisible) { keepMedia.stop(); mediaLoader.setSource("MediaPopup.qml", { root: root }); }
+        else keepMedia.restart();
+    }
+    Timer { id: keepMedia; interval: 400; onTriggered: mediaLoader.source = "" }
+
     Osd              { root: root }
     NotificationOverlay { root: root }
 
     IpcHandler {
+        target: "media"
+        function toggle() {
+            if (root.mediaVisible) root.mediaVisible = false;
+            else root.openMedia();
+        }
+        function open()  { root.openMedia(); }
+        function close() { root.mediaVisible = false; }
+    }
+
+    IpcHandler {
         target: "reminder"
-        function toggle(): void {
+        function toggle() {
             if (root.reminderVisible) root.reminderVisible = false;
             else root.openReminder();
         }
-        function open(): void  { root.openReminder(); }
-        function close(): void { root.reminderVisible = false; }
+        function open()  { root.openReminder(); }
+        function close() { root.reminderVisible = false; }
     }
 
     // ---------- IPC ----------
@@ -2477,64 +2503,64 @@ Item {
     //   bind = SUPER, P, exec, qs ipc call screenshots toggle
     IpcHandler {
         target: "screenshots"
-        function toggle(): void {
+        function toggle() {
             if (root.screenshotsVisible) root.screenshotsVisible = false;
             else root.openScreenshots();
         }
-        function open(): void { root.openScreenshots(); }
-        function close(): void { root.screenshotsVisible = false; }
+        function open() { root.openScreenshots(); }
+        function close() { root.screenshotsVisible = false; }
     }
 
     // bind = SUPER, V, exec, qs ipc call videos toggle
     IpcHandler {
         target: "videos"
-        function toggle(): void {
+        function toggle() {
             if (root.videosVisible) root.videosVisible = false;
             else root.openVideos();
         }
-        function open(): void { root.openVideos(); }
-        function close(): void { root.videosVisible = false; }
+        function open() { root.openVideos(); }
+        function close() { root.videosVisible = false; }
     }
 
     // bind = SUPER, W, exec, qs ipc call weather toggle
     IpcHandler {
         target: "weather"
-        function toggle(): void {
+        function toggle() {
             if (root.weatherVisible) root.weatherVisible = false;
             else root.openWeather();
         }
-        function open(): void    { root.openWeather(); }
-        function close(): void   { root.weatherVisible = false; }
-        function refresh(): void { root.refreshWeather(); }
+        function open()    { root.openWeather(); }
+        function close()   { root.weatherVisible = false; }
+        function refresh() { root.refreshWeather(); }
     }
 
     // bind = SUPER, A, exec, qs ipc call aether toggle
     IpcHandler {
         target: "aether"
-        function toggle(): void {
+        function toggle() {
             if (root.aetherVisible) root.aetherVisible = false;
             else root.openAether();
         }
-        function open(): void  { root.openAether(); }
-        function close(): void { root.aetherVisible = false; }
+        function open()  { root.openAether(); }
+        function close() { root.aetherVisible = false; }
     }
 
     // bind = SUPER, D, exec, qs ipc call display toggle
     IpcHandler {
         target: "display"
-        function toggle(): void {
+        function toggle() {
             if (root.displayVisible) root.displayVisible = false;
             else root.openDisplay();
         }
-        function open(): void  { root.openDisplay(); }
-        function close(): void { root.displayVisible = false; }
-        function reset(): void { root.resetDisplay(); }
-        function blank(): void { root.blankScreen(); }
+        function open()  { root.openDisplay(); }
+        function close() { root.displayVisible = false; }
+        function reset() { root.resetDisplay(); }
+        function blank() { root.blankScreen(); }
     }
 
     IpcHandler {
         target: "nightlight"
-        function toggle(): void {
+        function toggle() {
             if (root.warmthK < 6500) {
                 root.run("PREV=$(cat /tmp/nightlight-prev-bright 2>/dev/null || echo 100); "
                     + root.ensureSunset
@@ -2560,66 +2586,66 @@ Item {
     // bind = SUPER, C, exec, qs ipc call calendar toggle
     IpcHandler {
         target: "calendar"
-        function toggle(): void {
+        function toggle() {
             if (root.calendarVisible) root.calendarVisible = false;
             else root.openCalendar();
         }
-        function open(): void  { root.openCalendar(); }
-        function close(): void { root.calendarVisible = false; }
+        function open()  { root.openCalendar(); }
+        function close() { root.calendarVisible = false; }
     }
 
     IpcHandler {
         target: "system"
-        function toggle(): void {
+        function toggle() {
             if (root.systemVisible) root.systemVisible = false;
             else root.openSystem();
         }
-        function open(): void  { root.openSystem(); }
-        function close(): void { root.systemVisible = false; }
-        function btop(): void  { root.run("omarchy-launch-or-focus-tui btop"); }
+        function open()  { root.openSystem(); }
+        function close() { root.systemVisible = false; }
+        function btop()  { root.run("omarchy-launch-or-focus-tui btop"); }
     }
 
     // bind = SUPER, N, exec, qs ipc call network toggle
     IpcHandler {
         target: "network"
-        function toggle(): void {
+        function toggle() {
             if (root.networkVisible) root.networkVisible = false;
             else root.openNetwork();
         }
-        function open(): void  { root.openNetwork(); }
-        function close(): void { root.networkVisible = false; }
+        function open()  { root.openNetwork(); }
+        function close() { root.networkVisible = false; }
     }
 
     IpcHandler {
         target: "bluetooth"
-        function toggle(): void {
+        function toggle() {
             if (root.btVisible) root.btVisible = false;
             else root.openBluetooth();
         }
-        function open(): void  { root.openBluetooth(); }
-        function close(): void { root.btVisible = false; }
+        function open()  { root.openBluetooth(); }
+        function close() { root.btVisible = false; }
     }
 
     IpcHandler {
         target: "audio"
-        function toggle(): void {
+        function toggle() {
             if (root.audioVisible) root.audioVisible = false;
             else root.openAudio();
         }
-        function open(): void  { root.openAudio(); }
-        function close(): void { root.audioVisible = false; }
-        function refresh(): void { root.refreshAudio(); }
+        function open()  { root.openAudio(); }
+        function close() { root.audioVisible = false; }
+        function refresh() { root.refreshAudio(); }
     }
 
     // bind = SUPER, A, exec, qs -c desktop ipc call clipboard toggle
     IpcHandler {
         target: "clipboard"
-        function toggle(): void {
+        function toggle() {
             if (root.clipboardVisible) root.clipboardVisible = false;
             else root.openClipboard();
         }
-        function open(): void  { root.openClipboard(); }
-        function close(): void { root.clipboardVisible = false; }
+        function open()  { root.openClipboard(); }
+        function close() { root.clipboardVisible = false; }
     }
 
     // Bar face switch. Toggle from a keybind, or jump straight to one:
@@ -2627,62 +2653,62 @@ Item {
     // Also surfaced as a "Bar Style" row in the omni palette.
     IpcHandler {
         target: "bar"
-        function set(name: string): void { root.setBarVariant(name); }
-        function zen(): void       { root.setBarVariant("zen"); }
-        function toggle(): void    { root.barHidden = !root.barHidden; }
-        function hide(): void      { root.barHidden = true; }
-        function show(): void      { root.barHidden = false; }
-        function transparent(): void { root.setBarTransparent(!root.barTransparent); }
+        function set(name: string) { root.setBarVariant(name); }
+        function zen()       { root.setBarVariant("zen"); }
+        function toggle()    { root.barHidden = !root.barHidden; }
+        function hide()      { root.barHidden = true; }
+        function show()      { root.barHidden = false; }
+        function transparent() { root.setBarTransparent(!root.barTransparent); }
     }
 
     IpcHandler {
         target: "hyprland"
-        function toggle(): void {
+        function toggle() {
             if (root.hyprlandVisible) root.hyprlandVisible = false;
             else root.openHyprland();
         }
-        function open(): void  { root.openHyprland(); }
-        function close(): void { root.hyprlandVisible = false; }
+        function open()  { root.openHyprland(); }
+        function close() { root.hyprlandVisible = false; }
     }
 
     IpcHandler {
         target: "screenrecord"
-        function toggle(): void {
+        function toggle() {
             if (root.screenRecordVisible) root.screenRecordVisible = false;
             else root.openScreenRecord();
         }
-        function open(): void  { root.openScreenRecord(); }
-        function close(): void { root.screenRecordVisible = false; }
+        function open()  { root.openScreenRecord(); }
+        function close() { root.screenRecordVisible = false; }
     }
 
     IpcHandler {
         target: "wireproton"
-        function toggle(): void {
+        function toggle() {
             if (root.wireprotonVisible) root.wireprotonVisible = false;
             else root.openWireproton();
         }
-        function open(): void  { root.openWireproton(); }
-        function close(): void { root.wireprotonVisible = false; }
+        function open()  { root.openWireproton(); }
+        function close() { root.wireprotonVisible = false; }
     }
 
     IpcHandler {
         target: "locusfavs"
-        function toggle(): void {
+        function toggle() {
             if (root.locusfavsVisible) root.locusfavsVisible = false;
             else root.openLocusfavs();
         }
-        function open(): void  { root.openLocusfavs(); }
-        function close(): void { root.locusfavsVisible = false; }
+        function open()  { root.openLocusfavs(); }
+        function close() { root.locusfavsVisible = false; }
     }
 
     IpcHandler {
         target: "appmenu"
-        function toggle(): void {
+        function toggle() {
             if (root.appMenuVisible) root.appMenuVisible = false;
             else root.openAppMenu();
         }
-        function open(): void  { root.openAppMenu(); }
-        function close(): void { root.appMenuVisible = false; }
+        function open()  { root.openAppMenu(); }
+        function close() { root.appMenuVisible = false; }
     }
 
     // ---------- MPRIS (now playing) ----------
@@ -2697,6 +2723,31 @@ Item {
     property string musicArtist: ""
     property bool   musicPlaying: false
     property int    musicSourceIndex: -1
+    readonly property var mprisPlayers: {
+        const all = Mpris.players ? Mpris.players.values : [];
+        const out = [];
+        const seen = {};
+        for (let i = 0; i < all.length; i++) {
+            const p = all[i];
+            if (!p) continue;
+            const dbus = (p.dbusName || "").toLowerCase();
+            const id = (p.identity || p.desktopEntry || dbus).toLowerCase();
+            if (dbus.indexOf("playerctld") >= 0 || id.indexOf("playerctld") >= 0) continue;
+            if (seen[id]) continue;
+            seen[id] = true;
+            out.push(p);
+        }
+        return out;
+    }
+
+    function selectMusicPlayer(player) {
+        const players = root.mprisPlayers;
+        const idx = players.indexOf(player);
+        if (idx >= 0) {
+            root.musicSourceIndex = idx;
+            root.refreshMusic();
+        }
+    }
 
     function refreshMusic() {
         const players = Mpris.players ? Mpris.players.values : [];
@@ -2741,10 +2792,37 @@ Item {
         if (root.musicPlayer && root.musicPlayer.canTogglePlaying) root.musicPlayer.togglePlaying();
     }
     function musicNext() {
-        if (root.musicPlayer && root.musicPlayer.canGoNext) root.musicPlayer.next();
+        if (root.musicPlayer && root.musicPlayer.canGoNext) {
+            const wasPlaying = root.musicPlaying;
+            root.musicPlayer.next();
+            if (wasPlaying) root.ensureBrowserPlayback();
+        }
     }
+
     function musicPrev() {
-        if (root.musicPlayer && root.musicPlayer.canGoPrevious) root.musicPlayer.previous();
+        if (root.musicPlayer && root.musicPlayer.canGoPrevious) {
+            const wasPlaying = root.musicPlaying;
+            root.musicPlayer.previous();
+            if (wasPlaying) root.ensureBrowserPlayback();
+        }
+    }
+
+    Timer {
+        id: browserAutoPlayTimer
+        interval: 350
+        onTriggered: {
+            if (root.musicPlayer && root.musicPlayer.canPlay) {
+                root.musicPlayer.play();
+            }
+        }
+    }
+
+    function ensureBrowserPlayback() {
+        if (!root.musicPlayer) return;
+        const raw = (root.musicPlayer.dbusName || "").toLowerCase();
+        if (raw.indexOf("firefox") >= 0 || raw.indexOf("zen") >= 0) {
+            browserAutoPlayTimer.restart();
+        }
     }
 
     Item {
