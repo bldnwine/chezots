@@ -2479,22 +2479,22 @@ Item {
 
     IpcHandler {
         target: "media"
-        function toggle() {
+        function toggle(): void {
             if (root.mediaVisible) root.mediaVisible = false;
             else root.openMedia();
         }
-        function open()  { root.openMedia(); }
-        function close() { root.mediaVisible = false; }
+        function open(): void  { root.openMedia(); }
+        function close(): void { root.mediaVisible = false; }
     }
 
     IpcHandler {
         target: "reminder"
-        function toggle() {
+        function toggle(): void {
             if (root.reminderVisible) root.reminderVisible = false;
             else root.openReminder();
         }
-        function open()  { root.openReminder(); }
-        function close() { root.reminderVisible = false; }
+        function open(): void  { root.openReminder(); }
+        function close(): void { root.reminderVisible = false; }
     }
 
     // ---------- IPC ----------
@@ -2503,64 +2503,64 @@ Item {
     //   bind = SUPER, P, exec, qs ipc call screenshots toggle
     IpcHandler {
         target: "screenshots"
-        function toggle() {
+        function toggle(): void {
             if (root.screenshotsVisible) root.screenshotsVisible = false;
             else root.openScreenshots();
         }
-        function open() { root.openScreenshots(); }
-        function close() { root.screenshotsVisible = false; }
+        function open(): void { root.openScreenshots(); }
+        function close(): void { root.screenshotsVisible = false; }
     }
 
     // bind = SUPER, V, exec, qs ipc call videos toggle
     IpcHandler {
         target: "videos"
-        function toggle() {
+        function toggle(): void {
             if (root.videosVisible) root.videosVisible = false;
             else root.openVideos();
         }
-        function open() { root.openVideos(); }
-        function close() { root.videosVisible = false; }
+        function open(): void { root.openVideos(); }
+        function close(): void { root.videosVisible = false; }
     }
 
     // bind = SUPER, W, exec, qs ipc call weather toggle
     IpcHandler {
         target: "weather"
-        function toggle() {
+        function toggle(): void {
             if (root.weatherVisible) root.weatherVisible = false;
             else root.openWeather();
         }
-        function open()    { root.openWeather(); }
-        function close()   { root.weatherVisible = false; }
-        function refresh() { root.refreshWeather(); }
+        function open(): void    { root.openWeather(); }
+        function close(): void   { root.weatherVisible = false; }
+        function refresh(): void { root.refreshWeather(); }
     }
 
     // bind = SUPER, A, exec, qs ipc call aether toggle
     IpcHandler {
         target: "aether"
-        function toggle() {
+        function toggle(): void {
             if (root.aetherVisible) root.aetherVisible = false;
             else root.openAether();
         }
-        function open()  { root.openAether(); }
-        function close() { root.aetherVisible = false; }
+        function open(): void  { root.openAether(); }
+        function close(): void { root.aetherVisible = false; }
     }
 
     // bind = SUPER, D, exec, qs ipc call display toggle
     IpcHandler {
         target: "display"
-        function toggle() {
+        function toggle(): void {
             if (root.displayVisible) root.displayVisible = false;
             else root.openDisplay();
         }
-        function open()  { root.openDisplay(); }
-        function close() { root.displayVisible = false; }
-        function reset() { root.resetDisplay(); }
-        function blank() { root.blankScreen(); }
+        function open(): void  { root.openDisplay(); }
+        function close(): void { root.displayVisible = false; }
+        function reset(): void { root.resetDisplay(); }
+        function blank(): void { root.blankScreen(); }
     }
 
     IpcHandler {
         target: "nightlight"
-        function toggle() {
+        function toggle(): void {
             if (root.warmthK < 6500) {
                 root.run("PREV=$(cat /tmp/nightlight-prev-bright 2>/dev/null || echo 100); "
                     + root.ensureSunset
@@ -2586,66 +2586,66 @@ Item {
     // bind = SUPER, C, exec, qs ipc call calendar toggle
     IpcHandler {
         target: "calendar"
-        function toggle() {
+        function toggle(): void {
             if (root.calendarVisible) root.calendarVisible = false;
             else root.openCalendar();
         }
-        function open()  { root.openCalendar(); }
-        function close() { root.calendarVisible = false; }
+        function open(): void  { root.openCalendar(); }
+        function close(): void { root.calendarVisible = false; }
     }
 
     IpcHandler {
         target: "system"
-        function toggle() {
+        function toggle(): void {
             if (root.systemVisible) root.systemVisible = false;
             else root.openSystem();
         }
-        function open()  { root.openSystem(); }
-        function close() { root.systemVisible = false; }
-        function btop()  { root.run("omarchy-launch-or-focus-tui btop"); }
+        function open(): void  { root.openSystem(); }
+        function close(): void { root.systemVisible = false; }
+        function btop(): void  { root.run("omarchy-launch-or-focus-tui btop"); }
     }
 
     // bind = SUPER, N, exec, qs ipc call network toggle
     IpcHandler {
         target: "network"
-        function toggle() {
+        function toggle(): void {
             if (root.networkVisible) root.networkVisible = false;
             else root.openNetwork();
         }
-        function open()  { root.openNetwork(); }
-        function close() { root.networkVisible = false; }
+        function open(): void  { root.openNetwork(); }
+        function close(): void { root.networkVisible = false; }
     }
 
     IpcHandler {
         target: "bluetooth"
-        function toggle() {
+        function toggle(): void {
             if (root.btVisible) root.btVisible = false;
             else root.openBluetooth();
         }
-        function open()  { root.openBluetooth(); }
-        function close() { root.btVisible = false; }
+        function open(): void  { root.openBluetooth(); }
+        function close(): void { root.btVisible = false; }
     }
 
     IpcHandler {
         target: "audio"
-        function toggle() {
+        function toggle(): void {
             if (root.audioVisible) root.audioVisible = false;
             else root.openAudio();
         }
-        function open()  { root.openAudio(); }
-        function close() { root.audioVisible = false; }
-        function refresh() { root.refreshAudio(); }
+        function open(): void  { root.openAudio(); }
+        function close(): void { root.audioVisible = false; }
+        function refresh(): void { root.refreshAudio(); }
     }
 
     // bind = SUPER, A, exec, qs -c desktop ipc call clipboard toggle
     IpcHandler {
         target: "clipboard"
-        function toggle() {
+        function toggle(): void {
             if (root.clipboardVisible) root.clipboardVisible = false;
             else root.openClipboard();
         }
-        function open()  { root.openClipboard(); }
-        function close() { root.clipboardVisible = false; }
+        function open(): void  { root.openClipboard(); }
+        function close(): void { root.closeClipboard ? root.closeClipboard() : (root.clipboardVisible = false); }
     }
 
     // Bar face switch. Toggle from a keybind, or jump straight to one:
@@ -2653,62 +2653,62 @@ Item {
     // Also surfaced as a "Bar Style" row in the omni palette.
     IpcHandler {
         target: "bar"
-        function set(name: string) { root.setBarVariant(name); }
-        function zen()       { root.setBarVariant("zen"); }
-        function toggle()    { root.barHidden = !root.barHidden; }
-        function hide()      { root.barHidden = true; }
-        function show()      { root.barHidden = false; }
-        function transparent() { root.setBarTransparent(!root.barTransparent); }
+        function set(name: string): void { root.setBarVariant(name); }
+        function zen(): void       { root.setBarVariant("zen"); }
+        function toggle(): void    { root.barHidden = !root.barHidden; }
+        function hide(): void      { root.barHidden = true; }
+        function show(): void      { root.barHidden = false; }
+        function transparent(): void { root.setBarTransparent(!root.barTransparent); }
     }
 
     IpcHandler {
         target: "hyprland"
-        function toggle() {
+        function toggle(): void {
             if (root.hyprlandVisible) root.hyprlandVisible = false;
             else root.openHyprland();
         }
-        function open()  { root.openHyprland(); }
-        function close() { root.hyprlandVisible = false; }
+        function open(): void  { root.openHyprland(); }
+        function close(): void { root.hyprlandVisible = false; }
     }
 
     IpcHandler {
         target: "screenrecord"
-        function toggle() {
+        function toggle(): void {
             if (root.screenRecordVisible) root.screenRecordVisible = false;
             else root.openScreenRecord();
         }
-        function open()  { root.openScreenRecord(); }
-        function close() { root.screenRecordVisible = false; }
+        function open(): void  { root.openScreenRecord(); }
+        function close(): void { root.screenRecordVisible = false; }
     }
 
     IpcHandler {
         target: "wireproton"
-        function toggle() {
+        function toggle(): void {
             if (root.wireprotonVisible) root.wireprotonVisible = false;
             else root.openWireproton();
         }
-        function open()  { root.openWireproton(); }
-        function close() { root.wireprotonVisible = false; }
+        function open(): void  { root.openWireproton(); }
+        function close(): void { root.wireprotonVisible = false; }
     }
 
     IpcHandler {
         target: "locusfavs"
-        function toggle() {
+        function toggle(): void {
             if (root.locusfavsVisible) root.locusfavsVisible = false;
             else root.openLocusfavs();
         }
-        function open()  { root.openLocusfavs(); }
-        function close() { root.locusfavsVisible = false; }
+        function open(): void  { root.openLocusfavs(); }
+        function close(): void { root.locusfavsVisible = false; }
     }
 
     IpcHandler {
         target: "appmenu"
-        function toggle() {
+        function toggle(): void {
             if (root.appMenuVisible) root.appMenuVisible = false;
             else root.openAppMenu();
         }
-        function open()  { root.openAppMenu(); }
-        function close() { root.appMenuVisible = false; }
+        function open(): void  { root.openAppMenu(); }
+        function close(): void { root.appMenuVisible = false; }
     }
 
     // ---------- MPRIS (now playing) ----------
