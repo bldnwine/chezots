@@ -91,7 +91,7 @@ hl.on("hyprland.start", function()
 	-- hl.exec_cmd(launch("wl-paste --watch cliphist store"))
 	hl.exec_cmd(launch("playerctld"))
 	-- hl.exec_cmd(launch("hypridle"))
-	hl.exec_cmd("brightnessctl set 30%") -- one-shot, exits instantly
+      	-- hl.exec_cmd("brightnessctl set 30%") -- one-shot, exits instantly
 	-- hl.exec_cmd("notifier start")
 	-- hl.exec_cmd("swaybg -i ~/.config/aether/theme/backgrounds/* -m fill")
 	hl.exec_cmd(launch("swaybg -i ~/.config/omarchy/current/background -m fill"))

@@ -10,10 +10,26 @@ else
     wpctl set-volume @DEFAULT_AUDIO_SINK@ "${action#-}%-"
   fi
 fi
+
 state=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
-percent=$(awk '{for(i=1;i<=NF;i++) if($i~/^[0-9.]+$/) print int($i*100)}' <<<"$state")
-if grep -q MUTED <<<"$state" || [ "$percent" -eq 0 ]; then
-  icon="volume-muted"; else icon="volume-high"
+vol=${state#*Volume: }
+vol=${vol%% *}
+
+if [[ "$vol" =~ ([0-9]+)\.([0-9]+) ]]; then
+  int=${BASH_REMATCH[1]}
+  dec=${BASH_REMATCH[2]}
+  dec="${dec}00"
+  dec="${dec:0:2}"
+  percent=$(( 100 * 10#$int + 10#$dec ))
+else
+  percent=0
 fi
-qs -c desktop ipc call -- osd show "$(jq -cn --arg icon "$icon" --argjson value "$percent" '{icon:$icon,value:$value}')"
-qs -c desktop ipc call audio refresh >/dev/null 2>&1 || true
+
+if [[ "$state" == *"MUTED"* ]] || [ "$percent" -eq 0 ]; then
+  icon="volume-muted"
+else
+  icon="volume-high"
+fi
+
+qs -c desktop ipc call -- osd show "{\"icon\":\"$icon\",\"value\":$percent}"
+(qs -c desktop ipc call audio refresh >/dev/null 2>&1 &)

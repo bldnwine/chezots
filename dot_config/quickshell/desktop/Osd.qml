@@ -55,6 +55,14 @@ Item {
     IpcHandler {
         target: "osd"
         function show(payloadJson: string): string { root.open(payloadJson); return "ok"; }
+        function val(icon: string, value: int): string {
+            root.show(icon, "", String(value), "100", "", "1200");
+            return "ok";
+        }
+        function msg(icon: string, message: string): string {
+            root.show(icon, message, "", "100", "", "1200");
+            return "ok";
+        }
         function close(): string { root.close(); return "ok"; }
         function state(): string { return root.opened ? "open" : "closed"; }
         function ping(): string { return "ok"; }

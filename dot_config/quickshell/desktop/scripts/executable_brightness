@@ -4,5 +4,6 @@ if [[ "$1" == -* ]]; then
 else
   brightnessctl set "${1}%" >/dev/null
 fi
-percent=$(brightnessctl -m | awk -F, '{gsub(/%/,"",$4); print $4}')
-qs -c desktop ipc call -- osd show "$(jq -cn --argjson value "$percent" '{icon:"brightness",value:$value}')"
+IFS="," read -r _ _ _ pct _ <<< "$(brightnessctl -m)"
+percent="${pct%%%}"
+qs -c desktop ipc call -- osd show "{\"icon\":\"brightness\",\"value\":$percent}"

@@ -1,5 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "autoupdate": false,
   "plugin": ["opencode-gemini-auth@latest", "@mohak34/opencode-notifier@latest", "/home/bldnwine/ponytail/.opencode/plugins/ponytail.mjs"],
   "provider": {
     "ollama": {

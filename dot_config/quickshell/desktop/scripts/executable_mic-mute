@@ -1,8 +1,9 @@
 #!/bin/bash
 wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle >/dev/null
-if wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | grep -q MUTED; then
-  qs -c desktop ipc call -- osd show "$(jq -cn '{"icon":"microphone-muted","message":"Microphone muted"}')"
+state=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@)
+if [[ "$state" == *"MUTED"* ]]; then
+  qs -c desktop ipc call -- osd show '{"icon":"microphone-muted","message":"Microphone muted"}'
 else
-  qs -c desktop ipc call -- osd show "$(jq -cn '{"icon":"microphone","message":"Microphone on"}')"
+  qs -c desktop ipc call -- osd show '{"icon":"microphone","message":"Microphone on"}'
 fi
-qs -c desktop ipc call audio refresh >/dev/null 2>&1 || true
+(qs -c desktop ipc call audio refresh >/dev/null 2>&1 &)

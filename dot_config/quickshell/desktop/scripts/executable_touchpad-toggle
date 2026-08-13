@@ -4,8 +4,8 @@ device=$(hyprctl devices -j | jq -r '.touch[0].name // empty')
 enabled=$(hyprctl devices -j | jq -r '.touch[0].enabled // false')
 if [ "$enabled" = "true" ]; then
   hyprctl eval "hl.device({ name = \"$device\", enabled = false })" >/dev/null
-  qs -c desktop ipc call -- osd show "$(jq -cn '{"icon":"touchpad","message":"Touchpad disabled"}')"
+  qs -c desktop ipc call -- osd show '{"icon":"touchpad","message":"Touchpad disabled"}'
 else
   hyprctl eval "hl.device({ name = \"$device\", enabled = true })" >/dev/null
-  qs -c desktop ipc call -- osd show "$(jq -cn '{"icon":"touchpad","message":"Touchpad enabled"}')"
+  qs -c desktop ipc call -- osd show '{"icon":"touchpad","message":"Touchpad enabled"}'
 fi
