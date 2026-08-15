@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Helper script to re-authenticate gws with full calendar read & write scopes.
+
+set -euo pipefail
+
+export GOOGLE_WORKSPACE_CLI_CONFIG_DIR="$HOME/.config/gws-omarchy-calendar"
+
+echo "==> Requesting full Google Calendar read & write permissions via gws..."
+gws auth login --scopes "https://www.googleapis.com/auth/calendar,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/calendar.readonly"

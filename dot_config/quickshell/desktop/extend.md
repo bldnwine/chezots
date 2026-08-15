@@ -188,7 +188,17 @@ function mapKeys(raw) {
 
 - Card dimensions: adjust `cardWidth: 320` and `cardHeight: 52`.
 - Error animation: `shakeAnimation` shakes horizontally by +/- 8px on failed authentication.
-- PAM config: parses `/etc/pam.d/polkit-1` via `PolkitModel.js` to prioritize fingerprint prompts when configured.
+## Calendar & Google Calendar sync
+
+`CalendarPopup.qml` reads `~/.local/state/omarchy/calendar-events.json` and renders a month grid with calendar-colored event dots, day agenda, and one-click **Join** buttons for Google Meet, Zoom, and Teams meetings.
+
+- **Sync Google Calendar**: run `~/.config/quickshell/desktop/scripts/calendar-sync/setup` to link your Google account and install the systemd timer (`omarchy-calendar-sync.timer`).
+- **Other Sources**: any tool (`khal`, `vdirsyncer`, Nextcloud, custom ICS script) can write to `~/.local/state/omarchy/calendar-events.json`.
+- **Keyboard Navigation**:
+  - `Left` / `Right` / `Up` / `Down`: navigate day selection across the grid.
+  - `PageUp` / `PageDown`: step previous / next month.
+  - `Home`: jump back to today.
+  - `Esc` or `Q`: dismiss popup.
 
 ## Workflow tips
 
