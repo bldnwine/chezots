@@ -46,7 +46,7 @@ The navbar menu button calls `toggle()` on the sibling palette in-process, no IP
 | --- | --- |
 | Bar | Kanji workspace markers, telemetry (cpu, mem, bt, wifi, audio, battery), centred clock, click-through popups for calendar, screenshots, videos, display, weather, aether blueprints. |
 | Locus | Full-screen command palette over installed apps and the omarchy-menu (Style, Setup, Install, Remove, Update, System, Toggle, Trigger, Capture, Share, Learn), file search, GitHub repo search, processes, theme picker, plus Quick-mode tile grid, tldr lookup (`$`), and local Ollama chat (`?`). |
-| Background | Multi-screen native layer-shell wallpaper with smooth animated diagonal wipe transitions, live symlink tracking (`~/.config/omarchy/current/background`), and double-click triggers. |
+| Background | Multi-screen native layer-shell wallpaper with smooth animated diagonal wipe transitions and event-driven IPC (`background set / transition / refresh`). |
 | Polkit | Theme-aware PolicyKit authentication agent dialog with micro-shake feedback, password masking, Esc cancellation, and PAM fingerprint detection. |
 | Theme | Shared live palette sourced from `~/.config/aether/theme/colors.toml`. Drift animation runs on theme swap so bar + palette breathe in sync. |
 

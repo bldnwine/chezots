@@ -176,11 +176,11 @@ function mapKeys(raw) {
 
 ## Desktop background
 
-`Background.qml` tracks the active wallpaper symlink (`~/.config/omarchy/current/background`) and applies a slanted-wipe reveal animation when the image changes.
+`Background.qml` renders the wallpaper and applies a slanted-wipe reveal animation when the image changes over IPC.
 
 - Change transition speed: edit `duration: 420` in `revealAnimation`.
 - Change slant angle: edit `slant: -0.18` in `revealMask`.
-- Double-click shortcuts: Double-left runs the wallpaper picker; double-right runs the theme switcher.
+- IPC verbs: `qs -c desktop ipc call background set <path>` or `refresh`.
 
 ## Polkit agent
 

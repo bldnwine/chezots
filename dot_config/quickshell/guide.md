@@ -7,8 +7,10 @@
 ## Lint
 - `cd ~/.config/quickshell/desktop && qmllint *.qml omni/*.qml` (exit 0 = clean)
 
-## Test popups headlessly
+## Test popups and surfaces headlessly
 - `qs -c desktop ipc call <target> toggle|open|close` (targets live in Navbar.qml's `IpcHandler` blocks)
+- Background: `qs -c desktop ipc call background set <path>` or `refresh`
+- Polkit agent: `pkexec whoami` (triggers native overlay authentication card)
 
 ## QML gotchas
 1. New popups MUST be Loader-instantiated in Navbar.qml (a direct type ref fails: `Type X unavailable`); clear the source with a 250ms Timer after hide.

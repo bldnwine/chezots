@@ -12,8 +12,7 @@ Item {
     required property var theme
 
     readonly property string home: Quickshell.env("HOME")
-    readonly property string primaryBackgroundLink: home + "/.config/omarchy/current/background"
-    readonly property string stateBackgroundLink: home + "/.local/state/omarchy/current/background"
+    readonly property string backgroundLink: home + "/.config/omarchy/current/background"
 
     property string currentBackground: ""
     property string displayedBackground: ""
@@ -104,29 +103,9 @@ Item {
         revealAnimation.restart();
     }
 
-    function openSelector() {
-        if (!bgSwitchProc.running) bgSwitchProc.running = true;
-    }
-
-    function openThemeSwitcher() {
-        if (!themeSwitchProc.running) themeSwitchProc.running = true;
-    }
-
-    Process {
-        id: bgSwitchProc
-        command: ["bash", "-lc", "if command -v omarchy-theme-bg-switcher >/dev/null 2>&1; then background=$(omarchy-theme-bg-switcher); [[ -n $background ]] && omarchy-theme-bg-set \"$background\"; fi"]
-        onExited: root.refreshBackground()
-    }
-
-    Process {
-        id: themeSwitchProc
-        command: ["bash", "-lc", "if command -v omarchy-theme-switcher >/dev/null 2>&1; then theme=$(omarchy-theme-switcher); [[ -n $theme ]] && omarchy-theme-set \"$theme\" >/dev/null 2>&1 &; fi"]
-        onExited: root.refreshBackground()
-    }
-
     Process {
         id: readlinkProc
-        command: ["bash", "-c", "readlink -f \"" + root.primaryBackgroundLink + "\" \"" + root.stateBackgroundLink + "\" 2>/dev/null | head -n1"]
+        command: ["readlink", "-f", root.backgroundLink]
         stdout: StdioCollector {
             onStreamFinished: {
                 var found = String(this.text || "").trim();
@@ -157,13 +136,6 @@ Item {
         function themeTransition(fromPath: string, path: string, finalPath: string, colorsB64: string, shellB64: string) {
             root.transitionBackgroundWithTheme(fromPath, path, finalPath, colorsB64, shellB64);
         }
-    }
-
-    Timer {
-        interval: 300
-        running: true
-        repeat: true
-        onTriggered: root.refreshBackground()
     }
 
     Timer {
@@ -225,7 +197,7 @@ Item {
             Image {
                 id: base
                 anchors.fill: parent
-                source: root.imageUrl(root.displayedBackground)
+                source: root.displayedBackground ? root.imageUrl(root.displayedBackground) : ""
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 cache: true
@@ -241,7 +213,7 @@ Item {
             Image {
                 id: oldFrame
                 anchors.fill: parent
-                source: root.imageUrl(root.oldBackground)
+                source: root.oldBackground ? root.imageUrl(root.oldBackground) : ""
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 cache: false
@@ -267,7 +239,7 @@ Item {
                 Image {
                     id: incomingFrame
                     anchors.fill: parent
-                    source: root.imageUrl(root.incomingBackground)
+                    source: root.incomingBackground ? root.imageUrl(root.incomingBackground) : ""
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     cache: false
@@ -310,16 +282,6 @@ Item {
                 function onIncomingBackgroundChanged() {
                     panel.maskReady = false;
                     panel.maybeStartReveal();
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                onDoubleClicked: function(mouse) {
-                    if (mouse.button === Qt.RightButton) root.openThemeSwitcher();
-                    else root.openSelector();
-                    mouse.accepted = true;
                 }
             }
         }

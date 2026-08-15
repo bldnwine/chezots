@@ -140,12 +140,22 @@ Item {
     }
 
     FileView {
+        id: pamUserFile
         path: "/etc/pam.d/polkit-1"
         watchChanges: true
         printErrors: false
         onLoaded: root.loadPamConfig(text())
-        onLoadFailed: root.fingerprintFirst = false
+        onLoadFailed: pamSystemFile.reload()
         onFileChanged: reload()
+    }
+
+    FileView {
+        id: pamSystemFile
+        path: "/usr/lib/pam.d/polkit-1"
+        watchChanges: false
+        printErrors: false
+        onLoaded: if (!pamUserFile.exists) root.loadPamConfig(text())
+        onLoadFailed: root.fingerprintFirst = false
     }
 
     PolkitAgent {
