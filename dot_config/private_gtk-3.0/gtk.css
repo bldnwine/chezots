@@ -15,13 +15,13 @@
 @define-color magenta #15613b;
 @define-color cyan #003d65;
 @define-color white #000505;
-@define-color bright_black #888d92;
+@define-color bright_black #131a20;
 @define-color bright_red #554c0f;
 @define-color bright_green #436104;
 @define-color bright_yellow #616207;
-@define-color bright_blue #2e488d;
-@define-color bright_magenta #2f4b90;
-@define-color bright_cyan #255d92;
+@define-color bright_blue #0d1426;
+@define-color bright_magenta #0c2257;
+@define-color bright_cyan #25313e;
 @define-color bright_white #101e1e;
 
 /* Adwaita color overrides (libadwaita / GTK4) */

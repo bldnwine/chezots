@@ -36,8 +36,8 @@ Item {
         // ships one, otherwise the first file in the backgrounds/
         // subdir (sort+head for deterministic pick).
         probeProc.command = ["sh", "-c",
-              "cur=$(cat \"$HOME/.config/omarchy/current/theme/colors.toml\" 2>/dev/null); "
-            + "for d in \"$OMARCHY_PATH/themes\"/*/ \"$HOME/.local/share/omarchy/themes\"/*/ \"$HOME/.config/omarchy/themes\"/*/; do "
+              "cur=$(cat \"$HOME/.config/aether/theme/colors.toml\" 2>/dev/null || cat \"$HOME/.config/omarchy/current/theme/colors.toml\" 2>/dev/null); "
+            + "for d in \"$HOME/.config/aether/themes\"/*/ \"$OMARCHY_PATH/themes\"/*/ \"$HOME/.local/share/omarchy/themes\"/*/ \"$HOME/.config/omarchy/themes\"/*/; do "
             + "  [ -d \"$d\" ] || continue; "
             + "  name=$(basename \"$d\"); "
             + "  c=$(cat \"$d/colors.toml\" 2>/dev/null); "
@@ -46,25 +46,33 @@ Item {
             + "  if [ -f \"$d/preview.png\" ]; then prev=\"$d/preview.png\"; "
             + "  elif [ -f \"$d/preview.jpg\" ]; then prev=\"$d/preview.jpg\"; "
             + "  elif [ -d \"$d/backgrounds\" ]; then "
-            + "    prev=$(find \"$d/backgrounds\" -maxdepth 1 -type f -size +0c \\( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o -iname '*.avif' -o -iname '*.gif' \\) 2>/dev/null | sort | head -n1); "
+            + "    for f in \"$d/backgrounds\"/*; do "
+            + "      case \"$f\" in *.png|*.jpg|*.jpeg|*.webp|*.avif) prev=\"$f\"; break;; esac; "
+            + "    done; "
             + "  fi; "
-            + "  printf '===%s\\t%s\\t%s\\n%s\\n' \"$name\" \"$marker\" \"$prev\" \"$c\"; "
+            + "  ts=$(stat -c %Y \"$d/colors.toml\" 2>/dev/null || stat -c %Y \"$d\" 2>/dev/null || echo 0); "
+            + "  printf '===%s\\t%s\\t%s\\tTHEME\\t%s\\n%s\\n' \"$name\" \"$marker\" \"$prev\" \"$ts\" \"$c\"; "
+            + "done; "
+            + "for f in \"$HOME/.config/aether/blueprints\"/*.json; do "
+            + "  [ -f \"$f\" ] || continue; "
+            + "  name=$(basename \"$f\" .json); "
+            + "  c=$(cat \"$f\" 2>/dev/null); "
+            + "  printf '===%s\\t \\t\\tBLUEPRINT\\t0\\n%s\\n' \"$name\" \"$c\"; "
             + "done"];
         probeProc.running = false;
         probeProc.running = true;
     }
 
-    // Background + foreground anchor the swatch pair; color1..color6 fan
-    // out the accents. Falls back to whatever colorN keys exist if the
-    // theme is missing the canonical names.
+    // Background + foreground anchor the swatch pair; color1..color6 or
+    // semantic names (red, green, blue...) fan out the accents.
     function paletteOf(toml) {
         const map = Palette.parseAll(toml);
-        const want = ["background", "foreground", "color1", "color2", "color3", "color4", "color5", "color6"];
+        const want = ["background", "foreground", "color1", "color2", "color3", "color4", "color5", "color6", "red", "green", "yellow", "blue", "magenta", "cyan", "accent"];
         const out = [];
-        for (let i = 0; i < want.length; i++) {
+        for (let i = 0; i < want.length && out.length < 8; i++) {
             if (map[want[i]]) out.push(map[want[i]]);
         }
-        if (out.length === 0) {
+        if (out.length < 2) {
             for (let i = 0; i < 16 && out.length < 8; i++) {
                 if (map["color" + i]) out.push(map["color" + i]);
             }
@@ -82,27 +90,62 @@ Item {
             const nl = chunk.indexOf("\n");
             if (nl < 0) continue;
             const head = chunk.substring(0, nl);
-            // header format: name<TAB>marker<TAB>previewPath
+            // header format: name<TAB>marker<TAB>previewPath<TAB>kind<TAB>timestamp
             const parts = head.split("\t");
             const name = parts[0] || "";
             const marker = parts[1] || " ";
-            const previewImage = parts[2] || "";
+            let previewImage = parts[2] || "";
+            const kind = parts[3] || "THEME";
+            let ts = parseInt(parts[4]) || 0;
             if (!name) continue;
-            // User dir wins over official with the same name. The shell
-            // loop emits official first, so a second hit overwrites.
+
             const body = chunk.substring(nl + 1);
-            const swatches = themes.paletteOf(body);
+            let swatches = [];
             const active = marker === "*";
-            const kw = name + " theme palette" + (active ? " active current" : "");
+
+            if (kind === "BLUEPRINT") {
+                try {
+                    const bp = JSON.parse(body);
+                    if (bp) {
+                        if (bp.timestamp) {
+                            ts = (bp.timestamp > 1000000000000 ? Math.floor(bp.timestamp / 1000) : bp.timestamp);
+                        }
+                        if (bp.palette) {
+                            const cols = bp.palette.colors || [];
+                            if (cols.length >= 8) {
+                                swatches = [
+                                    cols[0],
+                                    cols[7] || cols[15] || cols[0],
+                                    cols[1],
+                                    cols[2],
+                                    cols[3],
+                                    cols[4],
+                                    cols[5],
+                                    cols[6]
+                                ];
+                            }
+                            if (!previewImage && bp.palette.wallpaper) {
+                                previewImage = bp.palette.wallpaper;
+                            }
+                        }
+                    }
+                } catch (e) {}
+            } else {
+                swatches = themes.paletteOf(body);
+            }
+
+            const category = active ? "ACTIVE" : (kind === "BLUEPRINT" ? "BLUEPRINT" : "THEME");
+            const kw = name + " " + (kind === "BLUEPRINT" ? "blueprint" : "theme") + " palette" + (active ? " active current" : "");
             const entry = {
                 title: name,
-                category: active ? "ACTIVE" : "THEME",
+                category: category,
                 keywords: kw,
-                icon: active ? "󰸌" : "󰋩",
+                icon: active ? "󰸌" : (kind === "BLUEPRINT" ? "󱥒" : "󰋩"),
                 exec: "",
                 themeName: name,
                 isTheme: true,
                 isActive: active,
+                timestamp: ts,
                 swatches: swatches,
                 previewImage: previewImage,
                 rawCategory: false,
@@ -110,13 +153,15 @@ Item {
                 _k: kw.toLowerCase(),
                 _c: "theme"
             };
-            if (seen[name] !== undefined) out[seen[name]] = entry;
-            else { seen[name] = out.length; out.push(entry); }
+
+            const key = kind + ":" + name;
+            if (seen[key] !== undefined) out[seen[key]] = entry;
+            else { seen[key] = out.length; out.push(entry); }
         }
-        // Active theme floats to the top so the user sees what they've
-        // got before scrolling. Otherwise alphabetical.
+        // Active theme floats to the top. Then newest first (descending timestamp).
         out.sort((a, b) => {
             if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+            if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
             return a.title.localeCompare(b.title);
         });
         themes.items = out;

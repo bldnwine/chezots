@@ -52,6 +52,22 @@ CardWindow {
     property var playerList: mediaPopup.root.mprisPlayers
     property real latchedLength: 0
 
+    readonly property bool isBrowserPlayer: {
+        if (!activePlayer) return false;
+        const dbus = (activePlayer.dbusName || "").toLowerCase();
+        return dbus.indexOf("firefox") >= 0 || dbus.indexOf("zen") >= 0 || dbus.indexOf("chromium") >= 0 || dbus.indexOf("chrome") >= 0;
+    }
+
+    function syncBrowserLength() {
+        if (!isBrowserPlayer || !activePlayer || len > 0 || seekArmed || seekRunner.running) return;
+        const pfx = "org.mpris.MediaPlayer2.";
+        const raw = activePlayer.dbusName || "";
+        const pname = raw.indexOf(pfx) === 0 ? raw.slice(pfx.length) : raw;
+        seekRunner.command = ["playerctl", "-p", pname, "metadata", "mpris:length"];
+        seekRunner.running = false;
+        seekRunner.running = true;
+    }
+
     // ---- Seek state (matched to mediahero.qml) ----
     readonly property real posn: activePlayer ? activePlayer.position : 0
     readonly property bool lengthKnown: activePlayer
@@ -83,6 +99,7 @@ CardWindow {
                  && mediaPopup.activePlayer.isPlaying
         onTriggered: {
             mediaPopup.activePlayer.positionChanged();
+            if (mediaPopup.len <= 0) mediaPopup.syncBrowserLength();
             if (mediaPopup.seekSent && mediaPopup.len > 0
                 && Math.abs(mediaPopup.posn - mediaPopup.seekFrac * mediaPopup.len) < 1.5) {
                 mediaPopup.seekArmed = false;
@@ -92,7 +109,20 @@ CardWindow {
         }
     }
 
-    Process { id: seekRunner }
+    Process {
+        id: seekRunner
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const txt = this.text.trim();
+                const us = parseInt(txt, 10);
+                if (!isNaN(us) && us > 0 && us < 86400000000000) {
+                    const sec = Math.round(us / 1000000);
+                    if (sec > 0) mediaPopup.latchedLength = sec;
+                }
+            }
+        }
+    }
 
     // Debounce: waits 300ms after last scrub movement, then seeks
     Timer {
@@ -133,6 +163,7 @@ CardWindow {
         }
         function onLengthSupportedChanged() {
             if (mediaPopup.lengthKnown) mediaPopup.latchedLength = mediaPopup.activePlayer.length;
+            else if (mediaPopup.len <= 0) mediaPopup.syncBrowserLength();
         }
         function onTrackTitleChanged() {
             seekDebounce.stop();
@@ -140,9 +171,11 @@ CardWindow {
             mediaPopup.seekArmed = false;
             mediaPopup.seekSent = false;
             mediaPopup.latchedLength = mediaPopup.lengthKnown ? mediaPopup.activePlayer.length : 0;
+            if (mediaPopup.latchedLength <= 0) mediaPopup.syncBrowserLength();
         }
     }
 
+    onRevealedChanged: if (revealed && len <= 0) syncBrowserLength();
     onActivePlayerChanged: {
         seekDebounce.stop();
         seekIgnore.stop();
@@ -150,6 +183,7 @@ CardWindow {
         mediaPopup.seekSent = false;
         mediaPopup.latchedLength = activePlayer && activePlayer.lengthSupported
             && activePlayer.length > 0 ? activePlayer.length : 0;
+        if (mediaPopup.latchedLength <= 0) syncBrowserLength();
     }
 
     function formatTime(seconds) {
