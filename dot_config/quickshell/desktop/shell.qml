@@ -12,6 +12,16 @@ ShellRoot {
 
     Theme { id: theme }
 
+    Background {
+        id: background
+        theme: theme
+    }
+
+    PolkitAgent {
+        id: polkitAgent
+        theme: theme
+    }
+
     Navbar {
         id: nav
         theme: theme

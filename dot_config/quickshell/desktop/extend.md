@@ -14,6 +14,8 @@ For the high-level overview and IPC surface, see [README.md](./README.md).
 | Resize the bar | `Navbar.qml` | `barHeight` |
 | Move the bar to a different edge by default | `Navbar.qml` | `barEdge` |
 | Add or remove a bar module | `Bar.qml` | the `Module { ... }` blocks |
+| Customize wallpaper transitions | `Background.qml` | `revealAnimation`, `revealMask` |
+| Change Polkit card dimensions or styles | `PolkitAgent.qml` | `cardWidth`, `cardHeight` |
 | Change palette result cap | `OmniMenu.qml` | `maxResults` |
 | Retune search scoring | `OmniMenu.qml` | `scPrefix`, `scTitle`, `scKw`, `scCat` |
 | Change fonts | `Theme.qml` | `mono`, `serif` |
@@ -172,7 +174,21 @@ function mapKeys(raw) {
 }
 ```
 
-Useful when a theme stores its accent under a non-standard key, or when you want to wire `seal` to a different alert color.
+## Desktop background
+
+`Background.qml` tracks the active wallpaper symlink (`~/.config/omarchy/current/background`) and applies a slanted-wipe reveal animation when the image changes.
+
+- Change transition speed: edit `duration: 420` in `revealAnimation`.
+- Change slant angle: edit `slant: -0.18` in `revealMask`.
+- Double-click shortcuts: Double-left runs the wallpaper picker; double-right runs the theme switcher.
+
+## Polkit agent
+
+`PolkitAgent.qml` runs the PolicyKit authentication dialog using Quickshell's native `Quickshell.Services.Polkit.PolkitAgent` backend.
+
+- Card dimensions: adjust `cardWidth: 320` and `cardHeight: 52`.
+- Error animation: `shakeAnimation` shakes horizontally by +/- 8px on failed authentication.
+- PAM config: parses `/etc/pam.d/polkit-1` via `PolkitModel.js` to prioritize fingerprint prompts when configured.
 
 ## Workflow tips
 

@@ -34,6 +34,8 @@ qs -c desktop ipc call screenrecord toggle     # screen recording controls
 qs -c desktop ipc call wireproton toggle       # VPN wireguard connect/disconnect
 qs -c desktop ipc call locusfavs toggle        # folder bookmarks
 qs -c desktop ipc call hyprland toggle         # hyprland keybind viewer
+qs -c desktop ipc call background refresh      # re-read background symlink
+qs -c desktop ipc call background set <path>   # transition to new wallpaper
 ```
 
 The navbar menu button calls `toggle()` on the sibling palette in-process, no IPC round-trip or subprocess.
@@ -44,6 +46,8 @@ The navbar menu button calls `toggle()` on the sibling palette in-process, no IP
 | --- | --- |
 | Bar | Kanji workspace markers, telemetry (cpu, mem, bt, wifi, audio, battery), centred clock, click-through popups for calendar, screenshots, videos, display, weather, aether blueprints. |
 | Locus | Full-screen command palette over installed apps and the omarchy-menu (Style, Setup, Install, Remove, Update, System, Toggle, Trigger, Capture, Share, Learn), file search, GitHub repo search, processes, theme picker, plus Quick-mode tile grid, tldr lookup (`$`), and local Ollama chat (`?`). |
+| Background | Multi-screen native layer-shell wallpaper with smooth animated diagonal wipe transitions, live symlink tracking (`~/.config/omarchy/current/background`), and double-click triggers. |
+| Polkit | Theme-aware PolicyKit authentication agent dialog with micro-shake feedback, password masking, Esc cancellation, and PAM fingerprint detection. |
 | Theme | Shared live palette sourced from `~/.config/aether/theme/colors.toml`. Drift animation runs on theme swap so bar + palette breathe in sync. |
 
 ## Bar layout
