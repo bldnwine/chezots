@@ -309,7 +309,7 @@ hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "maximized", action
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen_state({ action = "toggle", internal = 0, client = 2 }))
 --hl.bind("SUPER + F", hl.dsp.exec_cmd("toggle-tiled-fullscreen"))
 hl.bind(mainMod .. " + CONTROL + Y", hl.dsp.exec_cmd(launch("cmd-ocr")))
---hl.bind(mainMod .. " + CONTROL + T", hl.dsp.exec_cmd(launch("qs -p ~/.config/quickshell/desktop/test-bp.qml")))
+hl.bind(mainMod .. " + CONTROL + T", hl.dsp.exec_cmd("qs -c desktop ipc call locus toggleCategory Themes"))
 hl.bind(mainMod .. " + SHIFT + A", hl.dsp.exec_cmd("qs -c desktop ipc call locus toggleCategory Themes"))
 hl.bind(mainMod .. " + SHIFT + G", function()
 	if look.gaps_in > 0 or look.gaps_out > 0 then

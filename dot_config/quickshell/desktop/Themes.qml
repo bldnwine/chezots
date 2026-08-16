@@ -168,16 +168,9 @@ Item {
         themes.loaded = true;
     }
 
-    // Refresh on entering the mode so the active marker stays honest
-    // after the user swaps themes. Outside the mode we keep items
-    // around so they remain searchable from root (typing "kanagawa"
-    // outside the drill-in still surfaces the apply-theme row).
+    // Refresh on entering the mode so themes and blueprints are loaded
+    // and the active marker stays honest after the user swaps themes.
     onActiveChanged: { if (themes.active) themes.refresh(); }
-
-    // Preload once at startup. Cheap (~24 small file reads), and means
-    // theme rows are present in root search the first time the user
-    // opens the palette, not just after entering the Themes drill-in.
-    Component.onCompleted: themes.refresh()
 
     Process {
         id: probeProc

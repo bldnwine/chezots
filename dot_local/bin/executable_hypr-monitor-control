@@ -72,10 +72,7 @@ done
 if (( CHANGED == 1 )); then
     hyprctl reload
     sleep 1
-    pkill swaybg 2>/dev/null || true
-    uwsm-app -- swaybg -i ~/.config/omarchy/current/background -m fill &
-    pkill waybar 2>/dev/null || true
-    uwsm-app -- waybar &
+    qs -c desktop ipc call background refresh >/dev/null 2>&1 || true
     if [[ "$ACTION" != "off" ]]; then
         for mon in $TARGETS; do
             hyprctl dispatch dpms on "$mon" >/dev/null 2>&1 || true

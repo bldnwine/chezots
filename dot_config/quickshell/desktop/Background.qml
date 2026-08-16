@@ -33,7 +33,8 @@ Item {
     }
 
     function refreshBackground() {
-        if (!readlinkProc.running) readlinkProc.running = true;
+        readlinkProc.running = false;
+        readlinkProc.running = true;
     }
 
     function setBackground(path, instant) {
@@ -105,7 +106,7 @@ Item {
 
     Process {
         id: readlinkProc
-        command: ["readlink", "-f", root.backgroundLink]
+        command: ["sh", "-c", "readlink -f \"$HOME/.config/omarchy/current/background\" 2>/dev/null || ls -1 \"$HOME/.config/aether/theme/backgrounds\"/* 2>/dev/null | head -n 1"]
         stdout: StdioCollector {
             onStreamFinished: {
                 var found = String(this.text || "").trim();

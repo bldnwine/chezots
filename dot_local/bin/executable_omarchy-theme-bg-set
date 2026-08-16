@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Bridge aether wallpaper updates to Quickshell native Background IPC
+set -euo pipefail
+
+WALLPAPER="${1:-}"
+[ -n "$WALLPAPER" ] || exit 0
+
+mkdir -p "$HOME/.config/omarchy/current"
+ln -sfn "$WALLPAPER" "$HOME/.config/omarchy/current/background"
+
+# Notify Quickshell to transition to new wallpaper with smooth diagonal wipe
+qs -c desktop ipc call background set "$WALLPAPER" 2>/dev/null || true
