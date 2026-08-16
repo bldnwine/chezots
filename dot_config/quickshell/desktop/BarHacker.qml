@@ -363,7 +363,7 @@ PanelWindow {
                         return "Wi-Fi · " + (hk.root.wifiSsid || "(hidden)") + " · " + hk.root.wifiSignal + "%";
                     return "Offline";
                 }
-                onActivated: hk.root.run("ghostty --title=impala -e impala")
+                onActivated: hk.root.runTerminal("impala", "impala")
             }
 
             HackerStat {
@@ -395,7 +395,7 @@ PanelWindow {
                         ? "Bluetooth · " + hk.root.btCount + " connected"
                         : "Bluetooth on";
                 }
-                onActivated: hk.root.run("ghostty --title='Bluetooth Manager' -e bluetui")
+                onActivated: hk.root.runTerminal("bluetui", "Bluetooth Manager")
             }
 
             HackerStat {
@@ -601,7 +601,7 @@ PanelWindow {
             font.family: hk.root.mono
             font.pixelSize: 12
             MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor
-                onClicked: hk.root.run("ghostty --title=impala -e impala") }
+                onClicked: hk.root.runTerminal("impala", "impala") }
         }
         Text {
             Layout.alignment: Qt.AlignHCenter

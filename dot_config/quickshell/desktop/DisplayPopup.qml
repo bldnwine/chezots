@@ -56,7 +56,7 @@ CardWindow {
             if (r.displayRow === 3) {
                 r.applyPreset(r.displayPresets[r.selectedPreset]);
             } else if (r.displayRow === 4) {
-                r.run("ghostty -e ${EDITOR:-nvim} ~/.config/hypr/hyprland.lua");
+                r.runTerminal("${EDITOR:-nvim} ~/.config/hypr/hyprland.lua");
                 r.displayVisible = false;
             } else if (r.displayRow === 5) r.blankScreen();
             else if (r.displayRow === 6) r.resetDisplay();
@@ -71,7 +71,7 @@ CardWindow {
         } else if (k === Qt.Key_B) {
             r.blankScreen();
         } else if (k === Qt.Key_E) {
-            r.run("ghostty -e ${EDITOR:-nvim} ~/.config/hypr/hyprland.lua");
+            r.runTerminal("${EDITOR:-nvim} ~/.config/hypr/hyprland.lua");
             r.displayVisible = false;
         } else {
             return;
@@ -176,7 +176,7 @@ CardWindow {
                 selected: displayPopup.root.displayRow === 4
                 onActivated: {
                     displayPopup.root.displayRow = 4;
-                    displayPopup.root.run("ghostty -e ${EDITOR:-nvim} ~/.config/hypr/hyprland.lua");
+                    displayPopup.root.runTerminal("${EDITOR:-nvim} ~/.config/hypr/hyprland.lua");
                     displayPopup.root.displayVisible = false;
                 }
             }

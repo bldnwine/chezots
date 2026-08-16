@@ -32,7 +32,7 @@ CardWindow {
     }
 
     function editConfig() {
-        popup.root.run("ghostty -e nvim ~/.config/hypr/hyprland.lua");
+        popup.root.runTerminal("nvim ~/.config/hypr/hyprland.lua");
         popup.root.hyprlandVisible = false;
     }
 

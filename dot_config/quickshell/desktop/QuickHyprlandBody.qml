@@ -15,7 +15,7 @@ Item {
     }
 
     function editConfig() {
-        body.nav.run("ghostty -e nvim ~/.config/hypr/hyprland.lua");
+        body.nav.runTerminal("nvim ~/.config/hypr/hyprland.lua");
         body.close();
     }
 

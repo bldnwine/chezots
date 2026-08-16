@@ -133,7 +133,7 @@ const omarchyItems = [
     { title: "Screen Record",       icon: "󰑊", category: "Capture", keywords: "screen record video capture mp4 gif",                                              exec: "qs -c desktop ipc call screenrecord toggle" },
     { title: "Text Extraction (OCR)",icon: "󰴑", category: "Capture", keywords: "ocr text extract recognize image scan copy",                                       exec: "cmd-ocr" },
     { title: "Color Picker",        icon: "󰃉", category: "Capture", keywords: "color picker hex rgb hyprpicker dropper sample eyedropper",                        exec: "bash -c 'pkill hyprpicker || hyprpicker -a'" },
-    { title: "Notes",               icon: "󰍔", category: "Capture", keywords: "notes note markdown scratchpad journal nano ghostty editor write text",  exec: "ghostty -e nano" },
+    { title: "Notes",               icon: "󰍔", category: "Capture", keywords: "notes note markdown scratchpad journal nano kitty editor write text",    exec: "kitty nano" },
 
     // ----- Trigger -----
     { title: "Reminders",           icon: "󰔛", category: "Trigger", keywords: "reminder reminders alarm timer notify wake notification show list pending set create", exec: "qs -c desktop ipc call reminder open" },

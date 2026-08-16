@@ -269,7 +269,7 @@ PanelWindow {
                 borderless: true
                 minWidth: 28
                 maxWidth: 28
-                onActivated: wr.root.run("ghostty --title='Bluetooth Manager' -e bluetui")
+                onActivated: wr.root.runTerminal("bluetui", "Bluetooth Manager")
             }
             WhiteRoseCell {
                 root: wr.root
@@ -286,7 +286,7 @@ PanelWindow {
                 borderless: true
                 minWidth: 28
                 maxWidth: 28
-                onActivated: wr.root.run("ghostty --title=impala -e impala")
+                onActivated: wr.root.runTerminal("impala", "impala")
             }
             WhiteRoseCell {
                 root: wr.root
@@ -470,7 +470,7 @@ PanelWindow {
             borderless: true
             minWidth: 20
             fontSize: 9
-            onActivated: wr.root.run("ghostty --title=impala -e impala")
+            onActivated: wr.root.runTerminal("impala", "impala")
         }
         WhiteRoseCell {
             root: wr.root

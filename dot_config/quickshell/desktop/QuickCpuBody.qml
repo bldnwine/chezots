@@ -26,7 +26,7 @@ Item {
         return false;
     }
     function _launch() {
-        if (body.nav) body.nav.run("ghostty -e btop");
+        if (body.nav) body.nav.runTerminal("btop");
         body.close();
     }
     Column {

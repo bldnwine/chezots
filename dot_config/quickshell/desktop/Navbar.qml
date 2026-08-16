@@ -1484,6 +1484,23 @@ Item {
         stderr: StdioCollector { onStreamFinished: if (this.text) console.log("[RUN-DIAG stderr] " + this.text) }
     }
     Process { id: themeApplier; running: false }
+    property string defaultTerminal: "kitty"
+
+    function terminalExec(cmd, title) {
+        const t = root.defaultTerminal;
+        if (t === "kitty") {
+            return title ? "kitty -T \"" + title + "\" " + cmd : "kitty " + cmd;
+        } else if (t === "ghostty") {
+            return title ? "ghostty --title=\"" + title + "\" -e " + cmd : "ghostty -e " + cmd;
+        } else {
+            return title ? t + " -T \"" + title + "\" -e " + cmd : t + " -e " + cmd;
+        }
+    }
+
+    function runTerminal(cmd, title) {
+        root.run(root.terminalExec(cmd, title));
+    }
+
     function run(cmd) {
         console.log("[RUN-DIAG] " + cmd);
         runner.command = ["bash", "-c", cmd];

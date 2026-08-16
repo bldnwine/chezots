@@ -70,7 +70,7 @@ CardWindow {
     }
 
     function openYazi(f) {
-        Quickshell.execDetached(["bash", "-c", "ghostty -e yazi " + f.path]);
+        popup.root.runTerminal("yazi " + f.path);
         popup.root.locusfavsVisible = false;
     }
     function openNemo(f) {
