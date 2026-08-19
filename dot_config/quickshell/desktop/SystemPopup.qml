@@ -11,7 +11,7 @@ CardWindow {
     layerNamespace: "omarchy-system"
     title: "SYSTEM"
     subtitle: "CPU " + Math.round(root.cpuVal) + "% - MEM " + Math.round(root.memVal) + "%"
-    footer: "B OPEN BTOP - ESC"
+    footer: "B OPEN BTOP"
 
     anchorEdge: systemPopup.root.systemAnchorItem ? systemPopup.root.barEdge : ""
     anchorBarX: systemPopup.root.popupAnchorX

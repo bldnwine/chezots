@@ -17,7 +17,7 @@ CardWindow {
     layerNamespace: "omarchy-clipboard"
     title: "CLIPBOARD"
     subtitle: root.clipboardHistory.length + " ENTRIES" + (popup.filterText ? " · “" + popup.filterText + "”" : "")
-    footer: "↵ COPY · ALT+↵ OPEN · DEL REMOVE · SHIFT+DEL CLEAR · ESC CLOSE"
+    footer: "↵ COPY · ALT+↵ OPEN · DEL REMOVE · SHIFT+DEL CLEAR"
     escDismiss: false
 
     readonly property string copyScript:  Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/clipboard-copy"

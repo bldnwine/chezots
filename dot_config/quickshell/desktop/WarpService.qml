@@ -267,17 +267,27 @@ Item {
   }
 
   function startDaemon() {
-    if (daemonProcess.running) return
+    lastError = ""
     actionStatus = "Starting WARP daemon…"
-    daemonProcess.command = ["bash", "-c", "sudo -n systemctl start warp-svc 2>/dev/null || pkexec systemctl start warp-svc"]
-    daemonProcess.running = true
+    Quickshell.execDetached(["sudo", "/usr/bin/systemctl", "start", "warp-svc"])
+    delayedRefresh.restart()
+    settleRefresh.restart()
   }
 
   function stopDaemon() {
-    if (daemonProcess.running) return
+    lastError = ""
     actionStatus = "Stopping WARP daemon…"
-    daemonProcess.command = ["bash", "-c", "sudo -n systemctl stop warp-svc 2>/dev/null || pkexec systemctl stop warp-svc"]
-    daemonProcess.running = true
+    daemonDown = true
+    connected = false
+    connecting = false
+    status = "DaemonDown"
+    statusText = "WARP daemon is not running"
+    Quickshell.execDetached(["pkill", "-9", "-f", "warp-taskbar"])
+    Quickshell.execDetached(["pkill", "-9", "-f", "crashpad_handler"])
+    Quickshell.execDetached(["sudo", "/usr/bin/systemctl", "stop", "warp-svc"])
+    flash("WARP daemon stopped")
+    delayedRefresh.restart()
+    settleRefresh.restart()
   }
 
   function runAction(args, label) {
@@ -433,16 +443,26 @@ Item {
     id: daemonProcess
     running: false
     command: []
-    stdout: StdioCollector { id: daemonStdout; waitForEnd: true }
-    stderr: StdioCollector { id: daemonStderr; waitForEnd: true }
+    stdout: StdioCollector { id: daemonStdout }
+    stderr: StdioCollector { id: daemonStderr }
     onExited: function(exitCode) {
       if (exitCode !== 0) {
         root.lastError = Model.elide(String(daemonStderr.text || daemonStdout.text || "Could not manage warp-svc"))
         root.flash(root.lastError)
       } else {
         root.lastError = ""
-        root.flash("WARP daemon updated")
-        Quickshell.execDetached(warpCommand(["debug", "connectivity-check", "disable"]))
+        if (root.actionStatus.indexOf("Stopping") !== -1) {
+          root.daemonDown = true
+          root.connected = false
+          root.connecting = false
+          root.status = "DaemonDown"
+          root.statusText = "WARP daemon is not running"
+          root.flash("WARP daemon stopped")
+        } else {
+          root.daemonDown = false
+          root.flash("WARP daemon started")
+          Quickshell.execDetached(warpCommand(["debug", "connectivity-check", "disable"]))
+        }
       }
       delayedRefresh.restart()
       settleRefresh.restart()

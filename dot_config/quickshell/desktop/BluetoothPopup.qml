@@ -19,7 +19,7 @@ CardWindow {
                ? (root.btDevices.length + " DEVICES"
                   + (root.btCount > 0 ? " · " + root.btCount + " CONN" : ""))
                : "POWER OFF"
-    footer: "T TRUST · S SCAN · U UNPAIR · ESC CLOSE"
+    footer: "T TRUST · S SCAN · U UNPAIR"
 
     anchorEdge: btpopup.root.barEdge
     anchorBarX: btpopup.root.popupAnchorX

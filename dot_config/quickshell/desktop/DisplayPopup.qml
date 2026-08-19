@@ -8,7 +8,7 @@ CardWindow {
     revealed: root.displayVisible
     cardWidth: 480
     layerNamespace: "omarchy-display"
-    footer: "↑↓ ROW · ←→ ADJUST · 1-4 PRESET · R RESET · B BLANK · E EDIT · ESC"
+    footer: "↑↓ ROW · ←→ ADJUST · 1-4 PRESET · R RESET · B BLANK · E EDIT"
 
     anchorEdge: displayPopup.root.barEdge
     anchorBarX: displayPopup.root.popupAnchorX

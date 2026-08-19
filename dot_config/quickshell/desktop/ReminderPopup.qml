@@ -13,7 +13,7 @@ CardWindow {
     layerNamespace: "omarchy-reminder"
     title: "REMINDER"
     subtitle: "SET TIMER OR ALARM"
-    footer: "ENTER SET · TAB/ARROWS NAV · ESC CLOSE"
+    footer: "ENTER SET · TAB/ARROWS NAV"
 
     anchorEdge: reminderPopup.root.barEdge
     anchorBarX: reminderPopup.root.popupAnchorX

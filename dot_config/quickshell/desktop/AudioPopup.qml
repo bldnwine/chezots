@@ -19,7 +19,7 @@ CardWindow {
               ? "MUTED"
               : (root.audioSinkDesc ? root.audioSinkDesc + " · " : "")
                 + root.audioVol + "%"
-    footer: "M MUTE · B MIXER · ENTER ACT · ESC CLOSE"
+    footer: "M MUTE · B MIXER · ENTER ACT"
 
     anchorEdge: audioPopup.root.barEdge
     anchorBarX: audioPopup.root.popupAnchorX

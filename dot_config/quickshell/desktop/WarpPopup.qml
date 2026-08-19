@@ -25,7 +25,7 @@ CardWindow {
         return "DISCONNECTED" + (warp.accountLabel !== "" ? " · " + warp.accountLabel.toUpperCase() : "");
     }
 
-    footer: "T TOGGLE · M MODES · S SPLIT · C COPY ID · R REFRESH · ESC CLOSE"
+    footer: "T TOGGLE · D DAEMON · M MODES · S SPLIT · C COPY ID · R REFRESH"
 
     anchorEdge: warppopup.root.barEdge
     anchorBarX: warppopup.root.popupAnchorX
@@ -58,6 +58,13 @@ CardWindow {
         }
         if (k === Qt.Key_T) {
             if (warp && warp.canToggle) warp.toggleConnection();
+            return true;
+        }
+        if (k === Qt.Key_D) {
+            if (warp) {
+                if (warp.daemonDown) warp.startDaemon();
+                else warp.stopDaemon();
+            }
             return true;
         }
         if (k === Qt.Key_R) {

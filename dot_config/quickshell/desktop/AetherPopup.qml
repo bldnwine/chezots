@@ -41,8 +41,8 @@ CardWindow {
             : "BLUEPRINTS  ·  " + shown + " / " + total + " MATCH" + (shown === 1 ? "" : "ES");
     }
     footer: aetherPopup.wallhavenMode
-            ? "SCROLL FOR MORE  ·  ↵ APPLY  ·  ^M MATERIAL  ·  TAB MODE  ·  ESC"
-            : "TAB SWITCHES MODE  ·  ↵ APPLY  ·  ESC CLOSE"
+            ? "SCROLL FOR MORE  ·  ↵ APPLY  ·  ^M MATERIAL  ·  TAB MODE"
+            : "TAB SWITCHES MODE  ·  ↵ APPLY"
 
     headerRight: CalendarChevron {
         visible: aetherPopup.wallhavenMode

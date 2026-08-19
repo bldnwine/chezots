@@ -10,7 +10,7 @@ CardWindow {
     revealed: root.weatherVisible
     cardWidth: weatherPopup.isWhiterose ? 320 : 360
     layerNamespace: "omarchy-weather"
-    footer: weatherPopup.isWhiterose ? "R REFRESH - ESC" : "CLICK PLACE TO EDIT · R REFRESH · ESC"
+    footer: weatherPopup.isWhiterose ? "R REFRESH" : "CLICK PLACE TO EDIT · R REFRESH"
 
     anchorEdge: weatherPopup.root.barEdge
     anchorBarX: weatherPopup.root.popupAnchorX

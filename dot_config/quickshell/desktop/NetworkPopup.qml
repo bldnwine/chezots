@@ -17,13 +17,11 @@ CardWindow {
     layerNamespace: "omarchy-network"
     title: "NETWORK"
     subtitle: {
-        let base = root.netKind === "eth" ? "ETHERNET"
-                 : root.netKind === "wifi" ? ((root.wifiSsid || "(hidden)") + " · " + root.wifiSignal + "%")
-                 : "OFFLINE";
-        if (root.wifiScanning) base += " · SCANNING";
-        return base;
+        return root.netKind === "eth" ? "ETHERNET"
+             : root.netKind === "wifi" ? ((root.wifiSsid || "(hidden)") + " · " + root.wifiSignal + "%")
+             : "OFFLINE";
     }
-    footer: "T AUTOCONNECT · S SCAN · U FORGET · ESC CLOSE"
+    footer: "T AUTOCONNECT · S SCAN · U FORGET"
 
     anchorEdge: netpopup.root.barEdge
     anchorBarX: netpopup.root.popupAnchorX
