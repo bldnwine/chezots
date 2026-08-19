@@ -407,6 +407,42 @@ Item {
             root.close();
             return;
         }
+        // In-process navbar popup toggle (warp, weather, display, calendar, system, bar, etc.)
+        if (root.navbar && item.exec && item.exec.indexOf("qs -c desktop ipc call ") === 0) {
+            const parts = item.exec.split(" ");
+            const target = parts[5];
+            const verb = parts[6] || "toggle";
+            if (target === "warp") {
+                if (root.navbar.warpVisible) root.navbar.warpVisible = false;
+                else root.navbar.openWarp();
+                root.close();
+                return;
+            } else if (target === "weather") {
+                if (root.navbar.weatherVisible) root.navbar.weatherVisible = false;
+                else root.navbar.openWeather();
+                root.close();
+                return;
+            } else if (target === "display") {
+                if (root.navbar.displayVisible) root.navbar.displayVisible = false;
+                else root.navbar.openDisplay();
+                root.close();
+                return;
+            } else if (target === "calendar") {
+                if (root.navbar.calendarVisible) root.navbar.calendarVisible = false;
+                else root.navbar.openCalendar();
+                root.close();
+                return;
+            } else if (target === "system") {
+                if (root.navbar.systemVisible) root.navbar.systemVisible = false;
+                else root.navbar.openSystem();
+                root.close();
+                return;
+            } else if (target === "bar") {
+                root.navbar.barHidden = !root.navbar.barHidden;
+                root.close();
+                return;
+            }
+        }
         // tldr → open a floating terminal with the user's typed text
         // pre-filled at the readline prompt, ready to edit and run.
         // Builds runner.command as argv (no shell-quoting layer) so

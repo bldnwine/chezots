@@ -438,6 +438,92 @@ PanelWindow {
                 }
             }
 
+            Item {
+                id: warpMod
+                readonly property var warp: bar.root.warpService
+                visible: bar.root.warpVisible || (warpMod.warp && (warpMod.warp.active || warpMod.warp.connecting))
+                Layout.alignment: bar.root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
+                Layout.preferredWidth: visible ? (bar.root.isHorizontal ? 24 : bar.root.barHeight) : 0
+                Layout.preferredHeight: visible ? (bar.root.isHorizontal ? bar.root.barHeight : 24) : 0
+
+                Component.onCompleted: bar.root.warpAnchorItem = this
+
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    radius: bar.root.cornerRadius
+                    color: warpMouse.containsMouse ? Qt.rgba(bar.root.ink.r, bar.root.ink.g, bar.root.ink.b, 0.08) : "transparent"
+                    Behavior on color { ColorAnimation { duration: 180 } }
+                }
+
+                Bloom { id: warpBloom; root: bar.root }
+
+                WarpIcon {
+                    anchors.centerIn: parent
+                    iconSize: 13
+                    color: warpMod.warp && warpMod.warp.active ? bar.root.accent : (warpMod.warp && warpMod.warp.daemonDown ? bar.root.sumi : bar.root.ink)
+                    badgeColor: bar.root.warn
+                    crossed: warpMod.warp && !warpMod.warp.active && !warpMod.warp.daemonDown
+                    warning: warpMod.warp && (warpMod.warp.daemonDown || warpMod.warp.needsRegistration)
+                }
+
+                readonly property string tipText: {
+                    var w = warpMod.warp;
+                    if (!w || !w.probed) return "Cloudflare WARP";
+                    if (w.daemonDown) return "Cloudflare WARP: Daemon inactive\nClick to start";
+                    if (!w.registered) return "Cloudflare WARP: Needs registration";
+                    var lines = ["Cloudflare WARP: " + w.statusText];
+                    if (w.mode) lines.push("Mode: " + w.modeLabel(w.mode));
+                    if (w.active && w.tunnelStats) {
+                        if (w.tunnelStats.endpoint) lines.push("Colo: " + w.tunnelStats.endpoint);
+                        if (w.tunnelStats.latency) lines.push("Latency: " + w.tunnelStats.latency);
+                        if (w.tunnelStats.sent || w.tunnelStats.received)
+                            lines.push("↑ " + (w.tunnelStats.sent || "0 B") + "   ↓ " + (w.tunnelStats.received || "0 B"));
+                    }
+                    return lines.join("\n");
+                }
+
+                Timer {
+                    id: warpTipDelay
+                    interval: 320
+                    onTriggered: {
+                        const p = warpMod.mapToItem(null, warpMod.width / 2, warpMod.height / 2);
+                        bar.root.showTooltip(warpMod.tipText, p.x, p.y);
+                    }
+                }
+
+                MouseArea {
+                    id: warpMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: {
+                        warpBloom.fire(mouseX, mouseY);
+                        warpTipDelay.restart();
+                    }
+                    onExited: {
+                        warpTipDelay.stop();
+                        bar.root.hideTooltip(warpMod.tipText);
+                    }
+                    onClicked: (e) => {
+                        warpTipDelay.stop();
+                        bar.root.hideTooltip(warpMod.tipText);
+                        if (e.button === Qt.RightButton) {
+                            if (warp) {
+                                if (warp.daemonDown) warp.startDaemon();
+                                else warp.toggleConnection();
+                            }
+                        } else if (e.button === Qt.MiddleButton) {
+                            if (warp) warp.refresh();
+                        } else {
+                            if (bar.root.warpVisible) bar.root.warpVisible = false;
+                            else bar.root.openWarp();
+                        }
+                    }
+                }
+            }
+
             Module {
                 root: bar.root
                 glyph: bar.root.audioIcon

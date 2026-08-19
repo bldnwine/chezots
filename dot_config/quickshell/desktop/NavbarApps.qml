@@ -17,6 +17,8 @@ Item {
           keywords: "calendar date month day year week schedule planner today" },
         { target: "system",      title: "System",      icon: "󰍛", category: "Toggle",
           keywords: "system cpu memory mem load pressure btop process monitor" },
+        { target: "warp",        title: "Cloudflare WARP", icon: "󰖂", category: "Toggle", verb: "toggle",
+          keywords: "cloudflare warp vpn tunnel 1.1.1.1 quad9 connect disconnect toggle panel" },
         { target: "bar",         title: "Toggle Bar Visibility", icon: "󰍜", category: "Toggle", verb: "toggle",
           keywords: "bar visibility show hide navbar variant style toggle hidden clear unobscured unobstruct" }
     ]

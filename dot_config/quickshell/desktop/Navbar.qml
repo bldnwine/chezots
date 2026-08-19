@@ -202,6 +202,7 @@ Item {
     property Item btAnchorItem:       null
     property Item audioAnchorItem:    null
     property Item clipboardAnchorItem: null
+    property Item warpAnchorItem:      null
 
     function anchorPopupTo(item) {
         const p = item.mapToItem(null, item.width / 2, item.height / 2);
@@ -716,6 +717,15 @@ Item {
         stdout: StdioCollector {
             onStreamFinished: root.wireprotonConfigs = text.trim().split("\n").filter(s => s.length > 0);
         }
+    }
+
+    // ---------- Cloudflare WARP state ----------
+    property bool warpVisible: false
+    WarpService { id: warpService; settings: ({}) }
+    readonly property var warpService: warpService
+    function openWarp() {
+        if (root.warpAnchorItem) root.anchorPopupTo(root.warpAnchorItem);
+        root.warpVisible = true;
     }
 
     // ---------- Locusfavs popup state ----------
@@ -2456,6 +2466,13 @@ Item {
     }
     Timer { id: keepWireproton; interval: 400; onTriggered: wireprotonLoader.source = "" }
 
+    Loader { id: warpLoader }
+    onWarpVisibleChanged: {
+        if (root.warpVisible) { keepWarp.stop(); warpLoader.setSource("WarpPopup.qml", { root: root }); }
+        else keepWarp.restart();
+    }
+    Timer { id: keepWarp; interval: 400; onTriggered: warpLoader.source = "" }
+
     Loader { id: appMenuLoader }
     onAppMenuVisibleChanged: {
         if (root.appMenuVisible) { keepAppMenu.stop(); appMenuLoader.setSource("AppMenu.qml", { navbar: root }); }
@@ -2706,6 +2723,31 @@ Item {
         }
         function open(): void  { root.openWireproton(); }
         function close(): void { root.wireprotonVisible = false; }
+    }
+
+    IpcHandler {
+        target: "warp"
+        function toggle(): void {
+            if (root.warpVisible) root.warpVisible = false;
+            else root.openWarp();
+        }
+        function open(): void  { root.openWarp(); }
+        function close(): void { root.warpVisible = false; }
+        function connect(): string { warpService.connect(); return "ok"; }
+        function disconnect(): string { warpService.disconnect(); return "ok"; }
+        function toggleConnection(): string { warpService.toggleConnection(); return "ok"; }
+        function refresh(): string { warpService.refresh(); return "ok"; }
+        function startDaemon(): string { warpService.startDaemon(); return "ok"; }
+        function stopDaemon(): string { warpService.stopDaemon(); return "ok"; }
+        function mode(val: string): string { warpService.setMode(val); return "ok"; }
+        function status(): string { return warpService.statusText; }
+        function splitTunnel(): string {
+            var entries = warpService.splitTunnelEntries;
+            if (!entries || entries.length === 0) return "No split tunnel rules";
+            var lines = [warpService.splitTunnelSummary];
+            for (var i = 0; i < entries.length; i++) lines.push(entries[i].value);
+            return lines.join("\n");
+        }
     }
 
     IpcHandler {

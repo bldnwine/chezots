@@ -58,14 +58,40 @@ CardWindow {
         return dbus.indexOf("firefox") >= 0 || dbus.indexOf("zen") >= 0 || dbus.indexOf("chromium") >= 0 || dbus.indexOf("chrome") >= 0;
     }
 
+    Process {
+        id: lengthSyncRunner
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const txt = this.text.trim();
+                const us = parseInt(txt, 10);
+                if (!isNaN(us) && us > 0 && us < 86400000000000) {
+                    const sec = Math.round(us / 1000000);
+                    if (sec > 0) mediaPopup.latchedLength = sec;
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: lengthSyncDebounce
+        interval: 100
+        repeat: false
+        onTriggered: {
+            if (!activePlayer || lengthKnown || lengthSyncRunner.running) return;
+            const pfx = "org.mpris.MediaPlayer2.";
+            const raw = activePlayer.dbusName || "";
+            const pname = (raw.indexOf(pfx) === 0 ? raw.slice(pfx.length) : raw)
+                          || activePlayer.desktopEntry || activePlayer.identity || "";
+            lengthSyncRunner.command = pname ? ["playerctl", "-p", pname, "metadata", "mpris:length"] : ["playerctl", "metadata", "mpris:length"];
+            lengthSyncRunner.running = false;
+            lengthSyncRunner.running = true;
+        }
+    }
+
     function syncBrowserLength() {
-        if (!isBrowserPlayer || !activePlayer || len > 0 || seekArmed || seekRunner.running) return;
-        const pfx = "org.mpris.MediaPlayer2.";
-        const raw = activePlayer.dbusName || "";
-        const pname = raw.indexOf(pfx) === 0 ? raw.slice(pfx.length) : raw;
-        seekRunner.command = ["playerctl", "-p", pname, "metadata", "mpris:length"];
-        seekRunner.running = false;
-        seekRunner.running = true;
+        if (!activePlayer || lengthKnown) return;
+        lengthSyncDebounce.restart();
     }
 
     // ---- Seek state (matched to mediahero.qml) ----
@@ -99,7 +125,9 @@ CardWindow {
                  && mediaPopup.activePlayer.isPlaying
         onTriggered: {
             mediaPopup.activePlayer.positionChanged();
-            if (mediaPopup.len <= 0) mediaPopup.syncBrowserLength();
+            if (!mediaPopup.lengthKnown && mediaPopup.latchedLength <= 0) {
+                mediaPopup.syncBrowserLength();
+            }
             if (mediaPopup.seekSent && mediaPopup.len > 0
                 && Math.abs(mediaPopup.posn - mediaPopup.seekFrac * mediaPopup.len) < 1.5) {
                 mediaPopup.seekArmed = false;
@@ -109,20 +137,7 @@ CardWindow {
         }
     }
 
-    Process {
-        id: seekRunner
-        running: false
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const txt = this.text.trim();
-                const us = parseInt(txt, 10);
-                if (!isNaN(us) && us > 0 && us < 86400000000000) {
-                    const sec = Math.round(us / 1000000);
-                    if (sec > 0) mediaPopup.latchedLength = sec;
-                }
-            }
-        }
-    }
+    Process { id: seekRunner }
 
     // Debounce: waits 300ms after last scrub movement, then seeks
     Timer {
@@ -159,11 +174,16 @@ CardWindow {
     Connections {
         target: mediaPopup.activePlayer
         function onLengthChanged() {
-            if (mediaPopup.lengthKnown) mediaPopup.latchedLength = mediaPopup.activePlayer.length;
+            if (mediaPopup.lengthKnown) {
+                mediaPopup.latchedLength = mediaPopup.activePlayer.length;
+            }
         }
         function onLengthSupportedChanged() {
-            if (mediaPopup.lengthKnown) mediaPopup.latchedLength = mediaPopup.activePlayer.length;
-            else if (mediaPopup.len <= 0) mediaPopup.syncBrowserLength();
+            if (mediaPopup.lengthKnown) {
+                mediaPopup.latchedLength = mediaPopup.activePlayer.length;
+            } else {
+                mediaPopup.syncBrowserLength();
+            }
         }
         function onTrackTitleChanged() {
             seekDebounce.stop();
@@ -171,7 +191,7 @@ CardWindow {
             mediaPopup.seekArmed = false;
             mediaPopup.seekSent = false;
             mediaPopup.latchedLength = mediaPopup.lengthKnown ? mediaPopup.activePlayer.length : 0;
-            if (mediaPopup.latchedLength <= 0) mediaPopup.syncBrowserLength();
+            mediaPopup.syncBrowserLength();
         }
     }
 
@@ -181,9 +201,8 @@ CardWindow {
         seekIgnore.stop();
         mediaPopup.seekArmed = false;
         mediaPopup.seekSent = false;
-        mediaPopup.latchedLength = activePlayer && activePlayer.lengthSupported
-            && activePlayer.length > 0 ? activePlayer.length : 0;
-        if (mediaPopup.latchedLength <= 0) syncBrowserLength();
+        mediaPopup.latchedLength = lengthKnown ? activePlayer.length : 0;
+        syncBrowserLength();
     }
 
     function formatTime(seconds) {
