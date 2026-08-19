@@ -84,6 +84,7 @@ local monitor_active = true
 
 hl.on("hyprland.start", function()
 	hl.exec_cmd(launch("qs -n -d -c desktop"))
+	hl.exec_cmd(launch("A704F_Mouse --apply --daemon"))
 	-- hl.exec_cmd(launch("waybar"))
 	-- hl.exec_cmd("systemctl --user start eclair.target")
 	-- hl.exec_cmd(launch("mako"))
@@ -380,6 +381,8 @@ for i = 1, 10 do
 	hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
 end
 
+hl.bind(mainMod .. " + I", hl.dsp.workspace.toggle_special("scratchpad"))
+hl.bind(mainMod .. " + SHIFT + I", hl.dsp.window.move({ workspace = "special:scratchpad" }))
 hl.bind(mainMod .. " + S", hl.dsp.workspace.toggle_special("magic"))
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
 
@@ -529,3 +532,9 @@ hl.window_rule({
 	center = true,
 	size = { 1447, 1009 },
 })
+
+-----------------------
+---- QUAKE CONSOLE ----
+-----------------------
+dofile(os.getenv("HOME") .. "/.config/hypr/qconsole.lua")
+
