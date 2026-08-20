@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Polkit
@@ -20,12 +21,13 @@ Item {
     readonly property color scrim: Qt.rgba(theme.paper.r, theme.paper.g, theme.paper.b, 0.65)
     readonly property int cornerRadius: theme.cornerRadius
 
-    readonly property int cardWidth: 320
-    readonly property int cardHeight: 52
+    readonly property int cardWidth: 380
+    readonly property int cardHeight: root.extractedCommand !== "" ? 82 : 52
 
     property bool closing: false
     property bool submitted: false
     property string currentMessage: ""
+    property string extractedCommand: ""
     property string currentPrompt: ""
     property string currentSupplementary: ""
     property bool responseRequired: false
@@ -48,6 +50,7 @@ Item {
 
     function resetSnapshot() {
         currentMessage = "";
+        extractedCommand = "";
         currentPrompt = "";
         currentSupplementary = "";
         responseRequired = false;
@@ -63,6 +66,7 @@ Item {
         if (!flow) return;
 
         currentMessage = String(flow.message || "Authentication is needed...");
+        extractedCommand = PolkitModel.extractCommand(currentMessage, flow.actionId);
         currentPrompt = String(flow.inputPrompt || "");
         currentSupplementary = String(flow.supplementaryMessage || "");
         responseRequired = !!flow.isResponseRequired;
@@ -233,6 +237,7 @@ Item {
             color: root.background
             border.color: root.errorFlash ? root.borderError : root.border
             border.width: 1
+            clip: true
 
             MouseArea {
                 anchors.fill: parent
@@ -256,85 +261,138 @@ Item {
                 }
             }
 
-            Row {
-                id: cardRow
+            Column {
                 anchors.fill: parent
-                anchors.leftMargin: 16
-                anchors.rightMargin: 16
-                spacing: 12
 
-                Text {
-                    text: "\uf023"
-                    color: root.errorFlash ? root.textError : root.accent
-                    font.family: root.fontFamily
-                    font.pixelSize: 18
-                    width: 24
-                    height: parent.height
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
+                // Requesting command header
+                Rectangle {
+                    visible: root.extractedCommand !== ""
+                    width: parent.width
+                    height: 30
+                    color: root.theme.rowHi
 
-                Item {
-                    width: parent.width - 36
-                    height: parent.height
-
-                    TextInput {
-                        id: passwordInput
+                    RowLayout {
                         anchors.fill: parent
-                        verticalAlignment: TextInput.AlignVCenter
-                        activeFocusOnPress: true
-                        clip: true
-                        selectionColor: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.35)
-                        selectedTextColor: root.foreground
-                        font.family: root.fontFamily
-                        font.pixelSize: 14
-                        echoMode: root.responseVisible ? TextInput.Normal : TextInput.Password
-                        passwordCharacter: "\u2022"
-                        color: root.errorFlash ? root.textError : root.foreground
-                        cursorVisible: activeFocus && !root.submitted && !root.errorFlash
-                        readOnly: root.submitted || root.errorFlash
-                        enabled: root.dialogVisible && !root.fingerprintWaiting
-                        visible: !root.fingerprintWaiting
-                        onAccepted: root.submitResponse()
-                        Keys.onPressed: function(event) {
-                            if (event.key === Qt.Key_Escape) {
-                                root.cancelRequest();
-                                event.accepted = true;
-                            }
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 8
+
+                        Text {
+                            text: "$"
+                            color: root.accent
+                            font.family: root.fontFamily
+                            font.pixelSize: 12
+                            font.bold: true
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        Text {
+                            text: root.extractedCommand
+                            color: root.foreground
+                            font.family: root.fontFamily
+                            font.pixelSize: 11
+                            font.weight: Font.Medium
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignVCenter
+                            elide: Text.ElideMiddle
                         }
                     }
 
-                    Text {
+                    Rectangle {
+                        anchors.bottom: parent.bottom
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: root.errorFlash
-                            ? "Wrong"
-                            : (root.submitted
-                                ? "Checking..."
-                                : (root.fingerprintWaiting ? "Swipe fingerprint or enter password" : (root.currentPrompt || "Enter password")))
-                        color: root.errorFlash ? root.textError : root.foreground
-                        opacity: root.errorFlash ? 1 : 0.4
-                        font.family: root.fontFamily
-                        font.pixelSize: 14
-                        elide: Text.ElideRight
-                        visible: !passwordInput.visible || passwordInput.text.length === 0
+                        height: 1
+                        color: root.border
                     }
+                }
 
-                    Rectangle {
-                        width: 2
-                        height: 18
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: root.errorFlash ? root.textError : root.accent
-                        visible: passwordInput.visible && passwordInput.activeFocus && passwordInput.text.length === 0 && !root.submitted && !root.errorFlash
-                    }
+                // Password input row
+                Item {
+                    width: parent.width
+                    height: 52
 
-                    MouseArea {
+                    Row {
+                        id: cardRow
                         anchors.fill: parent
-                        acceptedButtons: Qt.LeftButton
-                        enabled: passwordInput.visible
-                        onClicked: passwordInput.forceActiveFocus()
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 12
+
+                        Text {
+                            text: "\uf023"
+                            color: root.errorFlash ? root.textError : root.accent
+                            font.family: root.fontFamily
+                            font.pixelSize: 18
+                            width: 24
+                            height: parent.height
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        Item {
+                            width: parent.width - 36
+                            height: parent.height
+
+                            TextInput {
+                                id: passwordInput
+                                anchors.fill: parent
+                                verticalAlignment: TextInput.AlignVCenter
+                                activeFocusOnPress: true
+                                clip: true
+                                selectionColor: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.35)
+                                selectedTextColor: root.foreground
+                                font.family: root.fontFamily
+                                font.pixelSize: 14
+                                echoMode: root.responseVisible ? TextInput.Normal : TextInput.Password
+                                passwordCharacter: "\u2022"
+                                color: root.errorFlash ? root.textError : root.foreground
+                                cursorVisible: activeFocus && !root.submitted && !root.errorFlash
+                                readOnly: root.submitted || root.errorFlash
+                                enabled: root.dialogVisible && !root.fingerprintWaiting
+                                visible: !root.fingerprintWaiting
+                                onAccepted: root.submitResponse()
+                                Keys.onPressed: function(event) {
+                                    if (event.key === Qt.Key_Escape) {
+                                        root.cancelRequest();
+                                        event.accepted = true;
+                                    }
+                                }
+                            }
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.errorFlash
+                                    ? "Wrong"
+                                    : (root.submitted
+                                        ? "Checking..."
+                                        : (root.fingerprintWaiting ? "Swipe fingerprint or enter password" : (root.currentPrompt || "Enter password")))
+                                color: root.errorFlash ? root.textError : root.foreground
+                                opacity: root.errorFlash ? 1 : 0.4
+                                font.family: root.fontFamily
+                                font.pixelSize: 14
+                                elide: Text.ElideRight
+                                visible: !passwordInput.visible || passwordInput.text.length === 0
+                            }
+
+                            Rectangle {
+                                width: 2
+                                height: 18
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: root.errorFlash ? root.textError : root.accent
+                                visible: passwordInput.visible && passwordInput.activeFocus && passwordInput.text.length === 0 && !root.submitted && !root.errorFlash
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                acceptedButtons: Qt.LeftButton
+                                enabled: passwordInput.visible
+                                onClicked: passwordInput.forceActiveFocus()
+                            }
+                        }
                     }
                 }
             }

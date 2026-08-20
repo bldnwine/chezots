@@ -14,9 +14,24 @@ function fingerprintFirstFromPamConfig(raw) {
     return false;
 }
 
+function extractCommand(message, actionId) {
+    var text = String(message || "").trim();
+    if (!text) return "";
+    var quotedMatch = text.match(/[`\x27\x22\u2018\u2019\u201c\u201d]([^`\x27\x22\u2018\u2019\u201c\u201d]+)[`\x27\x22\u2018\u2019\u201c\u201d]/);
+    if (quotedMatch && quotedMatch[1]) return quotedMatch[1].trim();
+    var runMatch = text.match(/to run (?:the program )?([^\s]+(?:\s+[^\s]+)*?) as the super user/i);
+    if (runMatch && runMatch[1]) return runMatch[1].trim();
+    var runSimple = text.match(/to run (?:the program )?([^\s]+)/i);
+    if (runSimple && runSimple[1]) return runSimple[1].trim();
+    var actMatch = text.match(/to (?:start|stop|restart|reload|enable|disable) ([^\s]+)/i);
+    if (actMatch && actMatch[1]) return actMatch[1].trim();
+    return "";
+}
+
 if (typeof module !== "undefined") {
     module.exports = {
         promptLooksFingerprint: promptLooksFingerprint,
-        fingerprintFirstFromPamConfig: fingerprintFirstFromPamConfig
+        fingerprintFirstFromPamConfig: fingerprintFirstFromPamConfig,
+        extractCommand: extractCommand
     };
 }
