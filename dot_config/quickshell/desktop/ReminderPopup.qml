@@ -19,49 +19,103 @@ CardWindow {
     anchorBarX: reminderPopup.root.popupAnchorX
     anchorBarY: reminderPopup.root.popupAnchorY
 
-    property string minutesText: "5"
+    property string timeTargetText: "10m"
     property string noteText: ""
+    property var rawReminders: []
     property var activeReminders: []
 
-    // 0..4 = Presets, 5 = Mins, 6 = Note, 7 = SET btn, 8..8+N-1 = Active rows
+    // 0..4 = Presets, 5 = Time/Mins, 6 = Note, 7 = SET btn, 8..8+N-1 = Active rows
     property int kbdIndex: 6
     readonly property int presetCount: 5
     readonly property int kbdMax: 8 + activeReminders.length
 
-    function refreshReminders() {
-        reminderProbe.running = false;
-        reminderProbe.running = true;
+    function formatRemaining(secs) {
+        if (secs <= 0) return "0s";
+        const m = Math.floor(secs / 60);
+        const r = secs % 60;
+        if (m > 0 && r > 0) return m + "m " + r + "s";
+        if (m > 0) return m + "m";
+        return r + "s";
     }
 
-    function setReminder(mins, msg) {
-        const m = parseInt(mins) || 0;
-        if (m <= 0) return;
+    function formatTime(epoch) {
+        const d = new Date(epoch * 1000);
+        const h = d.getHours();
+        const mins = d.getMinutes();
+        return h + ":" + (mins < 10 ? "0" : "") + mins;
+    }
+
+    function updateFromState(txt) {
+        try {
+            reminderPopup.rawReminders = JSON.parse(txt.trim()) || [];
+        } catch (e) {
+            reminderPopup.rawReminders = [];
+        }
+        reminderPopup.updateCountdowns();
+    }
+
+    function updateCountdowns() {
+        const now = Math.floor(Date.now() / 1000);
+        const list = [];
+        for (let i = 0; i < reminderPopup.rawReminders.length; i++) {
+            const r = reminderPopup.rawReminders[i];
+            const remaining = r.dueEpoch - now;
+            if (remaining > 0) {
+                list.push({
+                    unit: r.unit,
+                    timer: r.timer || (r.unit + ".timer"),
+                    minutes: r.minutes || 0,
+                    message: r.message || "",
+                    label: r.label || r.message || (r.minutes + "-min reminder"),
+                    remaining: reminderPopup.formatRemaining(remaining),
+                    remainingSeconds: remaining,
+                    at: r.dueEpoch,
+                    atTime: reminderPopup.formatTime(r.dueEpoch)
+                });
+            }
+        }
+        reminderPopup.activeReminders = list;
+    }
+
+    function refreshReminders() {
+        reminderFileView.reload();
+    }
+
+    function setReminder(target, msg) {
+        const t = (target && String(target).trim().length > 0) ? String(target).trim() : "5m";
         const script = Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/reminder";
-        const args = msg && msg.length > 0 ? [script, String(m), msg] : [script, String(m)];
+        const args = msg && msg.length > 0 ? [script, t, msg] : [script, t];
         Quickshell.execDetached(args);
         reminderPopup.noteText = "";
-        reminderPopup.refreshReminders();
     }
 
     function clearAllReminders() {
         const script = Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/reminder";
         Quickshell.execDetached([script, "clear"]);
-        reminderPopup.refreshReminders();
+        reminderPopup.rawReminders = [];
+        reminderPopup.activeReminders = [];
+        if (reminderPopup.kbdIndex >= 8) {
+            reminderPopup.kbdIndex = 6;
+        }
     }
 
     function clearSingleReminder(unit) {
         if (!unit) return;
         const script = Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/reminder";
         Quickshell.execDetached([script, "clear", unit]);
-        reminderPopup.refreshReminders();
+        reminderPopup.rawReminders = reminderPopup.rawReminders.filter(r => r.unit !== unit);
+        reminderPopup.activeReminders = reminderPopup.activeReminders.filter(r => r.unit !== unit);
+        if (reminderPopup.kbdIndex >= reminderPopup.kbdMax) {
+            reminderPopup.kbdIndex = Math.max(6, reminderPopup.kbdMax - 1);
+        }
     }
 
     function activateAt(idx) {
         if (idx >= 0 && idx < 5) {
-            const mins = [5, 10, 15, 30, 60][idx];
+            const mins = ["5m", "10m", "15m", "30m", "1h"][idx];
             reminderPopup.setReminder(mins, reminderPopup.noteText);
         } else if (idx === 7) {
-            reminderPopup.setReminder(reminderPopup.minutesText, reminderPopup.noteText);
+            reminderPopup.setReminder(reminderPopup.timeTargetText, reminderPopup.noteText);
         } else if (idx >= 8) {
             const item = reminderPopup.activeReminders[idx - 8];
             if (item) reminderPopup.clearSingleReminder(item.unit);
@@ -71,7 +125,7 @@ CardWindow {
     function updateFocusForIndex(idx) {
         reminderPopup.kbdIndex = idx;
         if (idx === 5) {
-            minsInput.forceActiveFocus();
+            timeInput.forceActiveFocus();
         } else if (idx === 6) {
             noteInput.forceActiveFocus();
         } else {
@@ -79,28 +133,21 @@ CardWindow {
         }
     }
 
-    Process {
-        id: reminderProbe
-        running: false
-        command: [Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/reminder", "show", "--json"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const data = JSON.parse(this.text.trim());
-                    reminderPopup.activeReminders = data.reminders || [];
-                } catch (e) {
-                    reminderPopup.activeReminders = [];
-                }
-            }
-        }
+    FileView {
+        id: reminderFileView
+        path: Quickshell.env("HOME") + "/.local/state/quickshell-desktop/reminders.json"
+        watchChanges: true
+        printErrors: false
+        onLoaded: reminderPopup.updateFromState(text())
+        onFileChanged: reload()
     }
 
     Timer {
-        interval: 3000
+        interval: 1000
         running: reminderPopup.revealed
         repeat: true
         triggeredOnStart: true
-        onTriggered: reminderPopup.refreshReminders()
+        onTriggered: reminderPopup.updateCountdowns()
     }
 
     Component.onCompleted: reminderPopup.refreshReminders()
@@ -134,7 +181,7 @@ CardWindow {
             return;
         }
 
-        // If in text input fields (minsInput or noteInput), allow Left/Right arrows & characters to work natively
+        // If in text input fields (timeInput or noteInput), allow Left/Right arrows & characters to work natively
         if (reminderPopup.kbdIndex === 5 || reminderPopup.kbdIndex === 6) {
             if (k === Qt.Key_Up) {
                 reminderPopup.updateFocusForIndex(2); // Jump to preset chips
@@ -143,7 +190,7 @@ CardWindow {
                 reminderPopup.updateFocusForIndex(reminderPopup.activeReminders.length > 0 ? 8 : 7);
                 event.accepted = true;
             } else if (k === Qt.Key_Return || k === Qt.Key_Enter) {
-                reminderPopup.setReminder(reminderPopup.minutesText, reminderPopup.noteText);
+                reminderPopup.setReminder(reminderPopup.timeTargetText, reminderPopup.noteText);
                 event.accepted = true;
             }
             return;
@@ -191,11 +238,11 @@ CardWindow {
 
             Repeater {
                 model: [
-                    { label: "+5m", mins: 5 },
-                    { label: "+10m", mins: 10 },
-                    { label: "+15m", mins: 15 },
-                    { label: "+30m", mins: 30 },
-                    { label: "+1h", mins: 60 }
+                    { label: "+5m", mins: "5m" },
+                    { label: "+10m", mins: "10m" },
+                    { label: "+15m", mins: "15m" },
+                    { label: "+30m", mins: "30m" },
+                    { label: "+1h", mins: "1h" }
                 ]
                 delegate: Rectangle {
                     required property var modelData
@@ -237,7 +284,7 @@ CardWindow {
 
         // Section: Custom Entry
         Text {
-            text: "CUSTOM TIMER"
+            text: "SET TIME OR TIMER"
             color: root.inkDeep
             font.family: root.mono
             font.pixelSize: 10
@@ -248,9 +295,9 @@ CardWindow {
             width: parent.width
             spacing: 8
 
-            // Minutes Input Box
+            // Time / Duration Input Box
             Rectangle {
-                width: 70
+                width: 88
                 height: 32
                 radius: root.cornerRadius
                 color: reminderPopup.kbdIndex === 5 ? root.rowHi : "transparent"
@@ -258,38 +305,41 @@ CardWindow {
                 border.width: reminderPopup.kbdIndex === 5 ? 2 : 1
 
                 TextInput {
-                    id: minsInput
+                    id: timeInput
                     anchors.fill: parent
                     anchors.margins: 6
                     focus: reminderPopup.kbdIndex === 5
                     activeFocusOnTab: true
-                    text: reminderPopup.minutesText
+                    text: reminderPopup.timeTargetText
                     color: root.ink
                     font.family: root.mono
-                    font.pixelSize: 12
+                    font.pixelSize: 11
                     verticalAlignment: TextInput.AlignVCenter
                     horizontalAlignment: TextInput.AlignHCenter
                     selectByMouse: true
-                    onTextChanged: reminderPopup.minutesText = text
+                    onTextChanged: reminderPopup.timeTargetText = text
                     onActiveFocusChanged: {
                         if (activeFocus) reminderPopup.kbdIndex = 5;
                     }
-                    Keys.onReturnPressed: (event) => { reminderPopup.setReminder(reminderPopup.minutesText, reminderPopup.noteText); event.accepted = true; }
-                    Keys.onEnterPressed:  (event) => { reminderPopup.setReminder(reminderPopup.minutesText, reminderPopup.noteText); event.accepted = true; }
-                }
-            }
+                    Keys.onReturnPressed: (event) => { reminderPopup.setReminder(reminderPopup.timeTargetText, reminderPopup.noteText); event.accepted = true; }
+                    Keys.onEnterPressed:  (event) => { reminderPopup.setReminder(reminderPopup.timeTargetText, reminderPopup.noteText); event.accepted = true; }
 
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "min"
-                color: root.inkDeep
-                font.family: root.mono
-                font.pixelSize: 11
+                    Text {
+                        visible: timeInput.text.length === 0
+                        anchors.fill: parent
+                        text: "5m/18:30"
+                        color: root.inkDeep
+                        font.family: root.mono
+                        font.pixelSize: 10
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
             }
 
             // Note / Message Input Box
             Rectangle {
-                width: parent.width - 70 - 8 - 30 - 8 - 70
+                width: parent.width - 88 - 8 - 60 - 8
                 height: 32
                 radius: root.cornerRadius
                 color: reminderPopup.kbdIndex === 6 ? root.rowHi : "transparent"
@@ -312,8 +362,8 @@ CardWindow {
                     onActiveFocusChanged: {
                         if (activeFocus) reminderPopup.kbdIndex = 6;
                     }
-                    Keys.onReturnPressed: (event) => { reminderPopup.setReminder(reminderPopup.minutesText, reminderPopup.noteText); event.accepted = true; }
-                    Keys.onEnterPressed:  (event) => { reminderPopup.setReminder(reminderPopup.minutesText, reminderPopup.noteText); event.accepted = true; }
+                    Keys.onReturnPressed: (event) => { reminderPopup.setReminder(reminderPopup.timeTargetText, reminderPopup.noteText); event.accepted = true; }
+                    Keys.onEnterPressed:  (event) => { reminderPopup.setReminder(reminderPopup.timeTargetText, reminderPopup.noteText); event.accepted = true; }
 
                     Text {
                         visible: noteInput.text.length === 0
@@ -352,7 +402,7 @@ CardWindow {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         reminderPopup.kbdIndex = 7;
-                        reminderPopup.setReminder(reminderPopup.minutesText, reminderPopup.noteText);
+                        reminderPopup.setReminder(reminderPopup.timeTargetText, reminderPopup.noteText);
                     }
                 }
             }
@@ -407,9 +457,16 @@ CardWindow {
                 width: col.width
                 height: 34
                 radius: root.cornerRadius
-                color: focused || rowMouse.containsMouse ? root.rowHi : "transparent"
+                color: focused || rowMouse.containsMouse || delMouse.containsMouse ? root.rowHi : "transparent"
                 border.color: focused ? root.seal : root.sep
                 border.width: focused ? 2 : 1
+
+                MouseArea {
+                    id: rowMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: reminderPopup.kbdIndex = 8 + index
+                }
 
                 Row {
                     anchors.left: parent.left
@@ -471,13 +528,6 @@ CardWindow {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: reminderPopup.clearSingleReminder(modelData.unit)
                     }
-                }
-
-                MouseArea {
-                    id: rowMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: reminderPopup.kbdIndex = 8 + index
                 }
             }
         }

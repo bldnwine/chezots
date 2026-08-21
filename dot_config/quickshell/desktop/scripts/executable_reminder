@@ -1,166 +1,406 @@
-#!/bin/bash
+#!/usr/bin/env python3
+"""Desktop reminder manager with persistent state & high-precision systemd user timer backend."""
 
-# Desktop reminder manager — systemd user timer & notify-send backend
-set -euo pipefail
+import json
+import os
+import re
+import subprocess
+import sys
+import time
 
-REMINDER_DIR="${XDG_RUNTIME_DIR:-/tmp}/desktop-reminders"
-mkdir -p "$REMINDER_DIR"
+STATE_DIR = os.path.expanduser("~/.local/state/quickshell-desktop")
+STATE_FILE = os.path.join(STATE_DIR, "reminders.json")
+LEGACY_DIR = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "desktop-reminders")
+SOUND_FILE = "/usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga"
 
-format_remaining() {
-  local seconds=$1
-  local minutes=$((seconds / 60))
-  local remainder=$((seconds % 60))
 
-  if ((minutes > 0 && remainder > 0)); then
-    echo "${minutes}m ${remainder}s"
-  elif ((minutes > 0)); then
-    echo "${minutes}m"
-  else
-    echo "${remainder}s"
-  fi
-}
+def ensure_state_dir():
+    os.makedirs(STATE_DIR, exist_ok=True)
 
-active_reminder_timers() {
-  local now=${1:-$(date +%s)}
-  local timer next
 
-  while IFS=$'\t' read -r timer next; do
-    [[ -z $timer || -z $next ]] && continue
-    next=$((next / 1000000))
-    ((next <= now)) && continue
-    printf "%s\t%s\n" "$timer" "$next"
-  done < <(systemctl --user list-timers --all --output=json "reminder-*.timer" 2>/dev/null | jq -r '.[] | [.unit, .next] | @tsv')
-}
+def load_reminders() -> list:
+    ensure_state_dir()
+    if not os.path.exists(STATE_FILE):
+        return migrate_legacy()
+    try:
+        with open(STATE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
 
-show_json() {
-  local timer next remaining reminder reminder_minutes unit reminder_message label item_json reminders_json="[]"
-  local now=$(date +%s)
-  local count=0
 
-  while IFS=$'\t' read -r timer next; do
-    count=$((count + 1))
-    unit=${timer%.timer}
-    reminder=${unit#reminder-}
-    reminder_minutes=${reminder%%m-*}
-    [[ ! $reminder_minutes =~ ^[0-9]+$ ]] && reminder_minutes=0
-    remaining=$((next - now))
-    reminder_message=""
-    [[ -f $REMINDER_DIR/$unit.message ]] && reminder_message=$(<"$REMINDER_DIR/$unit.message")
+def save_reminders(reminders: list):
+    ensure_state_dir()
+    tmp_file = STATE_FILE + ".tmp"
+    with open(tmp_file, "w", encoding="utf-8") as f:
+        json.dump(reminders, f, indent=2)
+    os.replace(tmp_file, STATE_FILE)
 
-    if [[ -n $reminder_message ]]; then
-      label=$reminder_message
-    else
-      label="${reminder_minutes}-min reminder"
-    fi
 
-    item_json=$(jq -cn \
-      --arg unit "$unit" \
-      --arg timer "$timer" \
-      --arg label "$label" \
-      --arg message "$reminder_message" \
-      --arg remaining "$(format_remaining "$remaining")" \
-      --arg atTime "$(date -d "@$next" +%-H:%M)" \
-      --argjson minutes "$reminder_minutes" \
-      --argjson at "$next" \
-      --argjson remainingSeconds "$remaining" \
-      '{unit:$unit,timer:$timer,minutes:$minutes,message:$message,label:$label,remaining:$remaining,remainingSeconds:$remainingSeconds,at:$at,atTime:$atTime}')
-    reminders_json=$(jq -cn --argjson reminders "$reminders_json" --argjson item "$item_json" '$reminders + [$item]')
-  done < <(active_reminder_timers "$now")
+def migrate_legacy() -> list:
+    reminders = []
+    now = int(time.time())
+    try:
+        res = subprocess.run(
+            ["systemctl", "--user", "list-timers", "--all", "--output=json", "reminder-*.timer"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            data = json.loads(res.stdout)
+            for item in data:
+                timer = item.get("unit", "")
+                next_usec = item.get("next")
+                if not timer or not next_usec:
+                    continue
+                next_epoch = int(next_usec) // 1000000
+                if next_epoch <= now:
+                    continue
+                unit = timer[:-6] if timer.endswith(".timer") else timer
+                part = unit[9:] if unit.startswith("reminder-") else unit
+                mins_str = part.split("m-")[0] if "m-" in part else "0"
+                mins = int(mins_str) if mins_str.isdigit() else 0
+                msg = ""
+                msg_file = os.path.join(LEGACY_DIR, f"{unit}.message")
+                if os.path.exists(msg_file):
+                    try:
+                        with open(msg_file, "r", encoding="utf-8") as mf:
+                            msg = mf.read().strip()
+                    except Exception:
+                        pass
+                label = msg if msg else f"{mins}-min reminder"
+                reminders.append({
+                    "unit": unit,
+                    "timer": timer,
+                    "minutes": mins,
+                    "message": msg,
+                    "label": label,
+                    "createdAt": now,
+                    "dueEpoch": next_epoch,
+                })
+        if reminders:
+            save_reminders(reminders)
+    except Exception:
+        pass
+    return reminders
 
-  jq -cn --argjson count "$count" --argjson reminders "$reminders_json" '{count:$count,active:($count > 0),reminders:$reminders}'
-}
 
-show_reminders() {
-  local timer next remaining reminder reminder_minutes body=""
-  local reminder_message=""
-  local now=$(date +%s)
+def format_remaining(seconds: int) -> str:
+    if seconds <= 0:
+        return "0s"
+    minutes = seconds // 60
+    remainder = seconds % 60
+    if minutes > 0 and remainder > 0:
+        return f"{minutes}m {remainder}s"
+    elif minutes > 0:
+        return f"{minutes}m"
+    else:
+        return f"{remainder}s"
 
-  while IFS=$'\t' read -r timer next; do
-    remaining=$((next - now))
-    reminder=${timer%.timer}
-    reminder=${reminder#reminder-}
-    reminder_minutes=${reminder%%m-*}
-    reminder_message=""
-    [[ -f $REMINDER_DIR/${timer%.timer}.message ]] && reminder_message=$(<"$REMINDER_DIR/${timer%.timer}.message")
 
-    if [[ -n $reminder_message ]]; then
-      body+="$reminder_message in $(format_remaining $remaining) ($(date -d "@$next" +%-H:%M))"$'\n'
-    else
-      body+="${reminder_minutes}-min reminder in $(format_remaining $remaining) ($(date -d "@$next" +%-H:%M))"$'\n'
-    fi
-  done < <(active_reminder_timers "$now")
+def format_time(epoch: int) -> str:
+    return time.strftime("%-H:%M", time.localtime(epoch))
 
-  if [[ -z $body ]]; then
-    notify-send -i alarm-symbolic "Upcoming Reminders" "No active reminders"
-  else
-    notify-send -i alarm-symbolic "Upcoming Reminders" "${body%$'\n'}"
-  fi
-}
 
-clear_reminders() {
-  local target_unit=${1:-}
-  if [[ -n $target_unit ]]; then
-    systemctl --user stop "${target_unit}.timer" 2>/dev/null || true
-    rm -f "$REMINDER_DIR/$target_unit.message" 2>/dev/null || true
-    notify-send -i alarm-symbolic "Reminder Cancelled" "Removed $target_unit"
-    exit 0
-  fi
+def parse_time_target(spec: str, now: int = None) -> tuple:
+    """Parses relative duration or clock time into (due_epoch, default_label)."""
+    if now is None:
+        now = int(time.time())
+    spec = spec.strip().lower()
 
-  local units
-  units=$(systemctl --user list-timers --all --no-legend --no-pager "reminder-*.timer" 2>/dev/null | awk '{ print $(NF - 1), $NF }')
-  if [[ -n $units ]]; then
-    xargs -r systemctl --user stop <<<"$units" || true
-  fi
+    # 1. Pure integer -> minutes
+    if spec.isdigit():
+        mins = int(spec)
+        if mins <= 0:
+            raise ValueError("Duration must be > 0")
+        return now + mins * 60, f"{mins}-min reminder"
 
-  rm -f "$REMINDER_DIR"/reminder-*.message 2>/dev/null || true
-  notify-send -i alarm-symbolic "Reminders Cleared" "All active reminders cancelled"
-}
+    # 2. Relative units (e.g. 10m, 2h, 1.5h, 90s)
+    m_rel = re.match(r"^(\d+(?:\.\d+)?)\s*(s|sec|secs|m|min|mins|h|hr|hrs)$", spec)
+    if m_rel:
+        val = float(m_rel.group(1))
+        unit = m_rel.group(2)
+        if unit.startswith("s"):
+            secs = int(val)
+        elif unit.startswith("h"):
+            secs = int(val * 3600)
+        else:
+            secs = int(val * 60)
+        if secs <= 0:
+            raise ValueError("Duration must be > 0")
+        return now + secs, f"{spec} reminder"
 
-case ${1:-} in
-show | list)
-  case ${2:-} in
-  -j | --json)
-    show_json
-    ;;
-  *)
-    show_reminders
-    ;;
-  esac
-  exit 0
-  ;;
-clear)
-  clear_reminders "${2:-}"
-  exit 0
-  ;;
-esac
+    # Compound (e.g. 1h30m)
+    m_comp = re.match(r"^(\d+)h\s*(\d+)m?$", spec)
+    if m_comp:
+        secs = int(m_comp.group(1)) * 3600 + int(m_comp.group(2)) * 60
+        if secs <= 0:
+            raise ValueError("Duration must be > 0")
+        return now + secs, f"{spec} reminder"
 
-minutes=${1:-}
-shift || true
-message="$*"
-custom_message="$message"
+    # 3. Clock time (12h or 24h)
+    m_12 = re.match(r"^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$", spec)
+    m_24 = re.match(r"^(\d{1,2}):(\d{2})$", spec)
+    hour, minute = None, 0
 
-if [[ -z $minutes ]] || [[ ! $minutes =~ ^[0-9]+$ ]] || ((minutes == 0)); then
-  echo "Usage: reminder <minutes> [message] | show [--json] | clear [unit]"
-  exit 1
-fi
+    if m_12:
+        h = int(m_12.group(1))
+        minute = int(m_12.group(2) or 0)
+        meridiem = m_12.group(3)
+        if not (1 <= h <= 12 and 0 <= minute < 60):
+            raise ValueError("Invalid 12-hour time")
+        if meridiem == "pm" and h != 12:
+            hour = h + 12
+        elif meridiem == "am" and h == 12:
+            hour = 0
+        else:
+            hour = h
+    elif m_24:
+        h = int(m_24.group(1))
+        m = int(m_24.group(2))
+        if not (0 <= h < 24 and 0 <= m < 60):
+            raise ValueError("Invalid 24-hour time")
+        hour = h
+        minute = m
 
-if [[ -z $message ]]; then
-  message="Your ${minutes} minute reminder is up!"
-fi
+    if hour is not None:
+        lt = time.localtime(now)
+        target_tuple = (lt.tm_year, lt.tm_mon, lt.tm_mday, hour, minute, 0, lt.tm_wday, lt.tm_yday, lt.tm_isdst)
+        target_epoch = int(time.mktime(target_tuple))
+        if target_epoch <= now:
+            target_epoch += 86400  # Tomorrow
+        t_str = format_time(target_epoch)
+        return target_epoch, f"Alarm for {t_str}"
 
-set_at=$(date +%s)
-remind_at=$(date -d "+${minutes} minutes" +%H:%M)
-unit="reminder-${minutes}m-$set_at"
-message_file="$REMINDER_DIR/$unit.message"
-confirmation="You'll be reminded at $remind_at"
-confirmation_title="Reminder set for ${minutes} minutes"
+    raise ValueError(f"Unrecognized time format: {spec}")
 
-if [[ -n $custom_message ]]; then
-  printf "%s" "$custom_message" >"$message_file"
-  confirmation_title="$custom_message in ${minutes} minutes"
-fi
 
-systemd-run --user --quiet --collect --on-active="${minutes}m" --unit="$unit" \
-  bash -c 'notify-send -u critical -i alarm-symbolic "Reminder" "$1"; rm -f "$2"' bash "$message" "$message_file"
+def play_sound():
+    if os.path.exists(SOUND_FILE):
+        for player in ("/usr/bin/paplay", "/usr/bin/pw-play", "/usr/bin/aplay"):
+            if os.path.exists(player):
+                try:
+                    subprocess.Popen(
+                        [player, SOUND_FILE],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    break
+                except Exception:
+                    pass
 
-notify-send -i alarm-symbolic "$confirmation_title" "$confirmation"
+
+def notify(title: str, body: str, urgency: str = "normal", icon: str = "alarm-symbolic"):
+    cmd = ["notify-send", "-i", icon]
+    if urgency != "normal":
+        cmd.extend(["-u", urgency])
+    cmd.extend([title, body])
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+
+def schedule_systemd_timer(unit: str, due_epoch: int):
+    script_path = os.path.abspath(__file__)
+    subprocess.run(
+        [
+            "systemd-run",
+            "--user",
+            "--quiet",
+            "--collect",
+            f"--unit={unit}",
+            f"--on-calendar=@{due_epoch}",
+            "--timer-property=AccuracySec=100ms",
+            script_path,
+            "fire",
+            unit,
+        ],
+        check=False,
+    )
+
+
+def show_json():
+    reminders = load_reminders()
+    now = int(time.time())
+    active_items = []
+
+    for r in reminders:
+        remaining = r["dueEpoch"] - now
+        if remaining > 0:
+            active_items.append({
+                "unit": r["unit"],
+                "timer": r.get("timer", f"{r['unit']}.timer"),
+                "minutes": r.get("minutes", 0),
+                "message": r.get("message", ""),
+                "label": r.get("label", r.get("message") or f"{r.get('minutes', 0)}-min reminder"),
+                "remaining": format_remaining(remaining),
+                "remainingSeconds": remaining,
+                "at": r["dueEpoch"],
+                "atTime": format_time(r["dueEpoch"]),
+            })
+
+    output = {
+        "count": len(active_items),
+        "active": len(active_items) > 0,
+        "reminders": active_items,
+    }
+    sys.stdout.write(json.dumps(output) + "\n")
+
+
+def show_reminders():
+    reminders = load_reminders()
+    now = int(time.time())
+    active = [r for r in reminders if r["dueEpoch"] > now]
+
+    if not active:
+        notify("Upcoming Reminders", "No active reminders")
+        return
+
+    lines = []
+    for r in active:
+        remaining = r["dueEpoch"] - now
+        at_time = format_time(r["dueEpoch"])
+        label = r.get("message") or f"{r.get('minutes', 0)}-min reminder"
+        lines.append(f"{label} in {format_remaining(remaining)} ({at_time})")
+
+    notify("Upcoming Reminders", "\n".join(lines))
+
+
+def set_reminder(time_spec: str, message: str):
+    now = int(time.time())
+    try:
+        due_epoch, default_label = parse_time_target(time_spec, now)
+    except ValueError as e:
+        notify("Invalid Time", str(e), urgency="critical")
+        sys.exit(1)
+
+    diff_mins = max(1, round((due_epoch - now) / 60))
+    unit = f"reminder-{diff_mins}m-{now}"
+    label = message if message else default_label
+    remind_at = format_time(due_epoch)
+
+    reminders = load_reminders()
+    reminders = [r for r in reminders if r["unit"] != unit]
+    reminders.append({
+        "unit": unit,
+        "timer": f"{unit}.timer",
+        "minutes": diff_mins,
+        "message": message,
+        "label": label,
+        "createdAt": now,
+        "dueEpoch": due_epoch,
+    })
+    save_reminders(reminders)
+
+    schedule_systemd_timer(unit, due_epoch)
+
+    title = f"{message} at {remind_at}" if message else f"Reminder set for {remind_at}"
+    notify(title, f"You'll be reminded at {remind_at}")
+
+
+def fire_reminder(unit: str):
+    reminders = load_reminders()
+    match = None
+    remaining_list = []
+    for r in reminders:
+        if r["unit"] == unit:
+            match = r
+        else:
+            remaining_list.append(r)
+
+    # Immediately fire notification & sound for zero latency
+    if match:
+        msg = match.get("message") or f"Your {match.get('minutes', '')} minute reminder is up!"
+    else:
+        msg = "Your reminder is up!"
+
+    notify("Reminder", msg, urgency="critical")
+    play_sound()
+
+    save_reminders(remaining_list)
+
+
+def clear_reminders(target_unit: str = None):
+    reminders = load_reminders()
+
+    if target_unit:
+        subprocess.run(
+            ["systemctl", "--user", "stop", f"{target_unit}.timer", f"{target_unit}.service"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        updated = [r for r in reminders if r["unit"] != target_unit]
+        save_reminders(updated)
+        notify("Reminder Cancelled", f"Removed {target_unit}")
+        return
+
+    # Clear all
+    for r in reminders:
+        u = r["unit"]
+        subprocess.run(
+            ["systemctl", "--user", "stop", f"{u}.timer", f"{u}.service"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    save_reminders([])
+    notify("Reminders Cleared", "All active reminders cancelled")
+
+
+def restore_reminders():
+    reminders = load_reminders()
+    now = int(time.time())
+    active_list = []
+
+    for r in reminders:
+        if r["dueEpoch"] <= now:
+            missed_time = format_time(r["dueEpoch"])
+            label = r.get("message") or f"{r.get('minutes', 0)}-min reminder"
+            notify("Missed Reminder", f"{label} (was scheduled for {missed_time})", urgency="critical")
+        else:
+            active_list.append(r)
+            res = subprocess.run(
+                ["systemctl", "--user", "is-active", "--quiet", f"{r['unit']}.timer"],
+                check=False,
+            )
+            if res.returncode != 0:
+                schedule_systemd_timer(r["unit"], r["dueEpoch"])
+
+    save_reminders(active_list)
+
+
+def main():
+    args = sys.argv[1:]
+    if not args:
+        print("Usage: reminder <time_or_minutes> [message] | show [--json] | clear [unit] | restore | fire <unit>")
+        sys.exit(1)
+
+    cmd = args[0]
+
+    if cmd in ("show", "list"):
+        if len(args) > 1 and args[1] in ("-j", "--json"):
+            show_json()
+        else:
+            show_reminders()
+    elif cmd == "clear":
+        target = args[1] if len(args) > 1 else None
+        clear_reminders(target)
+    elif cmd == "fire":
+        if len(args) > 1:
+            fire_reminder(args[1])
+        else:
+            sys.exit(1)
+    elif cmd == "restore":
+        restore_reminders()
+    else:
+        time_spec = cmd
+        msg = " ".join(args[1:]).strip() if len(args) > 1 else ""
+        set_reminder(time_spec, msg)
+
+
+if __name__ == "__main__":
+    main()

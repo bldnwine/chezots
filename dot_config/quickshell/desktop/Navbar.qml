@@ -1123,6 +1123,7 @@ Item {
     readonly property string clipboardHistoryPath: Quickshell.env("HOME") + "/.local/state/quickshell-desktop/clipboard-history.json"
     readonly property string clipboardCaptureScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/clipboard-capture.sh"
     readonly property string clipboardPruneScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/clipboard-prune.sh"
+    readonly property string reminderScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/reminder"
 
     function clipboardAddEntry(entry) {
         const normalized = ClipboardHistory.normalizeEntry(entry);
@@ -2172,6 +2173,7 @@ Item {
         refreshPowerProfile();
         clipboardInitProc.running = true;
         Quickshell.execDetached([root.clipboardPruneScript]);
+        Quickshell.execDetached([root.reminderScript, "restore"]);
     }
 
     // ---------- Screenshots list probe ----------
