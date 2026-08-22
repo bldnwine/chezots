@@ -1,31 +1,33 @@
 #!/bin/bash
 action="$1"
+
+# Resolve default sink and physical sink
+def=$(pactl get-default-sink 2>/dev/null)
+target="$def"
+if [ "$def" = "effect_input.eq" ]; then
+  phys=$(pactl list sinks short 2>/dev/null | awk '$2 !~ /effect_/ {print $2; exit}')
+  [ -n "$phys" ] && target="$phys"
+  # Keep effect_input.eq at 100% unity gain
+  wpctl set-volume effect_input.eq 1.00 >/dev/null 2>&1 || true
+fi
+
 if [ "$action" = "mute" ]; then
-  wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle >/dev/null
+  pamixer ${target:+--sink "$target"} -t >/dev/null
 else
-  wpctl set-mute @DEFAULT_AUDIO_SINK@ 0 >/dev/null
+  pamixer ${target:+--sink "$target"} -u >/dev/null
   if [[ "$action" == +* ]]; then
-    wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ "${action#+}%+"
+    pamixer ${target:+--sink "$target"} -i "${action#+}" >/dev/null
   elif [[ "$action" == -* ]]; then
-    wpctl set-volume @DEFAULT_AUDIO_SINK@ "${action#-}%-"
+    pamixer ${target:+--sink "$target"} -d "${action#-}" >/dev/null
+  elif [[ "$action" =~ ^[0-9]+$ ]]; then
+    pamixer ${target:+--sink "$target"} --set-volume "$action" >/dev/null
   fi
 fi
 
-state=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
-vol=${state#*Volume: }
-vol=${vol%% *}
+percent=$(pamixer ${target:+--sink "$target"} --get-volume 2>/dev/null || echo 0)
+ismuted=$(pamixer ${target:+--sink "$target"} --get-mute 2>/dev/null || echo false)
 
-if [[ "$vol" =~ ([0-9]+)\.([0-9]+) ]]; then
-  int=${BASH_REMATCH[1]}
-  dec=${BASH_REMATCH[2]}
-  dec="${dec}00"
-  dec="${dec:0:2}"
-  percent=$(( 100 * 10#$int + 10#$dec ))
-else
-  percent=0
-fi
-
-if [[ "$state" == *"MUTED"* ]] || [ "$percent" -eq 0 ]; then
+if [ "$ismuted" = "true" ] || [ "$percent" -eq 0 ]; then
   icon="volume-muted"
 else
   icon="volume-high"

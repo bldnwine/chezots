@@ -1,0 +1,533 @@
+#!/usr/bin/env python3
+import sys
+import os
+import json
+import re
+import math
+import subprocess
+import time
+from pathlib import Path
+
+STATE_DIR = Path.home() / ".local" / "state" / "quickshell-desktop"
+PRESETS_FILE = STATE_DIR / "eq-presets.json"
+STATE_FILE = STATE_DIR / "eq-state.json"
+PW_CONF_DIR = Path.home() / ".config" / "pipewire" / "pipewire.conf.d"
+PW_EQ_CONF = PW_CONF_DIR / "99-eq.conf"
+
+DEFAULT_10_BANDS = [
+    {"freq": 32.0, "gain": 0.0, "q": 0.7, "type": "lowshelf"},
+    {"freq": 64.0, "gain": 0.0, "q": 1.0, "type": "peaking"},
+    {"freq": 125.0, "gain": 0.0, "q": 1.0, "type": "peaking"},
+    {"freq": 250.0, "gain": 0.0, "q": 1.0, "type": "peaking"},
+    {"freq": 500.0, "gain": 0.0, "q": 1.0, "type": "peaking"},
+    {"freq": 1000.0, "gain": 0.0, "q": 1.0, "type": "peaking"},
+    {"freq": 2000.0, "gain": 0.0, "q": 1.0, "type": "peaking"},
+    {"freq": 4000.0, "gain": 0.0, "q": 1.0, "type": "peaking"},
+    {"freq": 8000.0, "gain": 0.0, "q": 1.0, "type": "peaking"},
+    {"freq": 16000.0, "gain": 0.0, "q": 0.7, "type": "highshelf"},
+]
+
+DEFAULT_PRESETS = {
+    "Flat": {
+        "preamp": 0.0,
+        "bands": [dict(b) for b in DEFAULT_10_BANDS]
+    }
+}
+
+def sanitize_preset_name(name: str) -> str:
+    """Strips newlines and limits preset name length to 32 chars."""
+    if not name:
+        return "Custom"
+    clean = re.sub(r"[\r\n\t]+", " ", str(name)).strip()
+    if not clean:
+        return "Custom"
+    return clean[:32]
+
+def ensure_dirs():
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    PW_CONF_DIR.mkdir(parents=True, exist_ok=True)
+
+def load_presets():
+    ensure_dirs()
+    if not PRESETS_FILE.exists():
+        save_presets(DEFAULT_PRESETS)
+        return DEFAULT_PRESETS
+    try:
+        with open(PRESETS_FILE, "r") as f:
+            data = json.load(f)
+            if not isinstance(data, dict) or not data:
+                return DEFAULT_PRESETS
+            cleaned = {}
+            for k, v in data.items():
+                if "\n" in k or "\r" in k or len(k) > 40:
+                    continue
+                if k in ("Bass Boost", "Vocal Boost", "Harman Target", "Test 3-Band"):
+                    continue
+                cleaned[sanitize_preset_name(k)] = v
+            if "Flat" not in cleaned:
+                cleaned["Flat"] = DEFAULT_PRESETS["Flat"]
+            return cleaned
+    except Exception:
+        return DEFAULT_PRESETS
+
+def save_presets(presets):
+    ensure_dirs()
+    with open(PRESETS_FILE, "w") as f:
+        json.dump(presets, f, indent=2)
+
+def load_state():
+    ensure_dirs()
+    if not STATE_FILE.exists():
+        initial = {
+            "enabled": True,
+            "activePreset": "Flat",
+            "preamp": 0.0,
+            "bands": [dict(b) for b in DEFAULT_10_BANDS]
+        }
+        save_state(initial)
+        return initial
+    try:
+        with open(STATE_FILE, "r") as f:
+            data = json.load(f)
+            preset_name = sanitize_preset_name(data.get("activePreset", "Flat"))
+            if "\n" in preset_name or "\r" in preset_name:
+                preset_name = "Flat"
+            data["activePreset"] = preset_name
+            if "enabled" not in data:
+                data["enabled"] = True
+            return data
+    except Exception:
+        return {
+            "enabled": True,
+            "activePreset": "Flat",
+            "preamp": 0.0,
+            "bands": [dict(b) for b in DEFAULT_10_BANDS]
+        }
+
+def save_state(state):
+    ensure_dirs()
+    if "activePreset" in state:
+        state["activePreset"] = sanitize_preset_name(state["activePreset"])
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f, indent=2)
+
+def calculate_auto_preamp(bands: list) -> float:
+    """Calculates safe negative preamp headroom: -max(0, max(gains))."""
+    max_gain = max((float(b.get("gain", 0.0)) for b in bands), default=0.0)
+    return round(-max(0.0, max_gain), 2)
+
+def generate_pipewire_conf(preamp_db: float, bands: list, enabled: bool = True) -> str:
+    """Generates a PipeWire filter-chain configuration for N bands (1 <= N <= 10)."""
+    clean_bands = []
+    for b in bands[:10]:
+        f = max(20.0, float(b.get("freq", 1000.0)))
+        g = float(b.get("gain", 0.0)) if enabled else 0.0
+        q = max(0.1, float(b.get("q", 1.0)))
+        t = b.get("type", "peaking").lower()
+        if "low" in t or ("shelf" in t and f < 200):
+            label = "bq_lowshelf"
+        elif "high" in t or ("shelf" in t and f > 5000):
+            label = "bq_highshelf"
+        else:
+            label = "bq_peaking"
+        clean_bands.append({"freq": f, "gain": g, "q": q, "label": label})
+
+    if not clean_bands:
+        clean_bands = [{"freq": 1000.0, "gain": 0.0, "q": 1.0, "label": "bq_peaking"}]
+
+    effective_preamp = preamp_db if enabled else 0.0
+    mult_val = 10.0 ** (effective_preamp / 20.0)
+
+    nodes_lines = []
+    nodes_lines.append(f"""                    {{
+                        type  = builtin
+                        name  = eq_preamp
+                        label = linear
+                        control = {{ "Mult" = {mult_val:.6f} }}
+                    }}""")
+
+    for i, b in enumerate(clean_bands, 1):
+        nodes_lines.append(f"""                    {{
+                        type  = builtin
+                        name  = eq_band_{i}
+                        label = {b['label']}
+                        control = {{ "Freq" = {b['freq']:.1f} "Q" = {b['q']:.2f} "Gain" = {b['gain']:.2f} }}
+                    }}""")
+
+    nodes_str = ",\n".join(nodes_lines)
+
+    links_lines = []
+    links_lines.append('                    { output = "eq_preamp:Out" input = "eq_band_1:In" }')
+    for i in range(1, len(clean_bands)):
+        links_lines.append(f'                    {{ output = "eq_band_{i}:Out" input = "eq_band_{i+1}:In" }}')
+
+    links_str = ",\n".join(links_lines)
+
+    conf = f"""# Generated by pipewire-eq
+context.modules = [
+    {{ name = libpipewire-module-filter-chain
+        args = {{
+            node.description = "PipeWire Equalizer"
+            media.name       = "PipeWire Equalizer"
+            filter.graph = {{
+                nodes = [
+{nodes_str}
+                ]
+                links = [
+{links_str}
+                ]
+            }}
+            audio.channels = 2
+            audio.position = [ FL FR ]
+            capture.props = {{
+                node.name   = "effect_input.eq"
+                media.class = Audio/Sink
+                node.description = "Equalizer Sink"
+            }}
+            playback.props = {{
+                node.name   = "effect_output.eq"
+                node.passive = true
+            }}
+        }}
+    }}
+]
+"""
+    return conf
+
+def get_live_eq_node_info():
+    """Finds the node id and exposed control names of effect_input.eq using pw-dump."""
+    try:
+        res = subprocess.run(["pw-dump"], capture_output=True, text=True, timeout=3)
+        objects = json.loads(res.stdout)
+        for obj in objects:
+            if obj.get("type", "").startswith("PipeWire:Interface:Node"):
+                props = obj.get("info", {}).get("props", {})
+                if props.get("node.name") == "effect_input.eq":
+                    node_id = str(obj.get("id"))
+                    params = obj.get("info", {}).get("params", {})
+                    prop_info = params.get("PropInfo", []) if isinstance(params, dict) else []
+                    controls = set()
+                    for p in prop_info:
+                        if isinstance(p, dict) and p.get("name"):
+                            controls.add(p.get("name"))
+                    return node_id, controls
+    except Exception:
+        pass
+    return None, set()
+
+def apply_live_controls(state: dict) -> bool:
+    """Applies gains, frequencies, and preamp to the live running filter chain in 0ms via pw-cli."""
+    node_id, controls = get_live_eq_node_info()
+    if not node_id:
+        return False
+
+    enabled = state.get("enabled", True)
+    bands = state.get("bands", DEFAULT_10_BANDS)
+    preamp_db = state.get("preamp", 0.0)
+
+    # Check if the active filter graph has all needed controls
+    for i in range(1, len(bands) + 1):
+        if f"eq_band_{i}:Gain" not in controls:
+            return False  # Graph shape changed or missing; needs full restart
+
+    # 1. Ensure EQ sink volume is at 1.00 unity gain pass-through
+    subprocess.run(["wpctl", "set-volume", str(node_id), "1.00"], timeout=1)
+    subprocess.run(["wpctl", "set-mute", str(node_id), "0"], timeout=1)
+
+    # 2. Update Preamp linear multiplier
+    effective_preamp = preamp_db if enabled else 0.0
+    mult_val = 10.0 ** (effective_preamp / 20.0)
+    payload_preamp = json.dumps({"params": ["eq_preamp:Mult", float(f"{mult_val:.6f}")]})
+    subprocess.run(["pw-cli", "set-param", node_id, "Props", payload_preamp], capture_output=True, timeout=1)
+
+    # 3. Update Band Gains
+    for i, b in enumerate(bands, 1):
+        gain = float(b.get("gain", 0.0)) if enabled else 0.0
+        payload_gain = json.dumps({"params": [f"eq_band_{i}:Gain", float(f"{gain:.2f}")]})
+        subprocess.run(["pw-cli", "set-param", node_id, "Props", payload_gain], capture_output=True, timeout=1)
+        if enabled:
+            freq = float(b.get("freq", 1000.0))
+            q = float(b.get("q", 1.0))
+            payload_freq = json.dumps({"params": [f"eq_band_{i}:Freq", float(f"{freq:.1f}")]})
+            payload_q = json.dumps({"params": [f"eq_band_{i}:Q", float(f"{q:.2f}")]})
+            subprocess.run(["pw-cli", "set-param", node_id, "Props", payload_freq], capture_output=True, timeout=1)
+            subprocess.run(["pw-cli", "set-param", node_id, "Props", payload_q], capture_output=True, timeout=1)
+
+    return True
+
+def restart_pipewire():
+    try:
+        subprocess.run(["systemctl", "--user", "restart", "pipewire"], check=True, timeout=5)
+        time.sleep(0.3)
+        for _ in range(15):
+            res_post = subprocess.run(["wpctl", "status"], capture_output=True, text=True, timeout=3)
+            eq_id = None
+            for line in res_post.stdout.splitlines():
+                if "effect_input.eq" in line:
+                    m = re.search(r"(\d+)\.\s+effect_input\.eq", line)
+                    if m:
+                        eq_id = m.group(1)
+                        break
+
+            if eq_id:
+                # Set default sink to effect_input.eq and lock its volume at 1.00 unity gain
+                subprocess.run(["wpctl", "set-default", str(eq_id)], timeout=3)
+                subprocess.run(["wpctl", "set-volume", str(eq_id), "1.00"], timeout=3)
+                subprocess.run(["wpctl", "set-mute", str(eq_id), "0"], timeout=3)
+                return
+            time.sleep(0.15)
+    except Exception as e:
+        print(f"Notice during pipewire reload: {e}", file=sys.stderr)
+
+def cmd_apply(args, force_restart=False):
+    """Applies current or provided state to PipeWire with live 0ms updates when possible."""
+    if args and args[0].strip():
+        arg_str = " ".join(args).strip()
+        try:
+            payload = json.loads(arg_str)
+            state = load_state()
+            if "preamp" in payload:
+                state["preamp"] = float(payload["preamp"])
+            if "bands" in payload:
+                state["bands"] = payload["bands"]
+            if "enabled" in payload:
+                state["enabled"] = bool(payload["enabled"])
+            if "activePreset" in payload:
+                state["activePreset"] = sanitize_preset_name(payload["activePreset"])
+            save_state(state)
+        except Exception:
+            presets = load_presets()
+            clean_name = sanitize_preset_name(arg_str)
+            if clean_name in presets:
+                state = load_state()
+                p = presets[clean_name]
+                state["preamp"] = p.get("preamp", 0.0)
+                state["bands"] = p.get("bands", DEFAULT_10_BANDS)
+                state["activePreset"] = clean_name
+                save_state(state)
+            else:
+                state = load_state()
+    else:
+        state = load_state()
+
+    # Try applying live via pw-cli first (0ms latency, zero restart)
+    if not force_restart and apply_live_controls(state):
+        conf = generate_pipewire_conf(state.get("preamp", 0.0), state.get("bands", DEFAULT_10_BANDS), state.get("enabled", True))
+        ensure_dirs()
+        with open(PW_EQ_CONF, "w") as f:
+            f.write(conf)
+        print(json.dumps({"status": "applied_live", "preset": state.get("activePreset", "Custom"), "enabled": state.get("enabled", True)}))
+        return
+
+    # Fallback to config file generation and PipeWire reload if graph needs recreation
+    conf = generate_pipewire_conf(state.get("preamp", 0.0), state.get("bands", DEFAULT_10_BANDS), state.get("enabled", True))
+    ensure_dirs()
+    with open(PW_EQ_CONF, "w") as f:
+        f.write(conf)
+    restart_pipewire()
+    print(json.dumps({"status": "applied_restarted", "preset": state.get("activePreset", "Custom"), "enabled": state.get("enabled", True)}))
+
+def cmd_toggle(args):
+    """Toggles EQ bypass/enabled state live."""
+    state = load_state()
+    state["enabled"] = not state.get("enabled", True)
+    save_state(state)
+    cmd_apply([])
+
+def cmd_auto_preamp(args):
+    """Calculates auto-preamp and applies it live."""
+    state = load_state()
+    auto_val = calculate_auto_preamp(state.get("bands", DEFAULT_10_BANDS))
+    state["preamp"] = auto_val
+    save_state(state)
+    cmd_apply([])
+    print(json.dumps({"status": "auto_preamp_applied", "preamp": auto_val}))
+
+def cmd_disable(args):
+    """Disables the PipeWire equalizer sink."""
+    state = load_state()
+    state["enabled"] = False
+    save_state(state)
+    if PW_EQ_CONF.exists():
+        PW_EQ_CONF.unlink()
+    try:
+        subprocess.run(["systemctl", "--user", "restart", "pipewire"], check=True, timeout=5)
+    except Exception:
+        pass
+    print(json.dumps({"status": "disabled"}))
+
+def cmd_get_state(args):
+    """Prints current active EQ state and presets as JSON."""
+    presets = load_presets()
+    state = load_state()
+    auto_preamp_val = calculate_auto_preamp(state.get("bands", DEFAULT_10_BANDS))
+    output = {
+        "state": {**state, "autoPreamp": auto_preamp_val},
+        "presets": presets
+    }
+    print(json.dumps(output, indent=2))
+
+def cmd_save_preset(args):
+    """Saves a named preset."""
+    if not args:
+        print(json.dumps({"error": "Preset name required"}), file=sys.stderr)
+        sys.exit(1)
+    raw_name = " ".join(args).strip()
+    
+    if "Filter 1:" in raw_name or "Preamp:" in raw_name:
+        cmd_import(args)
+        return
+
+    name = sanitize_preset_name(raw_name)
+    state = load_state()
+    presets = load_presets()
+    presets[name] = {
+        "preamp": state.get("preamp", 0.0),
+        "bands": state.get("bands", DEFAULT_10_BANDS)
+    }
+    state["activePreset"] = name
+    save_presets(presets)
+    save_state(state)
+    print(json.dumps({"status": "saved", "name": name}))
+
+def cmd_delete_preset(args):
+    """Deletes a named preset."""
+    if not args:
+        print(json.dumps({"error": "Preset name required"}), file=sys.stderr)
+        sys.exit(1)
+    name = sanitize_preset_name(args[0])
+    if name == "Flat":
+        print(json.dumps({"error": "Cannot delete base Flat preset"}), file=sys.stderr)
+        sys.exit(1)
+    presets = load_presets()
+    if name in presets:
+        del presets[name]
+        save_presets(presets)
+        state = load_state()
+        if state.get("activePreset") == name:
+            state["activePreset"] = "Flat"
+            save_state(state)
+        print(json.dumps({"status": "deleted", "name": name}))
+    else:
+        print(json.dumps({"error": f"Preset '{name}' not found"}), file=sys.stderr)
+
+def parse_autoeq_text(text: str):
+    """Parses standard AutoEQ parametric filter text."""
+    bands = []
+    preamp = 0.0
+    lines = text.strip().splitlines()
+    for line in lines:
+        line_clean = line.strip()
+        preamp_m = re.search(r"Preamp:\s*([+-]?\d+(?:\.\d+)?)\s*dB", line_clean, re.IGNORECASE)
+        if preamp_m:
+            preamp = float(preamp_m.group(1))
+            continue
+
+        filter_m = re.search(r"Filter\s+\d+:\s*(?:ON|OFF)?\s*([A-Za-z]+)\s+Fc\s+([0-9.]+)\s*Hz\s+Gain\s+([+-]?[0-9.]+)\s*dB(?:\s+Q\s+([0-9.]+))?", line_clean, re.IGNORECASE)
+        if filter_m:
+            ftype_raw = filter_m.group(1).upper()
+            fc = max(20.0, float(filter_m.group(2)))
+            gain = float(filter_m.group(3))
+            q_val = max(0.1, float(filter_m.group(4)) if filter_m.group(4) else 1.0)
+            if "LS" in ftype_raw or "LOW" in ftype_raw:
+                ftype = "lowshelf"
+            elif "HS" in ftype_raw or "HIGH" in ftype_raw:
+                ftype = "highshelf"
+            else:
+                ftype = "peaking"
+            bands.append({
+                "freq": fc,
+                "gain": gain,
+                "q": q_val,
+                "type": ftype
+            })
+            if len(bands) >= 10:
+                break
+    return preamp, bands
+
+def cmd_import(args):
+    """Imports AutoEQ parametric string or file."""
+    if not args:
+        print(json.dumps({"error": "AutoEQ text or file path required"}), file=sys.stderr)
+        sys.exit(1)
+    
+    content = ""
+    target_path = Path(args[0])
+    preset_name = "AutoEQ Preset"
+    if len(args) > 1:
+        preset_name = sanitize_preset_name(args[1])
+
+    if target_path.exists() and target_path.is_file():
+        content = target_path.read_text()
+        if preset_name == "AutoEQ Preset":
+            preset_name = sanitize_preset_name(target_path.stem)
+    else:
+        content = " ".join(args)
+
+    preamp, bands = parse_autoeq_text(content)
+    if not bands:
+        print(json.dumps({"error": "No valid parametric EQ filters found in input"}), file=sys.stderr)
+        sys.exit(1)
+
+    state = load_state()
+    state["preamp"] = preamp
+    state["bands"] = bands
+    state["activePreset"] = preset_name
+    state["enabled"] = True
+    save_state(state)
+
+    presets = load_presets()
+    presets[preset_name] = {"preamp": preamp, "bands": bands}
+    save_presets(presets)
+
+    # Recreate graph if band count changed
+    cmd_apply([], force_restart=True)
+    print(json.dumps({"status": "imported", "name": preset_name, "bands_count": len(bands), "preamp": preamp}))
+
+def cmd_export(args):
+    """Exports preset as AutoEQ-compatible text."""
+    state = load_state()
+    preamp = state.get("preamp", 0.0)
+    bands = state.get("bands", DEFAULT_10_BANDS)
+    lines = [f"Preamp: {preamp:.1f} dB"]
+    for i, b in enumerate(bands, 1):
+        t = b.get("type", "peaking").upper()
+        type_code = "PK"
+        if "LOW" in t:
+            type_code = "LS"
+        elif "HIGH" in t:
+            type_code = "HS"
+        lines.append(f"Filter {i}: ON {type_code} Fc {b.get('freq', 1000):.0f} Hz Gain {b.get('gain', 0.0):.1f} dB Q {b.get('q', 1.0):.2f}")
+    result = "\n".join(lines)
+    print(result)
+
+def main():
+    if len(sys.argv) < 2:
+        cmd_get_state([])
+        return
+    cmd = sys.argv[1].lower()
+    args = sys.argv[2:]
+
+    if cmd in ("apply", "live", "set"):
+        cmd_apply(args)
+    elif cmd in ("toggle", "bypass"):
+        cmd_toggle(args)
+    elif cmd in ("auto-preamp", "autopreamp", "auto"):
+        cmd_auto_preamp(args)
+    elif cmd in ("disable", "stop", "off"):
+        cmd_disable(args)
+    elif cmd in ("state", "status", "list", "get"):
+        cmd_get_state(args)
+    elif cmd in ("save", "add"):
+        cmd_save_preset(args)
+    elif cmd in ("delete", "remove", "del"):
+        cmd_delete_preset(args)
+    elif cmd == "import":
+        cmd_import(args)
+    elif cmd == "export":
+        cmd_export(args)
+    else:
+        cmd_apply([cmd] + args)
+
+if __name__ == "__main__":
+    main()

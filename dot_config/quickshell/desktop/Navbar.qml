@@ -470,7 +470,13 @@ Item {
         const v = Math.max(0, Math.min(100, Math.round(pct)));
         root.audioVol = v;
         root._lastVolChangeTime = Date.now();
-        root.run("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ " + v + "%");
+        root.run("target=$(pactl get-default-sink 2>/dev/null); "
+            + "if [ \"$target\" = \"effect_input.eq\" ]; then "
+            + "  phys=$(pactl list sinks short 2>/dev/null | awk '$2 !~ /effect_/ {print $2; exit}'); "
+            + "  [ -n \"$phys\" ] && target=\"$phys\"; "
+            + "fi; "
+            + "pactl set-sink-volume \"$target\" " + v + "%; "
+            + "pactl set-sink-volume effect_input.eq 100% 2>/dev/null || true");
     }
 
     function setInputVolume(pct) {
@@ -514,7 +520,13 @@ Item {
 
     function toggleAudioMute() {
         root.audioMuted = !root.audioMuted;
-        root.run("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle");
+        root.run("target=$(pactl get-default-sink 2>/dev/null); "
+            + "if [ \"$target\" = \"effect_input.eq\" ]; then "
+            + "  phys=$(pactl list sinks short 2>/dev/null | awk '$2 !~ /effect_/ {print $2; exit}'); "
+            + "  [ -n \"$phys\" ] && target=\"$phys\"; "
+            + "fi; "
+            + "pactl set-sink-mute \"$target\" toggle; "
+            + "pactl set-sink-mute effect_input.eq 0 2>/dev/null || true");
         root.refreshAudio();
     }
 
@@ -1828,12 +1840,17 @@ Item {
         id: audioProbe
         running: false
         command: ["bash", "-c",
-            "v=$(pamixer --get-volume 2>/dev/null || echo 0); "
-            + "m=$(pamixer --get-mute 2>/dev/null || echo false); "
-            + "d=$(pactl get-default-sink 2>/dev/null); "
-            +             "p=$(pactl list sinks 2>/dev/null | awk -v w=\"$d\" '$0==\"\\tName: \" w {f=1} f && /Active Port:/ {print $3; exit}'); "
-            +             "case \"$d\" in *bluez*|*bluetooth*) case \"$p\" in *headset*|*headphone*|*hp*) t=\"hp\" ;; *) t=\"bt\" ;; esac ;; *hdmi*|*dp*|*displayport*) t=\"hdmi\" ;; *) case \"$p\" in *headphone*|*headset*|*hp*) t=\"hp\" ;; *) t=\"spk\" ;; esac ;; esac; "
-            +             "desc=$(pactl list sinks 2>/dev/null | grep -A5 -F \"Name: $d\" | grep \"Description:\" | sed 's/.*Description: //'); "
+            "d=$(pactl get-default-sink 2>/dev/null); "
+            + "target=\"$d\"; "
+            + "if [ \"$d\" = \"effect_input.eq\" ]; then "
+            + "  phys=$(pactl list sinks short 2>/dev/null | awk '$2 !~ /effect_/ {print $2; exit}'); "
+            + "  [ -n \"$phys\" ] && target=\"$phys\"; "
+            + "fi; "
+            + "v=$(pamixer ${target:+--sink \"$target\"} --get-volume 2>/dev/null || echo 0); "
+            + "m=$(pamixer ${target:+--sink \"$target\"} --get-mute 2>/dev/null || echo false); "
+            + "p=$(pactl list sinks 2>/dev/null | awk -v w=\"$target\" '$0==\"\\tName: \" w {f=1} f && /Active Port:/ {print $3; exit}'); "
+            + "case \"$target\" in *bluez*|*bluetooth*) case \"$p\" in *headset*|*headphone*|*hp*) t=\"hp\" ;; *) t=\"bt\" ;; esac ;; *hdmi*|*dp*|*displayport*) t=\"hdmi\" ;; *) case \"$p\" in *headphone*|*headset*|*hp*) t=\"hp\" ;; *) t=\"spk\" ;; esac ;; esac; "
+            + "desc=$(pactl list sinks 2>/dev/null | grep -A5 -F \"Name: $target\" | grep \"Description:\" | sed 's/.*Description: //'); "
             + "iv=$(pamixer --default-source --get-volume 2>/dev/null || echo 0); "
             + "im=$(pamixer --default-source --get-mute 2>/dev/null || echo false); "
             + "case \"$p\" in *headphone*|*headset*|*hp*) pl=\"Headphones\" ;; *speaker*) pl=\"Speakers\" ;; *) pl=\"$p\" ;; esac; "

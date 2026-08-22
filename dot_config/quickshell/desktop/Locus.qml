@@ -423,8 +423,14 @@ Item {
                 root.close();
                 return;
             } else if (target === "display") {
-                if (root.navbar.displayVisible) root.navbar.displayVisible = false;
-                else root.navbar.openDisplay();
+                if (verb === "reset") {
+                    if (root.navbar.resetDisplay) root.navbar.resetDisplay();
+                } else if (verb === "blank") {
+                    if (root.navbar.blankScreen) root.navbar.blankScreen();
+                } else {
+                    if (root.navbar.displayVisible) root.navbar.displayVisible = false;
+                    else root.navbar.openDisplay();
+                }
                 root.close();
                 return;
             } else if (target === "calendar") {
@@ -438,7 +444,27 @@ Item {
                 root.close();
                 return;
             } else if (target === "bar") {
-                root.navbar.barHidden = !root.navbar.barHidden;
+                if (verb === "transparent") {
+                    root.navbar.setBarTransparent(!root.navbar.barTransparent);
+                } else if (verb === "hide") {
+                    root.navbar.barHidden = true;
+                } else if (verb === "show") {
+                    root.navbar.barHidden = false;
+                } else if (verb === "zen") {
+                    root.navbar.setBarVariant("zen");
+                } else {
+                    root.navbar.barHidden = !root.navbar.barHidden;
+                }
+                root.close();
+                return;
+            } else if (target === "corners") {
+                if (verb === "round") {
+                    if (root.navbar.theme) root.navbar.theme.setCorners("round");
+                } else if (verb === "sharp") {
+                    if (root.navbar.theme) root.navbar.theme.setCorners("sharp");
+                } else {
+                    if (root.navbar.theme) root.navbar.theme.toggleCorners();
+                }
                 root.close();
                 return;
             }

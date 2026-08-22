@@ -1,25 +1,25 @@
 import QtQuick
 import Quickshell.Services.Pipewire
 
-// Audio popup — volume slider + output/input device pickers. Data comes
-// from Navbar's wpctl/pactl probes (the same source the bar icon uses), so
-// labels are readable and there's no dependency on PwNode metadata that
-// quickshell 0.3.0 doesn't populate. The only Pipewire service use left is
-// the input peak meter, which reads a node ref directly.
+// Audio popup — volume slider + output/input device pickers + expandable native PipeWire equalizer.
+// Data comes from Navbar's wpctl/pactl probes. When EQ is toggled, expands to reveal the full
+// parametric EQ deck with dynamic bands, presets, and preamp controls.
 CardWindow {
     id: audioPopup
     required property var root
 
+    property bool eqExpanded: false
+
     theme: root
     revealed: root.audioVisible
-    cardWidth: 390
+    cardWidth: eqExpanded ? 890 : 390
     layerNamespace: "omarchy-audio"
-    title: "AUDIO"
+    title: eqExpanded ? "AUDIO & EQUALIZER" : "AUDIO"
     subtitle: root.audioMuted
               ? "MUTED"
               : (root.audioSinkDesc ? root.audioSinkDesc + " · " : "")
                 + root.audioVol + "%"
-    footer: "M MUTE · B MIXER · ENTER ACT"
+    footer: eqExpanded ? "M MUTE · E TOGGLE EQ · B MIXER · ENTER ACT" : "M MUTE · E EQ · B MIXER · ENTER ACT"
 
     anchorEdge: audioPopup.root.barEdge
     anchorBarX: audioPopup.root.popupAnchorX
@@ -130,6 +130,8 @@ CardWindow {
         const k = event.key;
         if (k === Qt.Key_Q) {
             audioPopup.root.audioVisible = false;
+        } else if (k === Qt.Key_E) {
+            audioPopup.eqExpanded = !audioPopup.eqExpanded;
         } else if (k === Qt.Key_Down || k === Qt.Key_J) {
             audioPopup.kbdIndex = Math.min(audioPopup.kbdRows.length - 1, audioPopup.kbdIndex + 1);
         } else if (k === Qt.Key_Up || k === Qt.Key_K) {
@@ -150,19 +152,266 @@ CardWindow {
         event.accepted = true;
     }
 
-    // Live input level. Binds a node ref directly, so it works even though
-    // PwNode metadata is empty on this quickshell version.
+    // Live input level. Binds a node ref directly.
     PwNodePeakMonitor {
         id: inputPeak
         node: Pipewire.defaultAudioSource
         enabled: audioPopup.revealed
     }
 
+    // Component for the standard Audio Control Pane (Volume, Sinks, Sources, Pavucontrol)
+    Component {
+        id: audioControlsComponent
+
+        Column {
+            spacing: 8
+
+            // ---------- OUTPUT ----------
+            Column {
+                width: parent.width
+                spacing: 6
+
+                Item {
+                    width: parent.width
+                    height: 18
+                    Text {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "OUTPUT"
+                        color: audioPopup.root.inkDeep
+                        font.family: audioPopup.root.mono
+                        font.pixelSize: 10
+                        font.letterSpacing: 2
+                    }
+                }
+                DisplaySlider {
+                    root: audioPopup.root
+                    width: parent.width
+                    value: audioPopup.outputVolume
+                    minV: 0
+                    maxV: 100
+                    unit: "%"
+                    selected: audioPopup.kbdRow.type === "outSlider"
+                    onCommit: (v) => audioPopup.setOutputVolume(v)
+                }
+                Repeater {
+                    model: audioPopup.displaySinks
+                    delegate: Rectangle {
+                        required property var modelData
+                        required property int index
+
+                        readonly property bool active: modelData.isActive
+                        readonly property bool focused: audioPopup.sinkFocused(index)
+
+                        width: parent.width
+                        height: 32
+                        radius: audioPopup.root.cornerRadius
+                        color: active || focused
+                               ? audioPopup.root.rowSel
+                               : sinkMouse.containsMouse ? audioPopup.root.rowHi : "transparent"
+                        border.color: active || focused ? audioPopup.root.seal : audioPopup.root.sep
+                        border.width: focused ? 2 : 1
+                        Behavior on color        { ColorAnimation { duration: 120 } }
+                        Behavior on border.color { ColorAnimation { duration: 120 } }
+                        Behavior on border.width { NumberAnimation { duration: 120 } }
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            spacing: 8
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: audioPopup.deviceGlyph(modelData.name + " " + modelData.portLabel, "sink")
+                                color: active ? audioPopup.root.seal : audioPopup.root.ink
+                                font.family: audioPopup.root.mono
+                                font.pixelSize: 13
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.portLabel ? modelData.name + " · " + modelData.portLabel : modelData.name
+                                elide: Text.ElideRight
+                                width: parent.width - 21 - 8
+                                color: active ? audioPopup.root.ink : audioPopup.root.fg
+                                font.family: audioPopup.root.mono
+                                font.pixelSize: 11
+                                font.weight: active ? Font.Medium : Font.Normal
+                            }
+                        }
+                        MouseArea {
+                            id: sinkMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: audioPopup.setDefaultSink(modelData.id, modelData.port)
+                        }
+                    }
+                }
+            }
+
+            // ---------- INPUT ----------
+            Column {
+                width: parent.width
+                spacing: 6
+                visible: audioPopup.inputVisible
+
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: audioPopup.root.sep
+                }
+                Item {
+                    width: parent.width
+                    height: 18
+                    Text {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "INPUT"
+                        color: audioPopup.root.inkDeep
+                        font.family: audioPopup.root.mono
+                        font.pixelSize: 10
+                        font.letterSpacing: 2
+                    }
+                }
+                DisplaySlider {
+                    root: audioPopup.root
+                    width: parent.width
+                    value: audioPopup.inputVolume
+                    minV: 0
+                    maxV: 100
+                    unit: "%"
+                    selected: audioPopup.kbdRow.type === "inSlider"
+                    onCommit: (v) => audioPopup.setInputVolume(v)
+                }
+                Rectangle {
+                    width: parent.width
+                    height: 4
+                    radius: 1
+                    color: Qt.rgba(audioPopup.root.ink.r, audioPopup.root.ink.g, audioPopup.root.ink.b, 0.12)
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        width: parent.width * Math.max(0, Math.min(1, inputPeak.peak))
+                        color: audioPopup.inputMuted ? audioPopup.root.fg : audioPopup.root.seal
+                        Behavior on width { NumberAnimation { duration: 70 } }
+                    }
+                }
+                Repeater {
+                    model: audioPopup.displaySources
+                    delegate: Rectangle {
+                        required property var modelData
+                        required property int index
+
+                        readonly property bool active: modelData.isActive
+                        readonly property bool focused: audioPopup.sourceFocused(index)
+
+                        width: parent.width
+                        height: 32
+                        radius: audioPopup.root.cornerRadius
+                        color: active || focused
+                               ? audioPopup.root.rowSel
+                               : sourceMouse.containsMouse ? audioPopup.root.rowHi : "transparent"
+                        border.color: active || focused ? audioPopup.root.seal : audioPopup.root.sep
+                        border.width: focused ? 2 : 1
+                        Behavior on color        { ColorAnimation { duration: 120 } }
+                        Behavior on border.color { ColorAnimation { duration: 120 } }
+                        Behavior on border.width { NumberAnimation { duration: 120 } }
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            spacing: 8
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: audioPopup.deviceGlyph(modelData.name + " " + modelData.portLabel, "source")
+                                color: active ? audioPopup.root.seal : audioPopup.root.ink
+                                font.family: audioPopup.root.mono
+                                font.pixelSize: 13
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.portLabel ? modelData.name + " · " + modelData.portLabel : modelData.name
+                                elide: Text.ElideRight
+                                width: parent.width - 21 - 8
+                                color: active ? audioPopup.root.ink : audioPopup.root.fg
+                                font.family: audioPopup.root.mono
+                                font.pixelSize: 11
+                                font.weight: active ? Font.Medium : Font.Normal
+                            }
+                        }
+                        MouseArea {
+                            id: sourceMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: audioPopup.setDefaultSource(modelData.id, modelData.port)
+                        }
+                    }
+                }
+            }
+
+            Rectangle { width: parent.width; height: 1; color: audioPopup.root.sep }
+
+            Item {
+                width: parent.width
+                height: 30
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: mixerMouse.containsMouse
+                           ? Qt.rgba(audioPopup.root.ink.r, audioPopup.root.ink.g, audioPopup.root.ink.b, 0.06)
+                           : "transparent"
+                    border.width: 1
+                    border.color: mixerMouse.containsMouse ? audioPopup.root.ink : audioPopup.root.sep
+                }
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 9
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "OPEN PAVUCONTROL"
+                    color: audioPopup.root.ink
+                    font.family: audioPopup.root.mono
+                    font.pixelSize: 10
+                    font.letterSpacing: 2
+                    font.weight: Font.Medium
+                }
+
+                Text {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 9
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "DETAIL AUDIO MIXER"
+                    color: audioPopup.root.inkDeep
+                    font.family: audioPopup.root.mono
+                    font.pixelSize: 10
+                    font.letterSpacing: 1.2
+                }
+
+                MouseArea {
+                    id: mixerMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: audioPopup.openMixer()
+                }
+            }
+        }
+    }
+
     Column {
         width: parent.width
         spacing: 8
 
-        // ---------- Hero: output glyph + master mute ----------
+        // ---------- Hero: output glyph + EQ toggle + master mute ----------
         Item {
             width: parent.width
             height: 30
@@ -176,254 +425,78 @@ CardWindow {
                 font.pixelSize: 15
                 opacity: audioPopup.outputMuted ? 0.5 : 1.0
             }
-            QuickButton {
+
+            Row {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                root: audioPopup.root
-                label: audioPopup.outputMuted ? "UNMUTE" : "MUTE"
-                selected: audioPopup.kbdRow.type === "hero"
-                onClicked: audioPopup.toggleOutputMute()
-            }
-        }
+                spacing: 6
 
-        Rectangle { width: parent.width; height: 1; color: audioPopup.root.sep }
-
-        // ---------- OUTPUT ----------
-        Column {
-            width: parent.width
-            spacing: 6
-
-            Item {
-                width: parent.width
-                height: 18
-                Text {
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "OUTPUT"
-                    color: audioPopup.root.inkDeep
-                    font.family: audioPopup.root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 2
+                QuickButton {
+                    root: audioPopup.root
+                    label: audioPopup.eqExpanded ? "HIDE EQ" : "EQ"
+                    glyph: "󰓃"
+                    selected: audioPopup.eqExpanded
+                    onClicked: audioPopup.eqExpanded = !audioPopup.eqExpanded
                 }
-            }
-            DisplaySlider {
-                root: audioPopup.root
-                width: parent.width
-                value: audioPopup.outputVolume
-                minV: 0
-                maxV: 100
-                unit: "%"
-                selected: audioPopup.kbdRow.type === "outSlider"
-                onCommit: (v) => audioPopup.setOutputVolume(v)
-            }
-            Repeater {
-                model: audioPopup.displaySinks
-                delegate: Rectangle {
-                    required property var modelData
-                    required property int index
 
-                    readonly property bool active: modelData.isActive
-                    readonly property bool focused: audioPopup.sinkFocused(index)
-
-                    width: parent.width
-                    height: 32
-                    radius: audioPopup.root.cornerRadius
-                    color: active || focused
-                           ? audioPopup.root.rowSel
-                           : sinkMouse.containsMouse ? audioPopup.root.rowHi : "transparent"
-                    border.color: active || focused ? audioPopup.root.seal : audioPopup.root.sep
-                    border.width: focused ? 2 : 1
-                    Behavior on color        { ColorAnimation { duration: 120 } }
-                    Behavior on border.color { ColorAnimation { duration: 120 } }
-                    Behavior on border.width { NumberAnimation { duration: 120 } }
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
-                        spacing: 8
-
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: audioPopup.deviceGlyph(modelData.name + " " + modelData.portLabel, "sink")
-                            color: active ? audioPopup.root.seal : audioPopup.root.ink
-                            font.family: audioPopup.root.mono
-                            font.pixelSize: 13
-                        }
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.portLabel ? modelData.name + " · " + modelData.portLabel : modelData.name
-                            elide: Text.ElideRight
-                            width: parent.width - 21 - 8
-                            color: active ? audioPopup.root.ink : audioPopup.root.fg
-                            font.family: audioPopup.root.mono
-                            font.pixelSize: 11
-                            font.weight: active ? Font.Medium : Font.Normal
-                        }
-                    }
-                    MouseArea {
-                        id: sinkMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: audioPopup.setDefaultSink(modelData.id, modelData.port)
-                    }
-                }
-            }
-        }
-
-        // ---------- INPUT ----------
-        Column {
-            width: parent.width
-            spacing: 6
-            visible: audioPopup.inputVisible
-
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: audioPopup.root.sep
-            }
-            Item {
-                width: parent.width
-                height: 18
-                Text {
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "INPUT"
-                    color: audioPopup.root.inkDeep
-                    font.family: audioPopup.root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 2
-                }
-            }
-            DisplaySlider {
-                root: audioPopup.root
-                width: parent.width
-                value: audioPopup.inputVolume
-                minV: 0
-                maxV: 100
-                unit: "%"
-                selected: audioPopup.kbdRow.type === "inSlider"
-                onCommit: (v) => audioPopup.setInputVolume(v)
-            }
-            Rectangle {
-                width: parent.width
-                height: 4
-                radius: 1
-                color: Qt.rgba(audioPopup.root.ink.r, audioPopup.root.ink.g, audioPopup.root.ink.b, 0.12)
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    width: parent.width * Math.max(0, Math.min(1, inputPeak.peak))
-                    color: audioPopup.inputMuted ? audioPopup.root.fg : audioPopup.root.seal
-                    Behavior on width { NumberAnimation { duration: 70 } }
-                }
-            }
-            Repeater {
-                model: audioPopup.displaySources
-                delegate: Rectangle {
-                    required property var modelData
-                    required property int index
-
-                    readonly property bool active: modelData.isActive
-                    readonly property bool focused: audioPopup.sourceFocused(index)
-
-                    width: parent.width
-                    height: 32
-                    radius: audioPopup.root.cornerRadius
-                    color: active || focused
-                           ? audioPopup.root.rowSel
-                           : sourceMouse.containsMouse ? audioPopup.root.rowHi : "transparent"
-                    border.color: active || focused ? audioPopup.root.seal : audioPopup.root.sep
-                    border.width: focused ? 2 : 1
-                    Behavior on color        { ColorAnimation { duration: 120 } }
-                    Behavior on border.color { ColorAnimation { duration: 120 } }
-                    Behavior on border.width { NumberAnimation { duration: 120 } }
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
-                        spacing: 8
-
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: audioPopup.deviceGlyph(modelData.name + " " + modelData.portLabel, "source")
-                            color: active ? audioPopup.root.seal : audioPopup.root.ink
-                            font.family: audioPopup.root.mono
-                            font.pixelSize: 13
-                        }
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.portLabel ? modelData.name + " · " + modelData.portLabel : modelData.name
-                            elide: Text.ElideRight
-                            width: parent.width - 21 - 8
-                            color: active ? audioPopup.root.ink : audioPopup.root.fg
-                            font.family: audioPopup.root.mono
-                            font.pixelSize: 11
-                            font.weight: active ? Font.Medium : Font.Normal
-                        }
-                    }
-                    MouseArea {
-                        id: sourceMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: audioPopup.setDefaultSource(modelData.id, modelData.port)
-                    }
+                QuickButton {
+                    root: audioPopup.root
+                    label: audioPopup.outputMuted ? "UNMUTE" : "MUTE"
+                    selected: audioPopup.kbdRow.type === "hero"
+                    onClicked: audioPopup.toggleOutputMute()
                 }
             }
         }
 
         Rectangle { width: parent.width; height: 1; color: audioPopup.root.sep }
 
+        // ---------- Content Deck (Single Column vs 2-Column Split when EQ Expanded) ----------
         Item {
             width: parent.width
-            height: 30
+            height: audioPopup.eqExpanded
+                    ? Math.max(eqDeck.implicitHeight, rightDeck.implicitHeight)
+                    : normalDeck.implicitHeight
 
-            Rectangle {
+            // Expanded Mode: Split Row
+            Row {
+                id: splitRow
+                visible: audioPopup.eqExpanded
                 anchors.fill: parent
-                color: mixerMouse.containsMouse
-                       ? Qt.rgba(audioPopup.root.ink.r, audioPopup.root.ink.g, audioPopup.root.ink.b, 0.06)
-                       : "transparent"
-                border.width: 1
-                border.color: mixerMouse.containsMouse ? audioPopup.root.ink : audioPopup.root.sep
+                spacing: 14
+
+                readonly property real totalDividerW: splitRow.spacing * 2 + 1
+                readonly property real availPaneW: parent.width - totalDividerW
+                readonly property real leftPaneW: Math.floor(availPaneW / 2)
+                readonly property real rightPaneW: availPaneW - leftPaneW
+
+                // Left Pane: Equalizer Deck
+                EqPanel {
+                    id: eqDeck
+                    root: audioPopup.root
+                    width: splitRow.leftPaneW
+                }
+
+                // Center Divider
+                Rectangle {
+                    width: 1
+                    height: parent.height
+                    color: audioPopup.root.sep
+                }
+
+                // Right Pane: Standard Audio Controls
+                Loader {
+                    id: rightDeck
+                    width: splitRow.rightPaneW
+                    sourceComponent: audioControlsComponent
+                }
             }
 
-            Text {
-                anchors.left: parent.left
-                anchors.leftMargin: 9
-                anchors.verticalCenter: parent.verticalCenter
-                text: "OPEN PAVUCONTROL"
-                color: audioPopup.root.ink
-                font.family: audioPopup.root.mono
-                font.pixelSize: 10
-                font.letterSpacing: 2
-                font.weight: Font.Medium
-            }
-
-            Text {
-                anchors.right: parent.right
-                anchors.rightMargin: 9
-                anchors.verticalCenter: parent.verticalCenter
-                text: "DETAIL AUDIO MIXER"
-                color: audioPopup.root.inkDeep
-                font.family: audioPopup.root.mono
-                font.pixelSize: 10
-                font.letterSpacing: 1.2
-            }
-
-            MouseArea {
-                id: mixerMouse
+            // Compact Mode: Single Column
+            Loader {
+                id: normalDeck
+                visible: !audioPopup.eqExpanded
                 anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: audioPopup.openMixer()
+                sourceComponent: audioControlsComponent
             }
         }
     }
