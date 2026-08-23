@@ -8,17 +8,22 @@ const procCategory = "Processes";
 const themeCategory = "Themes";
 
 // fd already respects .gitignore, the global ignore file, and skips
-// hidden files by default. These excludes catch build dirs that
-// aren't always gitignored.
+// hidden files by default. These excludes catch common build directories.
 const fdExcludes = [
-    "node_modules", "target", "dist", "build", ".cache",
-    ".venv", "__pycache__", ".tox", ".next", ".nuxt",
-    ".git", ".cargo", ".rustup", ".npm", ".gnupg",
-    ".mozilla", ".thunderbird", "Android", "proton", "go/pkg",
-    ".var", ".gradle", ".m2", ".wine", ".steam", "venv",
-    ".direnv", ".flatpak-builder", ".local/share/Steam",
-    ".local/share/Trash", ".local/share/flatpak", ".local/share/containers"
+    "node_modules", "target", "dist", "build", ".venv", "__pycache__",
+    ".tox", ".next", ".nuxt", ".git", "venv", ".direnv", ".flatpak-builder"
 ];
+
+// Target search roots: Home (visible user files/dirs), Configs, and User scripts/launchers.
+function getSearchRoots(homeDir) {
+    if (!homeDir) return [];
+    return [
+        homeDir,
+        homeDir + "/.config",
+        homeDir + "/.local/bin",
+        homeDir + "/.local/share/applications"
+    ];
+}
 
 const imageExts = [
     "png", "jpg", "jpeg", "webp", "gif", "bmp", "ico", "avif", "svg"

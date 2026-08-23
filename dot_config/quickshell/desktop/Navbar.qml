@@ -203,6 +203,7 @@ Item {
     property Item audioAnchorItem:    null
     property Item clipboardAnchorItem: null
     property Item warpAnchorItem:      null
+    property Item aiAnchorItem:        null
 
     function anchorPopupTo(item) {
         const p = item.mapToItem(null, item.width / 2, item.height / 2);
@@ -262,11 +263,33 @@ Item {
     property bool   wifiBusy: false          // one iwctl action in flight
     property string _wifiNetworksSer: ""
     property string _wifiActionSsid: ""
-    property bool   _wifiIsConnect: false
+    property bool   _wifiIsConnect: false    // iwd-based: omarchy uses iwctl, not nmcli. The probe detects the
+    // first station-mode device dynamically so multi-radio laptops work.
     signal wifiConnectResult(string ssid, bool ok)
 
     // iwd-based: omarchy uses iwctl, not nmcli. The probe detects the
     // first station-mode device dynamically so multi-radio laptops work.
+    function syncWifiActiveState(connectedSsid) {
+        if (!root.wifiNetworks || root.wifiNetworks.length === 0) return;
+        let changed = false;
+        const updated = root.wifiNetworks.map(n => {
+            const inUse = Boolean(connectedSsid && n.ssid === connectedSsid);
+            const known = inUse ? true : n.known;
+            if (n.inUse !== inUse || n.known !== known) changed = true;
+            return {
+                inUse: inUse,
+                ssid: n.ssid,
+                signal: n.signal,
+                security: n.security,
+                known: known
+            };
+        });
+        if (changed) {
+            updated.sort((a, b) => (b.inUse - a.inUse) || (b.signal - a.signal));
+            root._wifiNetworksSer = JSON.stringify(updated);
+            root.wifiNetworks = updated;
+        }
+    }
     function refreshWifi() {
         if (wifiScanProbe.running) return;
         root.wifiScanning = true;
@@ -315,6 +338,7 @@ Item {
     }
     function disconnectWifi() {
         if (root.wifiBusy) return;
+        root.syncWifiActiveState("");
         root.run("DEV=$(iwctl --dont-ask device list 2>/dev/null"
                  + " | sed 's/\\x1b\\[[0-9;]*m//g'"
                  + " | awk '/station/{print $1; exit}');"
@@ -339,6 +363,9 @@ Item {
             const ok = exitStatus === 0 && exitCode === 0;
             if (root._wifiIsConnect) {
                 root._wifiIsConnect = false;
+                if (ok && root._wifiActionSsid) {
+                    root.syncWifiActiveState(root._wifiActionSsid);
+                }
                 root.wifiConnectResult(root._wifiActionSsid, ok);
             }
             root.wifiBusy = false;
@@ -738,6 +765,15 @@ Item {
     function openWarp() {
         if (root.warpAnchorItem) root.anchorPopupTo(root.warpAnchorItem);
         root.warpVisible = true;
+    }
+
+    // ---------- Antigravity AI CLI state ----------
+    property bool aiVisible: false
+    AiService { id: aiService }
+    readonly property var aiService: aiService
+    function openAi() {
+        if (root.aiAnchorItem) root.anchorPopupTo(root.aiAnchorItem);
+        root.aiVisible = true;
     }
 
     // ---------- Locusfavs popup state ----------
@@ -1626,6 +1662,7 @@ Item {
                 if (t === "eth") {
                     root.netIcon = "󰀂"; root.netKind = "eth";
                     root.wifiSsid = ""; root.wifiSignal = 0;
+                    root.syncWifiActiveState("");
                 } else if (t.startsWith("wifi:")) {
                     // Split on the first two colons: signal pct, then SSID
                     // (which may itself contain colons, so a naive split
@@ -1636,9 +1673,11 @@ Item {
                     const ssid = c < 0 ? "" : rest.slice(c + 1);
                     root.netIcon = root.wifiBarsGlyph(sig); root.netKind = "wifi";
                     root.wifiSignal = sig; root.wifiSsid = ssid;
+                    root.syncWifiActiveState(ssid);
                 } else {
                     root.netIcon = "󰤮"; root.netKind = "none";
                     root.wifiSsid = ""; root.wifiSignal = 0;
+                    root.syncWifiActiveState("");
                 }
             }
         }
@@ -2009,7 +2048,7 @@ Item {
                         radioOn = line.slice(6) === "on";
                         continue;
                     }
-                    if (line.startsWith("KNOWN|")) known[line.slice(6)] = true;
+                    if (line.startsWith("KNOWN|")) known[line.slice(6).trim()] = true;
                 }
                 for (const line of lines) {
                     if (line.startsWith("RADIO|") || line.startsWith("---")
@@ -2024,7 +2063,7 @@ Item {
                         ssid: f[1],
                         signal: pct,
                         security: f[2],
-                        known: known[f[1]] === true
+                        known: known[f[1].trim()] === true
                     });
                 }
                 networks.sort((a, b) => (b.inUse - a.inUse) || (b.signal - a.signal));
@@ -2527,6 +2566,13 @@ Item {
     }
     Timer { id: keepMedia; interval: 400; onTriggered: mediaLoader.source = "" }
 
+    Loader { id: aiLoader }
+    onAiVisibleChanged: {
+        if (root.aiVisible) { keepAi.stop(); aiLoader.setSource("AiPopup.qml", { root: root }); }
+        else keepAi.restart();
+    }
+    Timer { id: keepAi; interval: 400; onTriggered: aiLoader.source = "" }
+
     Osd              { root: root }
     NotificationOverlay { root: root }
 
@@ -2767,6 +2813,29 @@ Item {
             for (var i = 0; i < entries.length; i++) lines.push(entries[i].value);
             return lines.join("\n");
         }
+    }
+
+    IpcHandler {
+        target: "ai"
+        function toggle(): void {
+            if (root.aiVisible) root.aiVisible = false;
+            else root.openAi();
+        }
+        function open(): void { root.openAi(); }
+        function close(): void { root.aiVisible = false; }
+        function refresh(): string { aiService.refresh(true); return "ok"; }
+        function status(): string { return aiService.statusText; }
+    }
+
+    IpcHandler {
+        target: "aipopup"
+        function toggle(): void {
+            if (root.aiVisible) root.aiVisible = false;
+            else root.openAi();
+        }
+        function open(): void { root.openAi(); }
+        function close(): void { root.aiVisible = false; }
+        function refresh(): string { aiService.refresh(true); return "ok"; }
     }
 
     IpcHandler {

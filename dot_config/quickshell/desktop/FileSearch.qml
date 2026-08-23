@@ -68,7 +68,7 @@ Item {
     }
 
     function buildFdArgs(tokens) {
-        const args = ["--type", "f", "--type", "d", "--max-depth", "8", "--max-results", "200"];
+        const args = ["--type", "f", "--type", "d", "--max-depth", "6", "--max-results", "150"];
         const excludes = Data.fdExcludes;
         for (let i = 0; i < excludes.length; i++) {
             args.push("--exclude");
@@ -78,7 +78,7 @@ Item {
         //   "mrrobot/*.txt" -> full-path glob, prefix `**/` so fd crosses
         //                      directory boundaries (a bare `*` doesn't).
         //   "*.png"         -> basename glob, no full-path scoping.
-        //   "img wall"      -> fzf-style regex, tokens joined by `.*`.
+        //   "img wall"      -> regex tokens joined by `.*`.
         const raw = tokens.join(" ");
         const hasSlash = raw.indexOf("/") >= 0;
         const hasGlob = raw.indexOf("*") >= 0 || raw.indexOf("?") >= 0;
@@ -93,7 +93,12 @@ Item {
         } else {
             args.push(tokens.join(".*"));
         }
-        args.push(fileSearch.homeDir);
+
+        // Search explicit roots: ~ (visible items only), ~/.config, ~/.local/bin, ~/.local/share/applications
+        const roots = Data.getSearchRoots(fileSearch.homeDir);
+        for (let i = 0; i < roots.length; i++) {
+            args.push(roots[i]);
+        }
         return args;
     }
 
@@ -107,14 +112,18 @@ Item {
         stdout: StdioCollector {
             onStreamFinished: {
                 const lines = this.text.split("\n").filter(s => s.length > 0);
-                const out = new Array(lines.length);
+                const out = [];
+                const seen = {};
                 const home = fileSearch.homeDir;
                 for (let i = 0; i < lines.length; i++) {
                     const path = lines[i];
+                    if (seen[path]) continue;
+                    seen[path] = true;
+
                     const dirShort = Data.tildify(Data.dirname(path), home);
                     const extIcon = Data.fileIcon(path);
                     const icon = extIcon && extIcon.length > 0 ? extIcon : "󰉋";
-                    out[i] = {
+                    out.push({
                         title: Data.basename(path),
                         comment: dirShort,
                         keywords: "",
@@ -123,7 +132,7 @@ Item {
                         path: path,
                         exec: Data.openUrl(path),
                         rawCategory: true
-                    };
+                    });
                 }
                 fileSearch.items = out;
                 fileSearch.updatePreview();
@@ -133,7 +142,7 @@ Item {
 
     Timer {
         id: fdDebounce
-        interval: 120
+        interval: 100
         repeat: false
         onTriggered: {
             const tokens = fileSearch.queryTokens;
@@ -142,8 +151,8 @@ Item {
                 fileSearch.updatePreview();
                 return;
             }
-            fdProc.command = ["fd"].concat(fileSearch.buildFdArgs(tokens));
             fdProc.running = false;
+            fdProc.command = ["fd"].concat(fileSearch.buildFdArgs(tokens));
             fdProc.running = true;
         }
     }

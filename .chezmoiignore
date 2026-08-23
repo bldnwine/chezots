@@ -1,0 +1,5 @@
+.config/quickshell/.git
+.config/quickshell/.git/**
+.config/quickshell/desktop/scripts/calendar-sync/omarchy_calendar_sync/__pycache__
+.config/quickshell/desktop/scripts/calendar-sync/omarchy_calendar_sync/__pycache__/**
+

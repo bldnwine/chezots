@@ -13,6 +13,7 @@ CardWindow {
     theme: root
     plain: true
     revealed: root.networkVisible
+    escDismiss: netpopup.passphraseSsid === ""
     cardWidth: 390
     layerNamespace: "omarchy-network"
     title: "NETWORK"
@@ -29,11 +30,37 @@ CardWindow {
 
     // 0 = RADIO toggle, 1 = SCAN, 2..N+1 = network rows.
     property int kbdIndex: 2
-    readonly property int _headerCount: 2
-    readonly property var _visibleNets: root.wifiRadioOn
-                                        ? root.wifiNetworks.slice(0, 8)
-                                        : []
-    readonly property int _kbdMax: _headerCount + _visibleNets.length
+    property string kbdSsid: ""
+    readonly property int headerCount: 2
+    property var visibleNets: root.wifiRadioOn
+                              ? root.wifiNetworks.slice(0, 8)
+                              : []
+    readonly property int kbdMax: headerCount + visibleNets.length
+
+    // Re-home the selection cursor whenever the network list changes
+    onVisibleNetsChanged: netpopup.rehome()
+
+    // Keep kbdSsid in sync whenever the keyboard cursor moves
+    onKbdIndexChanged: netpopup.syncSsid()
+
+    function syncSsid() {
+        const n = netpopup.visibleNets[netpopup.kbdIndex - netpopup.headerCount];
+        netpopup.kbdSsid = n ? n.ssid : "";
+    }
+
+    function rehome() {
+        if (netpopup.kbdSsid !== "") {
+            const nets = netpopup.visibleNets;
+            for (let i = 0; i < nets.length; i++) {
+                if (nets[i].ssid === netpopup.kbdSsid) {
+                    netpopup.kbdIndex = i + netpopup.headerCount;
+                    return;
+                }
+            }
+        }
+        if (netpopup.kbdIndex >= netpopup.kbdMax)
+            netpopup.kbdIndex = Math.max(0, netpopup.kbdMax - 1);
+    }
 
     property string passphraseSsid: ""
     property string passphraseText: ""
@@ -43,8 +70,11 @@ CardWindow {
 
     function kbdHandle(event) {
         const k = event.key;
-        if (netpopup.passphraseSsid !== "") return true;
-        const n = netpopup._kbdMax;
+        if (netpopup.passphraseSsid !== "") {
+            if (k === Qt.Key_Escape) netpopup._cancelPassphrase();
+            return true;
+        }
+        const n = netpopup.kbdMax;
         if (n === 0) return false;
         if (k === Qt.Key_Up || k === Qt.Key_Left) {
             netpopup.kbdIndex = Math.max(0, netpopup.kbdIndex - 1);
@@ -59,7 +89,7 @@ CardWindow {
             return true;
         }
         if (k === Qt.Key_T) {
-            const net = netpopup._visibleNets[netpopup.kbdIndex - netpopup._headerCount];
+            const net = netpopup.visibleNets[netpopup.kbdIndex - netpopup.headerCount];
             if (net && net.known) root.wifiToggleAutoConnect(net.ssid);
             return true;
         }
@@ -68,7 +98,7 @@ CardWindow {
             return true;
         }
         if (k === Qt.Key_U) {
-            const net = netpopup._visibleNets[netpopup.kbdIndex - netpopup._headerCount];
+            const net = netpopup.visibleNets[netpopup.kbdIndex - netpopup.headerCount];
             if (net && net.known && !net.inUse) root.forgetWifi(net.ssid);
             return true;
         }
@@ -80,7 +110,7 @@ CardWindow {
         if (netpopup.passphraseSsid !== "" || root.wifiBusy) return;
         if (i === 0) { root.toggleWifiRadio(); return; }
         if (i === 1) { root.refreshWifi(); return; }
-        const net = netpopup._visibleNets[i - netpopup._headerCount];
+        const net = netpopup.visibleNets[i - netpopup.headerCount];
         if (!net) return;
         if (net.inUse) { root.disconnectWifi(); return; }
         root.wifiConnect(net.ssid);
@@ -106,7 +136,7 @@ CardWindow {
     function _onWifiResult(ssid, ok) {
         if (ok) { netpopup.statusText = ""; return; }
         netpopup.statusText = "CONNECT FAILED";
-        const net = netpopup._visibleNets.find(n => n && n.ssid === ssid);
+        const net = netpopup.visibleNets.find(n => n && n.ssid === ssid);
         if (net && !net.known && netpopup._isProtected(net.security)) netpopup._openPassphrase(ssid);
     }
 
@@ -196,11 +226,11 @@ CardWindow {
 
         Repeater {
             id: netRepeater
-            model: netpopup._visibleNets
+            model: netpopup.visibleNets
             delegate: Rectangle {
                 required property var modelData
                 required property int index
-                readonly property bool kbdFocused: netpopup.kbdIndex === (index + netpopup._headerCount)
+                readonly property bool kbdFocused: netpopup.kbdIndex === (index + netpopup.headerCount)
                 readonly property bool isPassRow: netpopup.passphraseSsid === modelData.ssid
                 readonly property bool dimmed: !modelData.known && !modelData.inUse
                 width: col.width
@@ -337,14 +367,26 @@ CardWindow {
                                 root.forgetWifi(modelData.ssid);
                             return;
                         }
-                        netpopup._activateAt(index + netpopup._headerCount);
+                        netpopup._activateAt(index + netpopup.headerCount);
                     }
                 }
             }
         }
 
         Text {
-            visible: root.wifiRadioOn && root.wifiNetworks.length === 0 && !root.wifiScanning
+            visible: root.wifiRadioOn && netpopup.visibleNets.length === 0 && root.wifiScanning
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            text: "SCANNING FOR NETWORKS…"
+            color: root.inkDeep
+            font.family: root.mono
+            font.pixelSize: 10
+            font.letterSpacing: 2
+            opacity: 0.6
+        }
+
+        Text {
+            visible: root.wifiRadioOn && netpopup.visibleNets.length === 0 && !root.wifiScanning
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
             text: "NO NETWORKS FOUND"
@@ -386,7 +428,7 @@ CardWindow {
                     }
                     readonly property bool _warn: (modelData.kind === "ping"
                                                    || modelData.kind === "loss")
-                                                  && root.netPacketLoss > 0
+                                                  && (root.netPacketLoss > 0 || _val === "TIMEOUT")
                     readonly property bool _copy: modelData.copy && _val !== "—"
                     width: parent.width
                     height: 20

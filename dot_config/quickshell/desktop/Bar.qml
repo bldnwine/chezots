@@ -355,6 +355,76 @@ PanelWindow {
                 }
             }
 
+            Item {
+                id: aiMod
+                readonly property var ai: bar.root.aiService
+                visible: bar.root.aiVisible || (aiMod.ai && aiMod.ai.agentRunning)
+                Layout.alignment: bar.root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
+                Layout.preferredWidth: visible ? (bar.root.isHorizontal ? 24 : bar.root.barHeight) : 0
+                Layout.preferredHeight: visible ? (bar.root.isHorizontal ? bar.root.barHeight : 24) : 0
+
+                Component.onCompleted: bar.root.aiAnchorItem = this
+
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    radius: bar.root.cornerRadius
+                    color: aiMouse.containsMouse ? Qt.rgba(bar.root.ink.r, bar.root.ink.g, bar.root.ink.b, 0.08) : "transparent"
+                    Behavior on color { ColorAnimation { duration: 180 } }
+                }
+
+                Bloom { id: aiBloom; root: bar.root }
+
+                AiIcon {
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: -1
+                    iconSize: 13
+                    fontFamily: bar.root.mono
+                    glyphYOffset: -1
+                    color: aiMod.ai && aiMod.ai.agentState === "working" ? bar.root.accent : bar.root.ink
+                    badgeColor: aiMod.ai && aiMod.ai.agentState === "action_needed" ? bar.root.warn : bar.root.seal
+                    successColor: bar.root.accent
+                    state: aiMod.ai ? aiMod.ai.agentState : "idle"
+                }
+
+                readonly property string tipText: aiMod.ai ? aiMod.ai.tipText : "Antigravity"
+
+                Timer {
+                    id: aiTipDelay
+                    interval: 320
+                    onTriggered: {
+                        const p = aiMod.mapToItem(null, aiMod.width / 2, aiMod.height / 2);
+                        bar.root.showTooltip(aiMod.tipText, p.x, p.y);
+                    }
+                }
+
+                MouseArea {
+                    id: aiMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: {
+                        aiBloom.fire(mouseX, mouseY);
+                        aiTipDelay.restart();
+                    }
+                    onExited: {
+                        aiTipDelay.stop();
+                        bar.root.hideTooltip(aiMod.tipText);
+                    }
+                    onClicked: (e) => {
+                        aiTipDelay.stop();
+                        bar.root.hideTooltip(aiMod.tipText);
+                        if (e.button === Qt.MiddleButton) {
+                            if (aiMod.ai) aiMod.ai.refresh(true);
+                        } else {
+                            if (bar.root.aiVisible) bar.root.aiVisible = false;
+                            else bar.root.openAi();
+                        }
+                    }
+                }
+            }
+
             Module {
                 root: bar.root
                 glyph: bar.root.btIcon
@@ -565,7 +635,8 @@ PanelWindow {
                 visible: bar.root.recordingActive
                 color: bar.root.seal
                 tooltip: "RECORDING"
-                fontSize: 9
+                fontSize: 12
+                glyphYOffset: -1
                 onActivated: bar.root.run("qs -c desktop ipc call screenrecord toggle")
             }
 
