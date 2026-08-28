@@ -141,6 +141,8 @@ const omarchyItems = [
     { title: "Notes",               icon: "󰍔", category: "Capture", keywords: "notes note markdown scratchpad journal nano kitty editor write text",    exec: "kitty nano" },
 
     // ----- Trigger -----
+    { title: "Notification Center", icon: "󰂚", category: "Trigger", keywords: "notification notifications center bell archive history unread alerts",              exec: "qs -c desktop ipc call notification-center toggle" },
+    { title: "Clear Notifications", icon: "󰂚", category: "Trigger", keywords: "clear notifications archive purge delete history",                                    exec: "qs -c desktop ipc call notification-center clear" },
     { title: "Reminders",           icon: "󰔛", category: "Trigger", keywords: "reminder reminders alarm timer notify wake notification show list pending set create", exec: "qs -c desktop ipc call reminder open" },
     { title: "Clear Reminders",     icon: "󰔛", category: "Trigger", keywords: "reminders clear delete remove all cancel stop",                                    exec: "bash -c '$HOME/.config/quickshell/desktop/scripts/reminder clear'" },
     { title: "Transcode Media",     icon: "󰧸", category: "Trigger", keywords: "transcode media video audio convert compress mp4 mp3",                              exec: "omarchy-transcode" },

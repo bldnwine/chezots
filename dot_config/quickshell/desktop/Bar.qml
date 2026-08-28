@@ -426,6 +426,44 @@ PanelWindow {
             }
 
             Module {
+                id: notifMod
+                root: bar.root
+                glyph: bar.root.doNotDisturb ? "󰂛" : "󰂚"
+                color: bar.root.doNotDisturb ? bar.root.seal : bar.root.ink
+                fontSize: 13
+                tooltip: {
+                    const s = bar.root.notificationCenterService;
+                    const count = s ? s.unread : 0;
+                    if (bar.root.doNotDisturb) return count > 0 ? "Notifications silenced · " + count + " unread" : "Notifications silenced";
+                    if (count === 1) return "1 new notification";
+                    if (count > 1) return count + " new notifications";
+                    return "Notifications";
+                }
+                Component.onCompleted: bar.root.notificationAnchorItem = this
+                onActivated: {
+                    if (bar.root.notificationCenterVisible) bar.root.notificationCenterVisible = false;
+                    else bar.root.openNotificationCenter();
+                }
+                onRightActivated: bar.root.toggleDnd()
+
+                // Unread dot indicator
+                Rectangle {
+                    visible: {
+                        const s = bar.root.notificationCenterService;
+                        return s ? (s.unread > 0) : false;
+                    }
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4
+                    anchors.top: parent.top
+                    anchors.topMargin: 4
+                    width: 5
+                    height: 5
+                    radius: 2.5
+                    color: bar.root.accent
+                }
+            }
+
+            Module {
                 root: bar.root
                 glyph: bar.root.btIcon
                 fontSize: 13

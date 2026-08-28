@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+for cmd in bsdtar fc-cache find; do
+    if ! command -v "$cmd" &>/dev/null; then
+        printf "Error: Required binary '%s' is not installed.\n" "$cmd" >&2
+        exit 1
+    fi
+done
+
+ARCHIVES=()
+TMPDIRS=()
+cleanup() {
+    rm -rf "${TMPDIRS[@]:-}"
+    rm -f "${CHOOSER_OUT:-}"
+}
+trap cleanup EXIT
+
+if [[ $# -gt 0 ]]; then
+    ARCHIVES=("$@")
+else
+    if ! command -v yazi &>/dev/null; then
+        printf "Error: No path provided and 'yazi' is not installed.\n" >&2
+        exit 1
+    fi
+    CHOOSER_OUT="$(mktemp)"
+    yazi --chooser-file="$CHOOSER_OUT"
+    if [[ ! -s "$CHOOSER_OUT" ]]; then
+        printf "No file selected. Aborting.\n" >&2
+        exit 0
+    fi
+    mapfile -t ARCHIVES < "$CHOOSER_OUT"
+fi
+
+BASE_FONT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
+mkdir -p "$BASE_FONT_DIR"
+INSTALLED_ANY=false
+declare -A INSTALLED_TARGETS=()
+
+strip_archive_ext() {
+    local name="$1"
+    # loop to handle .tar.gz, .tar.xz etc.
+    while [[ "$name" =~ \.(tar\.gz|tar\.bz2|tar\.xz|tar\.zst|zip|tar|gz|bz2|xz|zst|7z|rar)$ ]]; do
+        name="${name%.*}"
+        if [[ "$name" == *.tar ]]; then
+            name="${name%.tar}"
+        fi
+    done
+    # also strip raw font extensions if passed directly
+    if [[ "$name" =~ \.(ttf|otf|ttc|otc|woff|woff2)$ ]]; then
+        name="${name%.*}"
+    fi
+    printf "%s" "$name"
+}
+
+is_font_file() {
+    local f="$1"
+    [[ "$f" =~ \.(ttf|otf|ttc|otc)$ ]]
+}
+
+for item in "${ARCHIVES[@]}"; do
+    if [[ ! -e "$item" ]]; then
+        printf "Warning: '%s' does not exist. Skipping.\n" "$item" >&2
+        continue
+    fi
+
+    filename="$(basename -- "$item")"
+    folder_name="$(strip_archive_ext "$filename")"
+    # safety fallback
+    if [[ -z "$folder_name" || "$folder_name" == "." || "$folder_name" == ".." ]]; then
+        folder_name="font_$(date +%s%N)"
+    fi
+    target_dir="$BASE_FONT_DIR/$folder_name"
+
+    # safety: never allow rm -rf outside BASE_FONT_DIR
+    if [[ "$target_dir" != "$BASE_FONT_DIR"/* ]]; then
+        printf "Warning: Invalid target '%s'. Skipping.\n" "$target_dir" >&2
+        continue
+    fi
+
+    printf "Processing: %s\n" "$filename"
+
+    font_files=()
+    temp_extract=""
+
+    if [[ -d "$item" ]]; then
+        # Input is already a directory
+        mapfile -d '' -t font_files < <(find "$item" -type f \( \
+            -iname "*.ttf" -o \
+            -iname "*.otf" -o \
+            -iname "*.ttc" -o \
+            -iname "*.otc" \
+        \) -print0)
+    elif is_font_file "$item"; then
+        # Input is a direct font file
+        font_files=("$item")
+    else
+        # Input is an archive
+        temp_extract="$(mktemp -d)"
+        TMPDIRS+=("$temp_extract")
+
+        if ! bsdtar -xf "$item" -C "$temp_extract"; then
+            printf "Warning: Failed to extract '%s'. Skipping.\n" "$item" >&2
+            continue
+        fi
+
+        mapfile -d '' -t font_files < <(find "$temp_extract" -type f \( \
+            -iname "*.ttf" -o \
+            -iname "*.otf" -o \
+            -iname "*.ttc" -o \
+            -iname "*.otc" \
+        \) -print0)
+    fi
+
+    if [[ ${#font_files[@]} -eq 0 ]]; then
+        printf "Warning: No font files found in '%s'. Skipping.\n" "$item" >&2
+        continue
+    fi
+
+    mkdir -p -- "$target_dir"
+
+    count=0
+    for file in "${font_files[@]}"; do
+        base="$(basename -- "$file")"
+        dest="$target_dir/$base"
+        # avoid collision: Font.ttf -> Font_1.ttf
+        if [[ -e "$dest" ]]; then
+            stem="${base%.*}"; ext="${base##*.}"
+            i=1; while [[ -e "$target_dir/${stem}_${i}.${ext}" ]]; do i=$((i + 1)); done
+            dest="$target_dir/${stem}_${i}.${ext}"
+        fi
+        if [[ -n "$temp_extract" ]]; then
+            mv -f -- "$file" "$dest"
+        else
+            cp -f -- "$file" "$dest"
+        fi
+        count=$((count + 1))
+    done
+
+    printf "Installed %d file(s) to '%s'.\n\n" "$count" "$target_dir"
+    INSTALLED_TARGETS["$target_dir"]=1
+    INSTALLED_ANY=true
+done
+
+if [[ "$INSTALLED_ANY" == true ]]; then
+    printf "Updating fontconfig cache...\n"
+    fc-cache -f "$BASE_FONT_DIR"
+    printf "Installation complete.\n\n"
+    printf "=== Installed Fonts Summary ===\n"
+    for tdir in "${!INSTALLED_TARGETS[@]}"; do
+        if command -v fc-scan &>/dev/null; then
+            fc-scan "$tdir" --format="  Family: %{family}\n  Style:  %{style}\n\n" 2>/dev/null | awk '!seen[$0]++'
+        fi
+    done
+else
+    printf "No fonts were installed.\n"
+fi

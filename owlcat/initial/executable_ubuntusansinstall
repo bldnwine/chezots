@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+FONT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/UbuntuSansNerd"
+ZIP_URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/UbuntuSans.zip"
+
+# 1. Dependency checks
+for cmd in curl bsdtar fc-cache fc-list; do
+    if ! command -v "$cmd" &>/dev/null; then
+        printf "Error: Required binary '%s' is not installed.\n" "$cmd" >&2
+        exit 1
+    fi
+done
+
+# 2. Prepare clean destination directory
+mkdir -p "$FONT_DIR"
+find "$FONT_DIR" -type f -delete
+
+# 3. Stream download directly to archive extraction (exclude non-font files)
+printf "Downloading and extracting UbuntuSans Nerd Font...\n"
+curl -fLsS "$ZIP_URL" | bsdtar -x -f - -C "$FONT_DIR" --include="*.[o,t]tf"
+
+# 4. Refresh font cache specifically for the target directory
+printf "Updating fontconfig cache...\n"
+fc-cache -f "$FONT_DIR"
+
+# 5. Output installed font families
+printf "\nSuccessfully installed:\n"
+fc-list : family | grep -i "UbuntuSans" | sort -u

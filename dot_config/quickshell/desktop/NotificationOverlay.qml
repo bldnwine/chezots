@@ -9,11 +9,69 @@ Item {
     required property var root
 
     property bool opened: false
-    property bool doNotDisturb: false
+    readonly property bool doNotDisturb: Boolean(root.root && root.root.doNotDisturb)
     property var currentNotif: null
 
     property real _opacity: 0
     Behavior on _opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+
+    function recordNotification(notification) {
+        if (!notification) return;
+        var stamp = Date.now();
+        var id = notification.id || Math.floor(Math.random() * 100000);
+        var urgency = 1;
+        if (notification.urgency === NotificationUrgency.Low) urgency = 0;
+        else if (notification.urgency === NotificationUrgency.Critical) urgency = 2;
+
+        var execArgv = [];
+        if (notification.actions) {
+            for (var i = 0; i < notification.actions.length; i++) {
+                var a = notification.actions[i];
+                if (a && a.identifier) execArgv.push(a.identifier);
+            }
+        }
+
+        var glyph = "";
+        var image = "";
+        try {
+            if (notification.hints) {
+                if (notification.hints["image-path"]) image = String(notification.hints["image-path"]);
+                if (notification.hints["image_path"]) image = String(notification.hints["image_path"]);
+                if (notification.hints["omarchy-glyph"]) glyph = String(notification.hints["omarchy-glyph"]);
+                if (notification.hints["glyph"]) glyph = String(notification.hints["glyph"]);
+            }
+        } catch (e) {}
+        if (!image && notification.image) image = String(notification.image);
+
+        var data = {
+            key: stamp + "-" + id,
+            app: String(notification.appName || ""),
+            appIcon: String(notification.appIcon || ""),
+            summary: String(notification.summary || ""),
+            body: String(notification.body || ""),
+            image: image,
+            glyph: glyph,
+            urgency: urgency,
+            timestamp: stamp,
+            execArgv: execArgv
+        };
+
+        var dir = Quickshell.env("HOME") + "/.local/state/quickshell-desktop/notifications";
+        var file = dir + "/" + data.key + ".json";
+        var jsonStr = JSON.stringify(data);
+
+        Quickshell.execDetached(["bash", "-c", "mkdir -p " + JSON.stringify(dir) + " && printf '%s' " + JSON.stringify(jsonStr) + " > " + JSON.stringify(file)]);
+
+        if (root.root && root.root.activeNotifications) {
+            root.root.activeNotifications[data.key] = notification;
+            var cleanupKey = data.key;
+            notification.closed.connect(function() {
+                if (root.root && root.root.activeNotifications) {
+                    delete root.root.activeNotifications[cleanupKey];
+                }
+            });
+        }
+    }
 
     function showNotif(notification) {
         root.currentNotif = notification;
@@ -56,11 +114,11 @@ Item {
         imageSupported: true
         persistenceSupported: true
         onNotification: function(notification) {
+            notification.tracked = true;
+            root.recordNotification(notification);
             if (root.doNotDisturb) {
-                notification.tracked = false;
                 return;
             }
-            notification.tracked = true;
             root.showNotif(notification);
         }
     }
@@ -71,10 +129,7 @@ Item {
         function ping(): string { return "ok"; }
         function state(): string { return root.opened ? "open" : "closed"; }
         function toggleDnd(): string {
-            root.doNotDisturb = !root.doNotDisturb;
-            if (root.root) root.root.run("qs -c desktop ipc call -- osd show "
-                + JSON.stringify({ icon: "󰂛",
-                                   message: root.doNotDisturb ? "NOTIFICATIONS OFF" : "NOTIFICATIONS ON" }));
+            if (root.root) root.root.toggleDnd();
             return root.doNotDisturb ? "on" : "off";
         }
     }

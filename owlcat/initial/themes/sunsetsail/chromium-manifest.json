@@ -1,0 +1,72 @@
+{
+    "manifest_version": 2,
+    "name": "Aether Theme",
+    "version": "1.0",
+    "description": "Aether dynamically generated theme",
+    "theme": {
+        "images": {
+            "theme_frame": "images/theme_frame.png",
+            "theme_toolbar": "images/theme_toolbar.png",
+            "theme_tab_background": "images/theme_tab_background.png",
+            "theme_ntp_background": "images/theme_ntp_background.png"
+        },
+        "colors": {
+            "frame": [#0E141E],
+            "frame_inactive": [#6c6f75],
+            "frame_incognito": [#0E141E],
+            "frame_incognito_inactive": [#0E141E],
+            "toolbar": [#0E141E],
+            "tab_background_text": [#F0CF8E],
+            "tab_text": [#F0CF8E],
+            "bookmark_text": [#F0CF8E],
+            "ntp_background": [#0E141E],
+            "ntp_text": [#F0CF8E],
+            "ntp_link": [#ab97dc],
+            "ntp_link_underline": [#ab97dc],
+            "control_background": [#0E141E],
+            "button_background": [#6c6f75],
+            "button_background_hover": [#ab97dc],
+            "button_background_active": [#ab97dc],
+            "button_foreground": [#F0CF8E],
+            "button_foreground_hover": [#0E141E],
+            "button_foreground_active": [#0E141E],
+            "omnibox_background": [#0E141E],
+            "omnibox_text": [#F0CF8E],
+            "omnibox_text_hover": [#F0CF8E],
+            "omnibox_text_focus": [#F0CF8E],
+            "omnibox_bubble_background": [#6c6f75],
+            "omnibox_bubble_text": [#F0CF8E],
+            "location_bar_background": [#0E141E],
+            "location_bar_border": [#6c6f75],
+            "location_bar_text": [#F0CF8E],
+            "incognito_frame": [#0E141E],
+            "incognito_toolbar": [#0E141E],
+            "incognito_tab_background": [#0E141E],
+            "incognito_tab_text": [#F0CF8E],
+            "incognito_bookmark_text": [#F0CF8E],
+            "ntp_background": [#0E141E],
+            "ntp_text": [#F0CF8E],
+            "ntp_link": [#ab97dc],
+            "ntp_link_underline": [#ab97dc],
+            "ntp_header": [#F0CF8E],
+            "ntp_section": [#F0CF8E],
+            "ntp_section_link": [#ab97dc],
+            "ntp_section_link_underline": [#ab97dc],
+            "infobars": [#0E141E],
+            "info_bar_border": [#6c6f75]
+        },
+        "tints": {
+            "buttons": [0.0, 0.0, 1.0],
+            "frame": [0.0, 0.0, 1.0],
+            "frame_inactive": [0.0, 0.0, 0.7],
+            "frame_incognito": [0.0, 0.0, 0.5],
+            "frame_incognito_inactive": [0.0, 0.0, 0.3],
+            "background_tab": [0.0, 0.0, 0.7]
+        },
+        "properties": {
+            "ntp_background_repeat": "no-repeat",
+            "ntp_background_position": "center",
+            "ntp_background_size": "cover"
+        }
+    }
+}

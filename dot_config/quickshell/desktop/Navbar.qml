@@ -48,7 +48,9 @@ Item {
     // BMP Private Use Area icons; written via fromCodePoint so the source
     // stays ASCII-safe.
     readonly property string icoOmarchy: String.fromCodePoint(0xe900)
-    readonly property string icoBtOn:    String.fromCodePoint(0xf294)
+    readonly property string icoBtOn:    String.fromCodePoint(0xf00af)
+    readonly property string icoBtOff:   String.fromCodePoint(0xf00b2)
+    readonly property string icoBtConnected: String.fromCodePoint(0xf00b1)
     readonly property string icoVol1:    String.fromCodePoint(0xf026)
     readonly property string icoVol2:    String.fromCodePoint(0xf027)
     readonly property string icoVol3:    String.fromCodePoint(0xf028)
@@ -204,6 +206,7 @@ Item {
     property Item clipboardAnchorItem: null
     property Item warpAnchorItem:      null
     property Item aiAnchorItem:        null
+    property Item notificationAnchorItem: null
 
     function anchorPopupTo(item) {
         const p = item.mapToItem(null, item.width / 2, item.height / 2);
@@ -378,7 +381,7 @@ Item {
         repeat: false
         onTriggered: root.refreshWifi()
     }
-    property string btIcon:  String.fromCodePoint(0xf294)
+    property string btIcon:  String.fromCodePoint(0xf00b2)
     property bool   btPowered: false
     property int    btCount: 0
     // Bluetooth device list for the Quick panel. Each entry:
@@ -774,6 +777,46 @@ Item {
     function openAi() {
         if (root.aiAnchorItem) root.anchorPopupTo(root.aiAnchorItem);
         root.aiVisible = true;
+    }
+
+    // ---------- Notification Center state ----------
+    property bool doNotDisturb: false
+    property var activeNotifications: ({})
+    function toggleDnd() {
+        root.doNotDisturb = !root.doNotDisturb;
+        root.run("qs -c desktop ipc call -- osd show "
+            + JSON.stringify({ icon: root.doNotDisturb ? "󰂛" : "󰂚",
+                               message: root.doNotDisturb ? "NOTIFICATIONS OFF" : "NOTIFICATIONS ON" }));
+    }
+
+    function invokeNotification(key) {
+        if (!key || !root.activeNotifications) return false;
+        var notif = root.activeNotifications[key];
+        if (!notif) return false;
+        try {
+            if (notif.actions && notif.actions.length > 0) {
+                for (var i = 0; i < notif.actions.length; i++) {
+                    var a = notif.actions[i];
+                    if (a && (a.identifier === "default" || a.identifier === "0" || notif.actions.length === 1)) {
+                        a.invoke();
+                        return true;
+                    }
+                }
+                if (notif.actions[0]) {
+                    notif.actions[0].invoke();
+                    return true;
+                }
+            }
+        } catch (e) {}
+        return false;
+    }
+
+    property bool notificationCenterVisible: false
+    NotificationCenterService { id: notificationCenterService }
+    readonly property var notificationCenterService: notificationCenterService
+    function openNotificationCenter() {
+        if (root.notificationAnchorItem) root.anchorPopupTo(root.notificationAnchorItem);
+        root.notificationCenterVisible = true;
     }
 
     // ---------- Locusfavs popup state ----------
@@ -1862,10 +1905,11 @@ Item {
                 const powered = (s === "on");
                 if (root.btPowered !== powered) root.btPowered = powered;
                 if (!powered) {
-                    if (root.btIcon !== root.icoBtOn) root.btIcon = root.icoBtOn;
+                    if (root.btIcon !== root.icoBtOff) root.btIcon = root.icoBtOff;
                     if (root.btCount !== 0)  root.btCount = 0;
                 } else {
-                    if (root.btIcon !== root.icoBtOn) root.btIcon = root.icoBtOn;
+                    const icon = (root.btCount > 0) ? root.icoBtConnected : root.icoBtOn;
+                    if (root.btIcon !== icon) root.btIcon = icon;
                 }
             }
         }
@@ -1986,7 +2030,13 @@ Item {
                 root._btDevicesSer = serialised;
                 root.btDevices = devs;
                 const connCount = devs.filter(d => d.connected).length;
-                if (root.btCount !== connCount) root.btCount = connCount;
+                if (root.btCount !== connCount) {
+                    root.btCount = connCount;
+                    if (root.btPowered) {
+                        const icon = (connCount > 0) ? root.icoBtConnected : root.icoBtOn;
+                        if (root.btIcon !== icon) root.btIcon = icon;
+                    }
+                }
             }
         }
     }
@@ -2573,8 +2623,44 @@ Item {
     }
     Timer { id: keepAi; interval: 400; onTriggered: aiLoader.source = "" }
 
+    Loader { id: notificationCenterLoader }
+    onNotificationCenterVisibleChanged: {
+        if (root.notificationCenterVisible) {
+            keepNotificationCenter.stop();
+            notificationCenterLoader.setSource("NotificationPopup.qml", { root: root });
+        } else {
+            keepNotificationCenter.restart();
+        }
+    }
+    Timer { id: keepNotificationCenter; interval: 400; onTriggered: notificationCenterLoader.source = "" }
+
     Osd              { root: root }
     NotificationOverlay { root: root }
+
+    IpcHandler {
+        target: "notification-center"
+        function toggle() {
+            if (root.notificationCenterVisible) root.notificationCenterVisible = false;
+            else root.openNotificationCenter();
+        }
+        function open()  { root.openNotificationCenter(); }
+        function close() { root.notificationCenterVisible = false; }
+        function toggleDnd(): string { root.toggleDnd(); return root.doNotDisturb ? "on" : "off"; }
+        function clear(): string { if (notificationCenterService) notificationCenterService.clearAll(); return "ok"; }
+        function seed(count: int): string {
+            if (notificationCenterService) Quickshell.execDetached(notificationCenterService.storeCommand(["seed", String(count > 0 ? count : 25)]));
+            return "seeding";
+        }
+        function unread(): int { return notificationCenterService ? notificationCenterService.unread : 0; }
+        function state(): string {
+            return JSON.stringify({
+                visible: root.notificationCenterVisible,
+                dnd: root.doNotDisturb,
+                entries: notificationCenterService ? notificationCenterService.entries.length : 0,
+                unread: notificationCenterService ? notificationCenterService.unread : 0
+            });
+        }
+    }
 
     IpcHandler {
         target: "media"

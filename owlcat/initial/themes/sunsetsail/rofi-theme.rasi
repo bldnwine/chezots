@@ -1,0 +1,79 @@
+* {
+    font: "JetBrainsMono Nerd Font 14";
+    background-color: transparent;
+}
+
+configuration {
+    modi:        "drun,run,window";
+    show-icons:  false;
+    drun-display-format: "{name}";
+}
+
+window {
+    location:         center;
+    width:            315px;
+    height:           300px;
+    border:           0px;
+    border-color:     #F0CF8E;
+    border-radius:    15px;
+    background-color: #0E141E;
+}
+
+mainbox {
+    padding: 5px 10px;
+}
+
+prompt {
+    enabled: false;
+}
+
+inputbar {
+    children:         [ entry ];
+    padding:          0 0 8px 0;
+    background-color: transparent;
+}
+
+entry {
+    placeholder:       "";
+    placeholder-color: #F0CF8E;
+    cursor:            text;
+    cursor-color:      #ab97dc;
+    text-color:        #F0CF8E;
+    background-color:  transparent;
+}
+
+listview {
+    lines:            10;
+    spacing:          2px;
+    cycle:            true;
+    dynamic:          true;
+    layout:           vertical;
+    fixed-height:     0;
+    background-color: transparent;
+}
+
+element {
+    padding:          6px 10px;
+    text-color:       #F0CF8E;
+    background-color: transparent;
+}
+
+element selected {
+    background-color: transparent;
+    text-color:       #ab97dc;
+}
+
+element-text selected {
+    background-color: transparent;
+    text-color:       #ab97dc;
+  }
+
+element-text {
+    text-color:       #F0CF8E;
+    background-color: transparent;
+}
+
+element-icon {
+    size:             0;
+    background-color: transparent;
+}
