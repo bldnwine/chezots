@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# Bridge aether wallpaper updates to Quickshell native Background IPC
+# Bridge wallpaper updates to Quickshell native Background IPC
 set -euo pipefail
 
-WALLPAPER="${1:-}"
-[ -n "$WALLPAPER" ] || exit 0
+TARGET="${1:-}"
+[ -n "$TARGET" ] || exit 0
+
+# Always resolve to absolute canonical path
+WALLPAPER=$(realpath "$TARGET" 2>/dev/null || echo "$TARGET")
+[ -f "$WALLPAPER" ] || exit 0
 
 mkdir -p "$HOME/.config/omarchy/current"
 ln -sfn "$WALLPAPER" "$HOME/.config/omarchy/current/background"

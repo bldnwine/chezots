@@ -15,9 +15,21 @@ Item {
     property real _opacity: 0
     Behavior on _opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
+    property var _recentNotifHashes: ({})
+
     function recordNotification(notification) {
         if (!notification) return;
-        var stamp = Date.now();
+        var app = String(notification.appName || "");
+        var summary = String(notification.summary || "");
+        var body = String(notification.body || "");
+        var hash = app + "|" + summary + "|" + body;
+        var now = Date.now();
+        if (root._recentNotifHashes[hash] && (now - root._recentNotifHashes[hash] < 3000)) {
+            return;
+        }
+        root._recentNotifHashes[hash] = now;
+
+        var stamp = now;
         var id = notification.id || Math.floor(Math.random() * 100000);
         var urgency = 1;
         if (notification.urgency === NotificationUrgency.Low) urgency = 0;
@@ -75,6 +87,7 @@ Item {
 
     function showNotif(notification) {
         root.currentNotif = notification;
+        notification.tracked = true;
         root.opened = true;
         var ms = Number(notification.expireTimeout || 0);
         if (notification.urgency === NotificationUrgency.Critical) {
@@ -87,7 +100,10 @@ Item {
 
     function close() {
         root.opened = false;
-        root.currentNotif = null;
+        if (root.currentNotif) {
+            try { root.currentNotif.tracked = false; } catch (e) {}
+            root.currentNotif = null;
+        }
         hideTimer.stop();
     }
 
@@ -99,7 +115,7 @@ Item {
                 if (a && a.identifier === "default") { a.invoke(); break; }
             }
         } catch (e) {}
-        root.currentNotif.dismiss();
+        try { root.currentNotif.dismiss(); } catch (e) {}
         root.close();
     }
 
@@ -112,11 +128,11 @@ Item {
         actionsSupported: true
         bodyMarkupSupported: true
         imageSupported: true
-        persistenceSupported: true
+        persistenceSupported: false
         onNotification: function(notification) {
-            notification.tracked = true;
             root.recordNotification(notification);
             if (root.doNotDisturb) {
+                notification.tracked = false;
                 return;
             }
             root.showNotif(notification);
@@ -157,7 +173,12 @@ Item {
             border.width: 1
             radius: root.root.theme.cornerRadius
             opacity: root._opacity
-            implicitWidth: col.implicitWidth + 120
+
+            readonly property real contentNaturalWidth: Math.max(
+                summaryText.implicitWidth,
+                bodyText.implicitWidth
+            )
+            implicitWidth: Math.min(900, Math.max(320, contentNaturalWidth + 120))
             implicitHeight: col.implicitHeight + 60
 
             MouseArea {
@@ -170,9 +191,11 @@ Item {
                 x: 60
                 y: 30
                 spacing: 4
-                width: Math.max(200, col.implicitWidth)
+                width: card.implicitWidth - 120
 
                 Text {
+                    id: summaryText
+                    width: col.width
                     text: root.currentNotif ? root.currentNotif.summary : ""
                     font.family: root.root.mono
                     font.pixelSize: 16
@@ -184,13 +207,15 @@ Item {
                 }
 
                 Text {
+                    id: bodyText
+                    width: col.width
                     text: root.currentNotif ? root.currentNotif.body : ""
                     font.family: root.root.mono
                     font.pixelSize: 13
                     color: root.root.inkDeep
                     elide: Text.ElideRight
                     wrapMode: Text.Wrap
-                    maximumLineCount: 2
+                    maximumLineCount: 4
                     visible: text.length > 0
                 }
             }

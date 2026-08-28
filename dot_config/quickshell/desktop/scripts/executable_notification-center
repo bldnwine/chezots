@@ -145,6 +145,22 @@ ingest_file() {
     fi
   fi
 
+  # Content-based duplicate guard: avoid re-ingesting identical notification emitted within recent entries
+  local app_text sum_text body_text
+  app_text=$(jq -r '.app // ""' "$file" 2>/dev/null)
+  sum_text=$(jq -r '.summary // ""' "$file" 2>/dev/null)
+  body_text=$(jq -r '.body // ""' "$file" 2>/dev/null)
+
+  if [[ -s $archive ]]; then
+    local recent_dup
+    recent_dup=$(tail -n 10 "$archive" 2>/dev/null | jq -r --arg app "$app_text" --arg sum "$sum_text" --arg body "$body_text" \
+      'select(.app == $app and .summary == $sum and .body == $body) | .key' 2>/dev/null | head -n 1)
+    if [[ -n $recent_dup ]]; then
+      rm -f -- "$file"
+      return 0
+    fi
+  fi
+
   app_icon=$(jq -r '.appIcon // ""' "$file")
   image_src=$(jq -r '.image // ""' "$file")
   exec_src=$(jq -r '.execArgv // .exec // ""' "$file")
@@ -183,11 +199,12 @@ ingest_file() {
      }
      | .timestamp = (if .timestamp > 0 then .timestamp
                      else ((.key | split("-")[0] | tonumber?) // 0) end)' \
-    "$file" 2>/dev/null) || return 0
-  [[ -n $entry ]] || return 0
+    "$file" 2>/dev/null) || { rm -f -- "$file"; return 0; }
+  [[ -n $entry ]] || { rm -f -- "$file"; return 0; }
 
   printf '%s\n' "$entry" >> "$archive"
   printf '%s\n' "$entry"
+  rm -f -- "$file"
 }
 
 sync_all() {
@@ -303,10 +320,7 @@ clear_all() {
   : > "$archive"
   : > "$dismissed_file"
   rm -f -- "$images"/*
-  for f in "$src_history"/*.json; do
-    [[ -e $f ]] || continue
-    rm -f -- "$f"
-  done
+  rm -f -- "$src_history"/*.json "$src_dir"/*.json
 }
 
 cmd_clear() {

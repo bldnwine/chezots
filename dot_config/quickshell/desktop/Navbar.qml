@@ -811,6 +811,31 @@ Item {
         return false;
     }
 
+    function removeNotification(key) {
+        if (!key) return;
+        if (root.activeNotifications && root.activeNotifications[key]) {
+            try {
+                if (root.activeNotifications[key].dismiss) root.activeNotifications[key].dismiss();
+            } catch (e) {}
+            delete root.activeNotifications[key];
+        }
+        if (root.notificationCenterService) root.notificationCenterService.remove(key);
+    }
+
+    function clearAllNotifications() {
+        if (root.activeNotifications) {
+            for (var k in root.activeNotifications) {
+                try {
+                    if (root.activeNotifications[k] && root.activeNotifications[k].dismiss) {
+                        root.activeNotifications[k].dismiss();
+                    }
+                } catch (e) {}
+            }
+            root.activeNotifications = {};
+        }
+        if (root.notificationCenterService) root.notificationCenterService.clearAll();
+    }
+
     property bool notificationCenterVisible: false
     NotificationCenterService { id: notificationCenterService }
     readonly property var notificationCenterService: notificationCenterService

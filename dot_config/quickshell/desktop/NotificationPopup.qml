@@ -133,48 +133,68 @@ CardWindow {
         var item = rows.get(index);
         if (!item) return;
 
+        var key = item.key;
+        var summary = item.summary;
+        var body = item.body;
+        var file = item.file;
+        var app = item.app;
+
+        var handled = false;
+
         // 1. Invoke live D-Bus notification action (tells browser/app to open the page/site)
-        if (root.invokeNotification && root.invokeNotification(item.key)) {
-            root.notificationCenterVisible = false;
-            return;
+        if (root.invokeNotification && root.invokeNotification(key)) {
+            handled = true;
         }
 
         // 2. Check for URL in summary or body
-        var url = extractUrl(item.summary) || extractUrl(item.body);
-        if (url) {
-            Quickshell.execDetached(["xdg-open", url]);
-            root.notificationCenterVisible = false;
-            return;
+        if (!handled) {
+            var url = extractUrl(summary) || extractUrl(body);
+            if (url) {
+                Quickshell.execDetached(["xdg-open", url]);
+                handled = true;
+            }
         }
 
         // 3. Check for image / file attachment or path in body
-        var fileTarget = item.file || extractFilePath(item.body) || extractFilePath(item.summary);
-        if (fileTarget && fileTarget.length > 0) {
-            Quickshell.execDetached(["xdg-open", fileTarget]);
-            root.notificationCenterVisible = false;
-            return;
+        if (!handled) {
+            var fileTarget = file || extractFilePath(body) || extractFilePath(summary);
+            if (fileTarget && fileTarget.length > 0) {
+                Quickshell.execDetached(["xdg-open", fileTarget]);
+                handled = true;
+            }
         }
 
         // 4. Focus app window in Hyprland
-        if (item.app && /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}$/.test(item.app)) {
-            Quickshell.execDetached([popup.focusScript, item.app]);
-            root.notificationCenterVisible = false;
+        if (!handled && app && /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}$/.test(app)) {
+            Quickshell.execDetached([popup.focusScript, app]);
+            handled = true;
         }
+
+        // Dismiss and remove the notification upon activation
+        popup.removeIndex(index);
+        root.notificationCenterVisible = false;
     }
 
     function removeIndex(index) {
         if (index < 0 || index >= rows.count) return;
         var item = rows.get(index);
-        if (!item || !service) return;
-        service.remove(item.key);
+        if (!item) return;
+        if (popup.root && popup.root.removeNotification) {
+            popup.root.removeNotification(item.key);
+        } else if (service) {
+            service.remove(item.key);
+        }
         rows.remove(index);
         if (popup.selectedIndex >= rows.count && rows.count > 0)
             popup.selectedIndex = rows.count - 1;
     }
 
     function clearAll() {
-        if (!service) return;
-        service.clearAll();
+        if (popup.root && popup.root.clearAllNotifications) {
+            popup.root.clearAllNotifications();
+        } else if (service) {
+            service.clearAll();
+        }
         rows.clear();
         popup.clearArmed = false;
         popup.selectedIndex = 0;

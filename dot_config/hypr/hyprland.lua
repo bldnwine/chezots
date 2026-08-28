@@ -84,7 +84,7 @@ local monitor_active = true
 
 hl.on("hyprland.start", function()
 	hl.exec_cmd(launch("qs -n -d -c desktop"))
-	hl.exec_cmd(launch("A704F_Mouse --apply --daemon"))
+	hl.exec_cmd("A704F_Mouse --apply")
 	-- hl.exec_cmd(launch("waybar"))
 	-- hl.exec_cmd("systemctl --user start eclair.target")
 	-- hl.exec_cmd(launch("mako"))
@@ -524,14 +524,14 @@ hl.window_rule({
 	match = { class = "Aether", title = "Aether" },
 	float = true,
 	center = true,
-	size = { 1049, 660 },
+	size = { 1656, 906 },
 })
 hl.window_rule({
 	name = "Zen-Browser",
 	match = { class = "zen", title = "Zen Browser" },
 	float = true,
 	center = true,
-	size = { 1447, 1009 },
+	size = { 1460, 912 },    --  1460, 912 / 1447, 1009
 })
 
 -----------------------
