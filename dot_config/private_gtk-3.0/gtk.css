@@ -4,25 +4,25 @@
  */
 
 /* Dynamic color palette from Aether */
-@define-color background #1e1c1a;
-@define-color foreground #fff1e5;
+@define-color background #0f1e2b;
+@define-color foreground #E7E3D1;
 
-@define-color black #1e1c1a;
-@define-color red #c0885d;
-@define-color green #e3be6b;
-@define-color yellow #ffe788;
-@define-color blue #b46761;
-@define-color magenta #ec916f;
-@define-color cyan #f0dc65;
-@define-color white #fff1e5;
-@define-color bright_black #636863;
-@define-color bright_red #e09964;
-@define-color bright_green #ffd262;
-@define-color bright_yellow #ffe366;
-@define-color bright_blue #d5766e;
-@define-color bright_magenta #ff9f73;
-@define-color bright_cyan #fff357;
-@define-color bright_white #fcf3eb;
+@define-color black #0f1e2b;
+@define-color red #b1a470;
+@define-color green #a2c196;
+@define-color yellow #d0c89b;
+@define-color blue #5e7d9f;
+@define-color magenta #5a80a4;
+@define-color cyan #4e8c83;
+@define-color white #E7E3D1;
+@define-color bright_black #595d62;
+@define-color bright_red #d8cb86;
+@define-color bright_green #badfa7;
+@define-color bright_yellow #e2d680;
+@define-color bright_blue #7fa1cd;
+@define-color bright_magenta #7ba4d2;
+@define-color bright_cyan #6cb3a7;
+@define-color bright_white #f6edb9;
 
 /* Adwaita color overrides (libadwaita / GTK4) */
 @define-color accent_bg_color @blue;
