@@ -132,6 +132,7 @@ const omarchyItems = [
     { title: "Toggle Touchpad",     icon: "󰟸", category: "Toggle", keywords: "toggle touchpad trackpad enable disable",                                          exec: "/home/bldnwine/.config/quickshell/desktop/scripts/touchpad-toggle" },
     { title: "Toggle Hyprland Menu",icon: "H", category: "Toggle", keywords: "toggle hyprland layout dwindle master monocle scrolling config editor",             exec: "qs -c desktop ipc call hyprland toggle" },
     { title: "Toggle Proton VPN",   icon: "󰦝", category: "Toggle", keywords: "toggle proton vpn wireguard connect disconnect",                                     exec: "qs -c desktop ipc call wireproton toggle" },
+    { title: "Toggle Tray Menu",    icon: "󰅂", category: "Toggle", keywords: "toggle tray menu system tray manage pin hide icons statusnotifier",                 exec: "qs -c desktop ipc call tray manage" },
 
     // ----- Capture -----
     { title: "Screenshot",          icon: "󰄀", category: "Capture", keywords: "screenshot screen capture image png shot snip print",                              exec: "capture-screenshot" },

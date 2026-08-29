@@ -1,3 +1,4 @@
+//@ pragma IconTheme breeze-dark
 import QtQuick
 import Quickshell
 

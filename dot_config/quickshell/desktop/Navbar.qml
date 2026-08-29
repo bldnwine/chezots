@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import Quickshell.Services.SystemTray
 import Quickshell.Hyprland
 import "ClipboardHistory.js" as ClipboardHistory
 
@@ -207,6 +208,7 @@ Item {
     property Item warpAnchorItem:      null
     property Item aiAnchorItem:        null
     property Item notificationAnchorItem: null
+    property Item trayAnchorItem: null
 
     function anchorPopupTo(item) {
         const p = item.mapToItem(null, item.width / 2, item.height / 2);
@@ -1239,6 +1241,177 @@ Item {
         if (root.musicAnchorItem) root.anchorPopupTo(root.musicAnchorItem);
         else if (root.calendarAnchorItem) root.anchorPopupTo(root.calendarAnchorItem);
         root.mediaVisible = true;
+    }
+
+    // ---------- System Tray state ----------
+    property bool trayExpanded: false
+    property bool trayManageVisible: false
+    property bool trayMenuVisible: false
+    property var  activeTrayItem: null
+    property var  activeTrayAnchor: null
+    readonly property string trayStatePath: Quickshell.env("HOME") + "/.local/state/quickshell-desktop/tray-state.json"
+    property var trayPinnedIds: []
+    property var trayHiddenIds: []
+
+    function trayIconSource(icon) {
+        if (!icon) return "";
+        var value = String(icon);
+        var marker = "?path=";
+        var markerIndex = value.indexOf(marker);
+        if (markerIndex !== -1) {
+            var name = value.substring(0, markerIndex).split("/").pop();
+            var iconPath = value.substring(markerIndex + marker.length).split("&")[0];
+            return "file://" + iconPath + "/hicolor/16x16/status/" + name + ".png";
+        }
+        if (value.indexOf("/") === 0 || value.indexOf("file://") === 0 || value.indexOf("image://") === 0) {
+            return value;
+        }
+        return Quickshell.iconPath(value);
+    }
+
+    readonly property var trayAllItems: {
+        const raw = SystemTray.items ? SystemTray.items.values : [];
+        const result = [];
+        for (let i = 0; i < raw.length; i++) {
+            const it = raw[i];
+            if (!it || it.status === Status.Passive) continue;
+            result.push(it);
+        }
+        return result;
+    }
+
+    readonly property var trayValidItems: {
+        const all = root.trayAllItems;
+        const result = [];
+        for (let i = 0; i < all.length; i++) {
+            const it = all[i];
+            const id = String(it.id || "");
+            if (root.trayHiddenIds.indexOf(id) === -1) result.push(it);
+        }
+        return result;
+    }
+
+    readonly property var trayPinnedItems: {
+        const valid = root.trayValidItems;
+        const result = [];
+        for (let i = 0; i < valid.length; i++) {
+            const it = valid[i];
+            const id = String(it.id || "");
+            if (root.trayPinnedIds.indexOf(id) !== -1) result.push(it);
+        }
+        return result;
+    }
+
+    readonly property var trayUnpinnedItems: {
+        const valid = root.trayValidItems;
+        const result = [];
+        for (let i = 0; i < valid.length; i++) {
+            const it = valid[i];
+            const id = String(it.id || "");
+            if (root.trayPinnedIds.indexOf(id) === -1) result.push(it);
+        }
+        return result;
+    }
+
+    readonly property var trayPrimaryItems: {
+        const pinned = root.trayPinnedItems;
+        const unpinned = root.trayUnpinnedItems;
+        if (pinned.length >= 5) return pinned;
+        const needed = 5 - pinned.length;
+        return pinned.concat(unpinned.slice(0, needed));
+    }
+
+    readonly property var trayOverflowItems: {
+        const pinned = root.trayPinnedItems;
+        const unpinned = root.trayUnpinnedItems;
+        if (pinned.length >= 5) return unpinned;
+        const needed = 5 - pinned.length;
+        return unpinned.slice(needed);
+    }
+
+    readonly property bool trayHasOverflow: trayOverflowItems.length > 0
+
+    function openTrayManage(anchor) {
+        if (anchor) {
+            root.trayAnchorItem = anchor;
+            root.anchorPopupTo(anchor);
+        } else if (root.trayAnchorItem) {
+            root.anchorPopupTo(root.trayAnchorItem);
+        }
+        root.trayManageVisible = true;
+    }
+
+    function openTrayMenu(item, anchor, mouse) {
+        if (!item) return;
+        if (!item.menu) {
+            if (anchor && anchor.QsWindow && typeof item.display === "function") {
+                var point = anchor.QsWindow.contentItem.mapFromItem(anchor, mouse.x, mouse.y);
+                item.display(anchor.QsWindow.window, point.x, point.y);
+            }
+            return;
+        }
+        root.activeTrayItem = item;
+        root.activeTrayAnchor = anchor;
+        if (anchor) root.anchorPopupTo(anchor);
+        root.trayMenuVisible = true;
+    }
+
+    function toggleTrayPin(id) {
+        var p = root.trayPinnedIds.slice();
+        var h = root.trayHiddenIds.slice();
+        var idx = p.indexOf(id);
+        if (idx !== -1) {
+            p.splice(idx, 1);
+        } else {
+            p.push(id);
+            var hi = h.indexOf(id);
+            if (hi !== -1) h.splice(hi, 1);
+        }
+        root.trayPinnedIds = p;
+        root.trayHiddenIds = h;
+        root.saveTrayState();
+    }
+
+    function toggleTrayHide(id) {
+        var p = root.trayPinnedIds.slice();
+        var h = root.trayHiddenIds.slice();
+        var idx = h.indexOf(id);
+        if (idx !== -1) {
+            h.splice(idx, 1);
+        } else {
+            h.push(id);
+            var pi = p.indexOf(id);
+            if (pi !== -1) p.splice(pi, 1);
+        }
+        root.trayPinnedIds = p;
+        root.trayHiddenIds = h;
+        root.saveTrayState();
+    }
+
+    function saveTrayState() {
+        var data = JSON.stringify({ pinned: root.trayPinnedIds, hidden: root.trayHiddenIds });
+        trayStateWriter.command = ["bash", "-c",
+            "mkdir -p " + JSON.stringify(root.trayStatePath.replace(/\/[^/]+$/, ""))
+            + " && printf '%s' " + JSON.stringify(data)
+            + " > " + JSON.stringify(root.trayStatePath)];
+        trayStateWriter.running = false;
+        trayStateWriter.running = true;
+    }
+
+    Process { id: trayStateWriter; running: false }
+    Process {
+        id: trayStateReader
+        running: true
+        command: ["cat", root.trayStatePath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var parsed = JSON.parse(this.text);
+                    if (parsed && Array.isArray(parsed.pinned)) root.trayPinnedIds = parsed.pinned;
+                    if (parsed && Array.isArray(parsed.hidden)) root.trayHiddenIds = parsed.hidden;
+                } catch(e) {}
+            }
+        }
     }
 
     // ---------- Clipboard state ----------
@@ -2655,6 +2828,20 @@ Item {
     }
     Timer { id: keepMedia; interval: 400; onTriggered: mediaLoader.source = "" }
 
+    Loader { id: trayManageLoader }
+    onTrayManageVisibleChanged: {
+        if (root.trayManageVisible) { keepTrayManage.stop(); trayManageLoader.setSource("TrayManagePopup.qml", { root: root }); }
+        else keepTrayManage.restart();
+    }
+    Timer { id: keepTrayManage; interval: 400; onTriggered: trayManageLoader.source = "" }
+
+    Loader { id: trayMenuLoader }
+    onTrayMenuVisibleChanged: {
+        if (root.trayMenuVisible) { keepTrayMenu.stop(); trayMenuLoader.setSource("TrayMenuPopup.qml", { root: root }); }
+        else keepTrayMenu.restart();
+    }
+    Timer { id: keepTrayMenu; interval: 400; onTriggered: trayMenuLoader.source = "" }
+
     Loader { id: aiLoader }
     onAiVisibleChanged: {
         if (root.aiVisible) { keepAi.stop(); aiLoader.setSource("AiPopup.qml", { root: root }); }
@@ -2961,6 +3148,16 @@ Item {
         function open(): void { root.openAi(); }
         function close(): void { root.aiVisible = false; }
         function refresh(): string { aiService.refresh(true); return "ok"; }
+    }
+
+    IpcHandler {
+        target: "tray"
+        function toggle(): void { root.trayExpanded = !root.trayExpanded; }
+        function open(): void   { root.trayExpanded = true; }
+        function close(): void  { root.trayExpanded = false; root.trayManageVisible = false; }
+        function manage(): void { root.openTrayManage(); }
+        function pin(id: string): void { root.toggleTrayPin(id); }
+        function hide(id: string): void { root.toggleTrayHide(id); }
     }
 
     IpcHandler {

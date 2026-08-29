@@ -338,6 +338,8 @@ PanelWindow {
 
             Separator { root: bar.root }
 
+            Tray { root: bar.root }
+
             // System indicators read right-to-left as
             //   battery · sound · wifi · bluetooth · cpu · [edge]
             // so the most-glanced item (battery) sits adjacent to the
