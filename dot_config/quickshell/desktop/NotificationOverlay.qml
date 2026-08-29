@@ -76,10 +76,15 @@ Item {
 
         if (root.root && root.root.activeNotifications) {
             root.root.activeNotifications[data.key] = notification;
+            if (notification.id) {
+                root.root.activeNotifications["id:" + notification.id] = notification;
+            }
             var cleanupKey = data.key;
+            var cleanupId = notification.id ? ("id:" + notification.id) : "";
             notification.closed.connect(function() {
                 if (root.root && root.root.activeNotifications) {
                     delete root.root.activeNotifications[cleanupKey];
+                    if (cleanupId) delete root.root.activeNotifications[cleanupId];
                 }
             });
         }
@@ -100,10 +105,7 @@ Item {
 
     function close() {
         root.opened = false;
-        if (root.currentNotif) {
-            try { root.currentNotif.tracked = false; } catch (e) {}
-            root.currentNotif = null;
-        }
+        root.currentNotif = null;
         hideTimer.stop();
     }
 
@@ -128,11 +130,11 @@ Item {
         actionsSupported: true
         bodyMarkupSupported: true
         imageSupported: true
-        persistenceSupported: false
+        persistenceSupported: true
         onNotification: function(notification) {
+            notification.tracked = true;
             root.recordNotification(notification);
             if (root.doNotDisturb) {
-                notification.tracked = false;
                 return;
             }
             root.showNotif(notification);

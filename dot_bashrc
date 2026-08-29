@@ -62,7 +62,7 @@ alias disablesh='sudo systemctl disable --now sshd'
 alias flamn='~/akeru/flame.sh'
 alias dmcams='./go2rtc_linux_amd64'
 alias oc='opencode'
-alias oc2='opencode2'
+alias oc2='opencode2 --standalone'
 alias y='yazi'
 alias ocol='ollama launch opencode --config'
 alias wifipw='iw dev wlan0 get power_save 2>/dev/null'
@@ -155,3 +155,25 @@ export PATH=/home/bldnwine/.opencode/bin:$PATH
 
 # Added by Antigravity CLI installer
 export PATH="/home/bldnwine/.local/bin:$PATH"
+
+# === NIX & NICS ENVIRONMENT LOADER ===
+if [ -d "$HOME/.local/bin" ] && case ":$PATH:" in *":$HOME/.local/bin:"*) false;; *) true;; esac; then
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
+if [ -e '/etc/profile.d/nix-daemon.sh' ]; then
+  . '/etc/profile.d/nix-daemon.sh'
+elif [ -e '/etc/profile.d/nix.sh' ]; then
+  . '/etc/profile.d/nix.sh'
+elif [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+  . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+fi
+
+# Desktop application integration for Nix GUI apps
+if [ -d "$HOME/.nix-profile/share" ]; then
+  case ":${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:" in
+    *":$HOME/.nix-profile/share:"*) ;;
+    *) export XDG_DATA_DIRS="$HOME/.nix-profile/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" ;;
+  esac
+fi
+# =====================================

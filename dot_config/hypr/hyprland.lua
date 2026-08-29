@@ -306,7 +306,7 @@ hl.bind(mainMod .. " + K", hl.dsp.exec_cmd("qs -c desktop ipc call wireproton to
 hl.bind(mainMod .. " + ALT + K", hl.dsp.exec_cmd("qs -c desktop ipc call warp toggle"))
 hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd(terminal .. " -e nano ~/Docs/base/notes.md"))
 hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd(terminal .. " -e nano ~/Docs/todo"))
-hl.bind(mainMod .. " + SHIFT + L", hl.dsp.exec_cmd(launch("localsend")))
+hl.bind(mainMod .. " + SHIFT + L", hl.dsp.exec_cmd(launch("nics gl localsend_app")))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen_state({ action = "toggle", internal = 0, client = 2 }))
 --hl.bind("SUPER + F", hl.dsp.exec_cmd("toggle-tiled-fullscreen"))

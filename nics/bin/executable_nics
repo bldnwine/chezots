@@ -1,0 +1,855 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# nics - Custom Nix Package Manager CLI Wrapper
+# Supports dual stable/unstable channels, Flakes, profile management, and tools.
+# ==============================================================================
+
+set -euo pipefail
+
+NICS_VERSION="1.2.0"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nics"
+CONFIG_FILE="$CONFIG_DIR/config"
+
+# Colors & Formatting
+if [ -t 1 ]; then
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  RED=$'\033[0;31m'
+  GREEN=$'\033[0;32m'
+  YELLOW=$'\033[0;33m'
+  BLUE=$'\033[0;34m'
+  MAGENTA=$'\033[0;35m'
+  CYAN=$'\033[0;36m'
+  NC=$'\033[0m'
+else
+  BOLD=""
+  DIM=""
+  RED=""
+  GREEN=""
+  YELLOW=""
+  BLUE=""
+  MAGENTA=""
+  CYAN=""
+  NC=""
+fi
+
+log_info()    { echo -e "${BLUE}${BOLD}[nics]${NC} $*"; }
+log_success() { echo -e "${GREEN}${BOLD}[nics]${NC} $*"; }
+log_warn()    { echo -e "${YELLOW}${BOLD}[nics]${NC} $*" >&2; }
+log_error()   { echo -e "${RED}${BOLD}[nics ERROR]${NC} $*" >&2; }
+
+# Initialize configuration
+init_config() {
+  if [ ! -f "$CONFIG_FILE" ]; then
+    mkdir -p "$CONFIG_DIR"
+    cat << 'EOF' > "$CONFIG_FILE"
+# nics configuration file
+# Default channel for package operations: "unstable" or "stable"
+DEFAULT_CHANNEL=unstable
+EOF
+  fi
+}
+
+get_default_channel() {
+  init_config
+  local channel
+  channel=$(grep -E '^DEFAULT_CHANNEL=' "$CONFIG_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"'\'' ' || echo "unstable")
+  if [ -z "$channel" ]; then
+    channel="unstable"
+  fi
+  echo "$channel"
+}
+
+set_default_channel() {
+  local new_channel="$1"
+  if [ "$new_channel" != "unstable" ] && [ "$new_channel" != "stable" ]; then
+    log_error "Invalid channel: '$new_channel'. Allowed values: 'unstable', 'stable'."
+    exit 1
+  fi
+  init_config
+  if grep -q '^DEFAULT_CHANNEL=' "$CONFIG_FILE" 2>/dev/null; then
+    sed -i "s/^DEFAULT_CHANNEL=.*/DEFAULT_CHANNEL=$new_channel/" "$CONFIG_FILE"
+  else
+    echo "DEFAULT_CHANNEL=$new_channel" >> "$CONFIG_FILE"
+  fi
+  log_success "Default channel set to ${BOLD}$new_channel${NC}."
+}
+
+# Resolve Flake registry target based on package input and channel flag
+resolve_target() {
+  local pkg="$1"
+  local channel_override="$2" # "stable", "unstable", or empty
+
+  # If the user supplied a fully qualified flake path (e.g. nixpkgs#hello or github:...), use it
+  if [[ "$pkg" == *"#"* ]] || [[ "$pkg" == *":"* ]]; then
+    echo "$pkg"
+    return
+  fi
+
+  local channel="$channel_override"
+  if [ -z "$channel" ]; then
+    channel=$(get_default_channel)
+  fi
+
+  if [ "$channel" = "stable" ]; then
+    echo "nixpkgs-stable#$pkg"
+  else
+    echo "nixpkgs#$pkg"
+  fi
+}
+
+check_nix_environment() {
+  if ! command -v nix >/dev/null 2>&1; then
+    # Attempt to source the standard profile script if not in PATH
+    if [ -e '/etc/profile.d/nix-daemon.sh' ]; then
+      # shellcheck source=/dev/null
+      . '/etc/profile.d/nix-daemon.sh'
+    elif [ -e '/etc/profile.d/nix.sh' ]; then
+      # shellcheck source=/dev/null
+      . '/etc/profile.d/nix.sh'
+    elif [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+      # shellcheck source=/dev/null
+      . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+    fi
+  fi
+
+  if ! command -v nix >/dev/null 2>&1; then
+    log_error "Nix is not found in PATH."
+    log_error "Please run './setup.sh' to install and configure Nix, or run: source /etc/profile.d/nix-daemon.sh"
+    exit 1
+  fi
+}
+
+show_help() {
+  cat << EOF
+${BOLD}${CYAN}nics${NC} - Custom Nix Package Manager Wrapper (v${NICS_VERSION})
+
+${BOLD}USAGE:${NC}
+  nics <command> [options] [arguments]
+
+${BOLD}PACKAGE MANAGEMENT:${NC}
+  ${GREEN}install${NC}, ${GREEN}add${NC}, ${GREEN}i${NC} <pkg...>    Install package(s) into your user profile (interactive prompt)
+                             ${DIM}[-u|--unstable]  Install from unstable channel (default)${NC}
+                             ${DIM}[-s|--stable]    Install from stable channel${NC}
+                             ${DIM}[-y|--yes]       Skip confirmation prompt${NC}
+  ${GREEN}remove${NC}, ${GREEN}rm${NC}, ${GREEN}uninstall${NC} <pkg...> Uninstall package(s) from your user profile
+  ${GREEN}update${NC}, ${GREEN}up${NC} [pkg...]         Upgrade installed packages and refresh channels
+  ${GREEN}check${NC}, ${GREEN}outdated${NC}             Check for available package & channel updates
+  ${GREEN}list${NC}, ${GREEN}ls${NC}                   List all currently installed packages
+  ${GREEN}search${NC}, ${GREEN}find${NC}, ${GREEN}s${NC} <query>    Search for available packages in nixpkgs
+                             ${DIM}[-u|--unstable]  Search unstable (default)${NC}
+                             ${DIM}[-s|--stable]    Search stable${NC}
+  ${GREEN}info${NC} <pkg>                 Display detailed package information
+
+${BOLD}GRAPHICAL & GPU APPS:${NC}
+  ${GREEN}gl${NC}, ${GREEN}gpu${NC} <app> [-- args]     Run graphical applications with GPU acceleration (opt-in)
+  ${GREEN}setup-gpu${NC}, ${GREEN}nixgl${NC}           Install nixGL GPU bridge permanently into profile
+
+${BOLD}EPHEMERAL RUN & SHELL:${NC}
+  ${GREEN}run${NC}, ${GREEN}r${NC} <pkg> [-s|-u] [-- args]  Run a package immediately without installing
+  ${GREEN}shell${NC}, ${GREEN}sh${NC} <pkg...> [-s|-u]     Open an interactive shell with packages available
+
+${BOLD}HISTORY & ROLLBACK:${NC}
+  ${GREEN}history${NC}, ${GREEN}generations${NC}        View atomic profile generations history
+  ${GREEN}rollback${NC}, ${GREEN}undo${NC}             Revert to the previous working profile generation
+
+${BOLD}MAINTENANCE & CHANNELS:${NC}
+  ${GREEN}channel${NC} [list|update|set-default] Manage stable/unstable channels and default
+  ${GREEN}gc${NC}, ${GREEN}clean${NC} [--all]            Garbage collect unused store paths to free disk space
+  ${GREEN}doctor${NC}                     Run diagnostic checks on your Nix installation
+  ${GREEN}version${NC}, ${GREEN}-v${NC}, ${GREEN}--version${NC}       Print version information
+  ${GREEN}help${NC}, ${GREEN}-h${NC}, ${GREEN}--help${NC}             Show this help message
+
+${BOLD}EXAMPLES:${NC}
+  ${DIM}# Install with confirmation table showing download/install size:${NC}
+  nics install btop
+
+  ${DIM}# Install without confirmation prompt:${NC}
+  nics install -y ripgrep
+
+  ${DIM}# Install nodejs from the stable channel:${NC}
+  nics install --stable nodejs
+
+  ${DIM}# Launch a GUI app with hardware acceleration:${NC}
+  nics gl localsend_app
+
+  ${DIM}# Check for available updates:${NC}
+  nics check
+
+  ${DIM}# View history and rollback an update:${NC}
+  nics history
+  nics rollback
+EOF
+}
+
+cmd_install() {
+  check_nix_environment
+  local channel_flag=""
+  local yes_flag=false
+  local packages=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -s|--stable)
+        channel_flag="stable"
+        shift
+        ;;
+      -u|--unstable)
+        channel_flag="unstable"
+        shift
+        ;;
+      -y|--yes|--noconfirm)
+        yes_flag=true
+        shift
+        ;;
+      -h|--help)
+        echo "Usage: nics install <package...> [-s|--stable | -u|--unstable] [-y|--yes]"
+        return 0
+        ;;
+      *)
+        packages+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [ ${#packages[@]} -eq 0 ]; then
+    log_error "No package specified to install."
+    echo "Usage: nics install <package...> [-s|--stable | -u|--unstable] [-y|--yes]"
+    return 1
+  fi
+
+  local effective_channel="${channel_flag:-$(get_default_channel)}"
+  log_info "Resolving ${BOLD}${#packages[@]}${NC} package(s) from ${CYAN}[$effective_channel]${NC}..."
+
+  local targets=()
+  local rows=()
+
+  for pkg in "${packages[@]}"; do
+    local target
+    target=$(resolve_target "$pkg" "$channel_flag")
+    targets+=("$target")
+
+    # Fetch size info via nix path-info
+    local info
+    info=$(nix path-info -Sh "$target" 2>&1 || true)
+    local dl_size inst_size
+    dl_size=$(echo "$info" | grep -oE '[0-9.]+ [KMGT]?i?B download' | head -n1 | awk '{print $1" "$2}' || true)
+    inst_size=$(echo "$info" | grep -oE '[0-9.]+ [KMGT]?i?B unpacked' | head -n1 | awk '{print $1" "$2}' || true)
+    if [ -z "$inst_size" ]; then
+      inst_size=$(echo "$info" | grep -E '^/nix/store' | awk '{print $2" "$3}' | head -n1 || true)
+    fi
+    if [ -z "$inst_size" ]; then
+      inst_size=$(echo "$info" | awk 'NR==1 && /[0-9]/ {print $2" "$3}' || true)
+    fi
+
+    rows+=("$pkg|$target|${dl_size:-cached locally}|${inst_size:-calculated on fetch}")
+  done
+
+  # Display Summary Table
+  echo ""
+  printf "  ${BOLD}%-20s %-32s %-20s %-20s${NC}\n" "Package" "Target" "Download Size" "Installed Size"
+  printf "  ${DIM}%s${NC}\n" "--------------------------------------------------------------------------------------------------"
+  for row in "${rows[@]}"; do
+    IFS='|' read -r r_pkg r_tgt r_dl r_inst <<< "$row"
+    printf "  %-20s %-32s %-20s %-20s\n" "$r_pkg" "$r_tgt" "$r_dl" "$r_inst"
+  done
+  echo ""
+
+  # Interactive Confirmation Prompt
+  if [ "$yes_flag" != true ]; then
+    echo -n -e "${BOLD}:: Proceed with installation? [Y/n] ${NC}"
+    local response
+    read -r response || response="n"
+    if [[ -n "$response" && ! "$response" =~ ^[Yy]$ ]]; then
+      log_warn "Installation cancelled by user."
+      return 0
+    fi
+  fi
+
+  for target in "${targets[@]}"; do
+    log_info "-> Installing ${BOLD}$target${NC}..."
+    if nix profile add "$target" 2>/dev/null || nix profile install "$target"; then
+      log_success "Successfully installed ${BOLD}$target${NC}."
+    else
+      log_error "Failed to install ${BOLD}$target${NC}."
+      return 1
+    fi
+  done
+  log_success "All packages installed successfully."
+}
+
+cmd_remove() {
+  check_nix_environment
+  local packages=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help)
+        echo "Usage: nics remove <package...>"
+        return 0
+        ;;
+      *)
+        packages+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [ ${#packages[@]} -eq 0 ]; then
+    log_error "No package specified to remove."
+    echo "Usage: nics remove <package...>"
+    return 1
+  fi
+
+  log_info "Removing ${BOLD}${#packages[@]}${NC} package(s)..."
+  for pkg in "${packages[@]}"; do
+    log_info "-> Removing ${BOLD}$pkg${NC}..."
+    # Attempt direct name removal or fallback to matching regex
+    if nix profile remove "$pkg" 2>/dev/null; then
+      log_success "Removed ${BOLD}$pkg${NC}."
+    else
+      if nix profile remove ".*#$pkg$" 2>/dev/null || nix profile remove ".*$pkg.*" 2>/dev/null; then
+        log_success "Removed ${BOLD}$pkg${NC}."
+      else
+        log_error "Could not find or remove package ${BOLD}$pkg${NC}. Use 'nics list' to check installed names."
+      fi
+    fi
+  done
+}
+
+cmd_update() {
+  check_nix_environment
+  log_info "Updating Nix channels..."
+  nix-channel --update || log_warn "nix-channel update finished with warnings."
+
+  if [[ $# -gt 0 ]]; then
+    for pkg in "$@"; do
+      log_info "Upgrading package ${BOLD}$pkg${NC}..."
+      nix profile upgrade ".*$pkg.*" || log_error "Failed to upgrade $pkg."
+    done
+  else
+    log_info "Upgrading all installed profile packages..."
+    nix profile upgrade '.*' || log_warn "Some packages may already be at latest revision."
+    log_success "Upgrade completed."
+  fi
+}
+
+cmd_check_updates() {
+  check_nix_environment
+  local channel_flag=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -s|--stable)
+        channel_flag="stable"
+        shift
+        ;;
+      -u|--unstable)
+        channel_flag="unstable"
+        shift
+        ;;
+      -h|--help)
+        echo "Usage: nics check [-s|--stable | -u|--unstable]"
+        return 0
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  local effective_channel="${channel_flag:-$(get_default_channel)}"
+  local target_flake="nixpkgs"
+  if [ "$effective_channel" = "stable" ]; then
+    target_flake="nixpkgs-stable"
+  fi
+
+  log_info "Checking for package updates against ${CYAN}[$effective_channel]${NC}..."
+
+  # 1. Check upstream Flake metadata
+  echo -n "Fetching latest upstream Flake metadata... "
+  local latest_info
+  latest_info=$(nix flake metadata "$target_flake" 2>/dev/null || true)
+  if [ -n "$latest_info" ]; then
+    echo -e "${GREEN}OK${NC}"
+    local latest_rev latest_date
+    latest_rev=$(echo "$latest_info" | grep -E '^Revision:' | awk '{print $2}' || true)
+    latest_date=$(echo "$latest_info" | grep -E '^Last modified:' | cut -d: -f2- | sed 's/^[ \t]*//' || true)
+    if [ -n "$latest_rev" ]; then
+      echo -e "  Latest Upstream Revision: ${BOLD}${latest_rev:0:10}${NC} (${DIM}$latest_date${NC})"
+    fi
+  else
+    echo -e "${YELLOW}Could not fetch remote metadata${NC}"
+  fi
+
+  # 2. Check installed packages
+  echo ""
+  log_info "Installed packages in user profile:"
+  if ! nix profile list 2>/dev/null; then
+    log_warn "No packages currently installed in user profile."
+    return 0
+  fi
+
+  echo ""
+  log_info "To upgrade installed packages to the latest revisions, run: ${BOLD}nics update${NC}"
+}
+
+cmd_history() {
+  check_nix_environment
+  log_info "Nix profile generation history:"
+  echo ""
+  if ! nix profile history 2>/dev/null; then
+    log_warn "No profile history found."
+  fi
+}
+
+cmd_rollback() {
+  check_nix_environment
+  log_info "Rolling back to previous profile generation..."
+  if nix profile rollback 2>/dev/null; then
+    log_success "Successfully rolled back! Run 'nics history' or 'nics list' to inspect."
+  else
+    log_error "Rollback failed. You may already be at the earliest generation."
+  fi
+}
+
+cmd_list() {
+  check_nix_environment
+  log_info "Installed packages in user profile:"
+  echo ""
+  if ! nix profile list 2>/dev/null; then
+    log_warn "No packages installed in current Nix profile."
+  fi
+}
+
+cmd_search() {
+  check_nix_environment
+  local channel_flag=""
+  local query=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -s|--stable)
+        channel_flag="stable"
+        shift
+        ;;
+      -u|--unstable)
+        channel_flag="unstable"
+        shift
+        ;;
+      -h|--help)
+        echo "Usage: nics search <query> [-s|--stable | -u|--unstable]"
+        return 0
+        ;;
+      *)
+        query="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [ -z "$query" ]; then
+    log_error "Please provide a search query."
+    echo "Usage: nics search <query> [-s|--stable | -u|--unstable]"
+    return 1
+  fi
+
+  local target_flake="nixpkgs"
+  local effective_channel="${channel_flag:-$(get_default_channel)}"
+  if [ "$effective_channel" = "stable" ]; then
+    target_flake="nixpkgs-stable"
+  fi
+
+  log_info "Searching for '${BOLD}$query${NC}' in ${CYAN}[$effective_channel]${NC}..."
+  nix search "$target_flake" "$query"
+}
+
+cmd_run() {
+  check_nix_environment
+  local channel_flag=""
+  local pkg=""
+  local args=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -s|--stable)
+        channel_flag="stable"
+        shift
+        ;;
+      -u|--unstable)
+        channel_flag="unstable"
+        shift
+        ;;
+      --)
+        shift
+        args=("$@")
+        break
+        ;;
+      -h|--help)
+        echo "Usage: nics run <pkg> [-s|--stable | -u|--unstable] [-- args...]"
+        return 0
+        ;;
+      *)
+        if [ -z "$pkg" ]; then
+          pkg="$1"
+        else
+          args+=("$1")
+        fi
+        shift
+        ;;
+    esac
+  done
+
+  if [ -z "$pkg" ]; then
+    log_error "No package specified to run."
+    return 1
+  fi
+
+  local target
+  target=$(resolve_target "$pkg" "$channel_flag")
+  if [ ${#args[@]} -gt 0 ]; then
+    nix run "$target" -- "${args[@]}"
+  else
+    nix run "$target"
+  fi
+}
+
+cmd_shell() {
+  check_nix_environment
+  local channel_flag=""
+  local packages=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -s|--stable)
+        channel_flag="stable"
+        shift
+        ;;
+      -u|--unstable)
+        channel_flag="unstable"
+        shift
+        ;;
+      -h|--help)
+        echo "Usage: nics shell <package...> [-s|--stable | -u|--unstable]"
+        return 0
+        ;;
+      *)
+        packages+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [ ${#packages[@]} -eq 0 ]; then
+    log_error "No packages specified for shell environment."
+    return 1
+  fi
+
+  local targets=()
+  for pkg in "${packages[@]}"; do
+    targets+=("$(resolve_target "$pkg" "$channel_flag")")
+  done
+
+  log_info "Entering ephemeral shell with: ${BOLD}${packages[*]}${NC}..."
+  nix shell "${targets[@]}"
+}
+
+cmd_info() {
+  check_nix_environment
+  local channel_flag=""
+  local pkg=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -s|--stable)
+        channel_flag="stable"
+        shift
+        ;;
+      -u|--unstable)
+        channel_flag="unstable"
+        shift
+        ;;
+      *)
+        pkg="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [ -z "$pkg" ]; then
+    log_error "No package specified."
+    return 1
+  fi
+
+  local target
+  target=$(resolve_target "$pkg" "$channel_flag")
+  log_info "Package info for ${BOLD}$target${NC}:"
+  nix search "${target%#*}" "^${target#*#}$" 2>/dev/null || nix search nixpkgs "^$pkg$"
+}
+
+cmd_channel() {
+  local subcmd="${1:-list}"
+  shift || true
+
+  case "$subcmd" in
+    list|ls)
+      log_info "Configured Nix Channels:"
+      nix-channel --list 2>/dev/null || echo "No channels found."
+      echo ""
+      log_info "Flake Registries (Stable/Unstable):"
+      nix registry list 2>/dev/null | grep -E '^global|^user' || true
+      echo ""
+      log_info "Default nics channel: ${CYAN}${BOLD}$(get_default_channel)${NC}"
+      ;;
+    update|up)
+      log_info "Updating Nix Channels and Flake registries..."
+      nix-channel --update
+      log_success "Channels updated."
+      ;;
+    set-default)
+      if [ -z "${1:-}" ]; then
+        log_error "Specify 'stable' or 'unstable'. e.g., 'nics channel set-default stable'"
+        return 1
+      fi
+      set_default_channel "$1"
+      ;;
+    *)
+      echo "Usage: nics channel [list | update | set-default <stable|unstable>]"
+      ;;
+  esac
+}
+
+cmd_gc() {
+  check_nix_environment
+  local delete_old=false
+  if [[ "${1:-}" == "--all" || "${1:-}" == "-a" ]]; then
+    delete_old=true
+  fi
+
+  log_info "Collecting garbage and optimizing store..."
+  if [ "$delete_old" = true ]; then
+    log_info "Removing older profile generations..."
+    nix-collect-garbage -d
+  else
+    nix-collect-garbage
+  fi
+
+  log_info "Optimizing Nix store hardlinks..."
+  nix store optimise 2>/dev/null || true
+  log_success "Garbage collection complete."
+}
+
+cmd_gl() {
+  check_nix_environment
+  if [ $# -eq 0 ]; then
+    log_error "No command specified to run with GPU acceleration."
+    echo "Usage: nics gl <command...> (e.g. nics gl localsend_app)"
+    return 1
+  fi
+
+  # Ensure nix profile bin is in PATH for nixGL target resolution
+  if [ -d "$HOME/.nix-profile/bin" ]; then
+    case ":$PATH:" in
+      *":$HOME/.nix-profile/bin:"*) ;;
+      *) export PATH="$HOME/.nix-profile/bin:$PATH" ;;
+    esac
+  fi
+
+  # Check if nixGL is installed
+  if command -v nixGL >/dev/null 2>&1; then
+    exec nixGL "$@"
+  elif [ -e "$HOME/.nix-profile/bin/nixGL" ]; then
+    exec "$HOME/.nix-profile/bin/nixGL" "$@"
+  else
+    echo ""
+    log_warn "nixGL (GPU hardware acceleration bridge) is required to run graphical applications."
+    log_warn "It is not currently installed in your profile (~100 MB download)."
+    echo ""
+    echo -n -e "${BOLD}:: Would you like to download and install nixGL now? [y/N] ${NC}"
+    local response
+    read -r response || response="n"
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+      log_info "Installing nixGL into your profile..."
+      if nix profile add --impure github:nix-community/nixGL 2>/dev/null || nix profile install --impure github:nix-community/nixGL; then
+        log_success "nixGL installed successfully! Launching application..."
+        if [ -e "$HOME/.nix-profile/bin/nixGL" ]; then
+          exec "$HOME/.nix-profile/bin/nixGL" "$@"
+        fi
+      else
+        log_error "Failed to install nixGL."
+        return 1
+      fi
+    else
+      log_warn "Aborted. You can install nixGL anytime with: nics setup-gpu"
+      return 1
+    fi
+  fi
+}
+
+cmd_setup_gpu() {
+  check_nix_environment
+  log_info "Installing nixGL into profile for permanent GPU hardware acceleration..."
+  if nix profile add --impure github:nix-community/nixGL 2>/dev/null || nix profile install --impure github:nix-community/nixGL; then
+    log_success "nixGL installed! You can now run any GUI app with 'nixGL <app>' or 'nics gl <app>'."
+  else
+    log_error "Failed to install nixGL."
+    return 1
+  fi
+}
+
+cmd_doctor() {
+  echo -e "${BOLD}${CYAN}=== nics Doctor & Health Diagnostic ===${NC}"
+  local issues=0
+
+  # 1. Check Nix binary
+  echo -n "Checking Nix binary in PATH... "
+  if command -v nix >/dev/null 2>&1; then
+    echo -e "${GREEN}OK${NC} ($(nix --version))"
+  else
+    echo -e "${RED}FAILED${NC}"
+    issues=$((issues+1))
+  fi
+
+  # 2. Check Daemon Service
+  echo -n "Checking nix-daemon systemd service... "
+  if systemctl is-active nix-daemon.service >/dev/null 2>&1 || systemctl is-active nix-daemon.socket >/dev/null 2>&1; then
+    echo -e "${GREEN}ACTIVE${NC}"
+  else
+    echo -e "${YELLOW}INACTIVE / NOT DETECTED${NC}"
+    issues=$((issues+1))
+  fi
+
+  # 3. Check Socket permissions
+  echo -n "Checking daemon socket connectivity... "
+  if [ -e "/nix/var/nix/daemon-socket/socket" ]; then
+    echo -e "${GREEN}OK${NC} (/nix/var/nix/daemon-socket/socket exists)"
+  else
+    echo -e "${YELLOW}WARNING${NC} (Socket not found at default path)"
+  fi
+
+  # 4. Check Flake / Experimental Features
+  echo -n "Checking Flakes and nix-command support... "
+  if nix flake --help >/dev/null 2>&1; then
+    echo -e "${GREEN}ENABLED${NC}"
+  else
+    echo -e "${RED}DISABLED${NC} (Ensure experimental-features = nix-command flakes is in /etc/nix/nix.conf)"
+    issues=$((issues+1))
+  fi
+
+  # 5. Check Registries
+  echo -n "Checking Flake registry (nixpkgs & nixpkgs-stable)... "
+  if nix registry list 2>/dev/null | grep "nixpkgs" >/dev/null; then
+    echo -e "${GREEN}OK${NC}"
+  else
+    echo -e "${YELLOW}WARNING${NC} (Run setup.sh or 'nics channel update' to register nixpkgs flakes)"
+  fi
+
+  # 6. Check PATH integration for ~/.local/bin
+  echo -n "Checking ~/.local/bin in PATH... "
+  if [[ ":$PATH:" == *":$HOME/.local/bin:"* ]]; then
+    echo -e "${GREEN}OK${NC}"
+  else
+    echo -e "${YELLOW}WARNING${NC} (~/.local/bin is not in current PATH)"
+  fi
+
+  # 7. Check Desktop Integration
+  echo -n "Checking XDG_DATA_DIRS for Nix desktop apps... "
+  if [[ "${XDG_DATA_DIRS:-}" == *"$HOME/.nix-profile/share"* ]]; then
+    echo -e "${GREEN}OK${NC}"
+  else
+    echo -e "${YELLOW}NOTICE${NC} (Will be active in newly spawned login/bash shells)"
+  fi
+
+  echo ""
+  if [ $issues -eq 0 ]; then
+    log_success "All diagnostic checks passed! Nix and nics are ready to use."
+  else
+    log_warn "$issues potential issue(s) detected. Please run './setup.sh' to fix configuration."
+  fi
+}
+
+cmd_version() {
+  echo "nics version $NICS_VERSION"
+  if command -v nix >/dev/null 2>&1; then
+    echo "Nix runtime: $(nix --version)"
+  else
+    echo "Nix runtime: not found"
+  fi
+  echo "Default channel: $(get_default_channel)"
+}
+
+# Main Command Dispatcher
+main() {
+  if [[ $# -eq 0 ]]; then
+    show_help
+    exit 0
+  fi
+
+  local command="$1"
+  shift
+
+  case "$command" in
+    install|add|i)
+      cmd_install "$@"
+      ;;
+    remove|rm|uninstall)
+      cmd_remove "$@"
+      ;;
+    update|up|upgrade)
+      cmd_update "$@"
+      ;;
+    check|outdated|check-updates)
+      cmd_check_updates "$@"
+      ;;
+    history|generations)
+      cmd_history "$@"
+      ;;
+    rollback|undo)
+      cmd_rollback "$@"
+      ;;
+    list|ls)
+      cmd_list "$@"
+      ;;
+    search|find|s)
+      cmd_search "$@"
+      ;;
+    run|r|exec)
+      cmd_run "$@"
+      ;;
+    shell|sh)
+      cmd_shell "$@"
+      ;;
+    info)
+      cmd_info "$@"
+      ;;
+    channel|channels)
+      cmd_channel "$@"
+      ;;
+    gc|clean)
+      cmd_gc "$@"
+      ;;
+    gl|gpu)
+      cmd_gl "$@"
+      ;;
+    setup-gpu|install-gpu|nixgl)
+      cmd_setup_gpu "$@"
+      ;;
+    doctor)
+      cmd_doctor "$@"
+      ;;
+    version|-v|--version)
+      cmd_version "$@"
+      ;;
+    help|-h|--help)
+      show_help
+      ;;
+    *)
+      log_error "Unknown command: '$command'"
+      echo "Run 'nics --help' for usage."
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

@@ -792,6 +792,12 @@ Item {
     function invokeNotification(key) {
         if (!key || !root.activeNotifications) return false;
         var notif = root.activeNotifications[key];
+        if (!notif) {
+            var parts = String(key).split("-");
+            if (parts.length > 1) {
+                notif = root.activeNotifications["id:" + parts[1]];
+            }
+        }
         if (!notif) return false;
         try {
             if (notif.actions && notif.actions.length > 0) {
@@ -813,11 +819,19 @@ Item {
 
     function removeNotification(key) {
         if (!key) return;
-        if (root.activeNotifications && root.activeNotifications[key]) {
+        var notif = root.activeNotifications ? root.activeNotifications[key] : null;
+        var parts = String(key).split("-");
+        if (!notif && root.activeNotifications && parts.length > 1) {
+            notif = root.activeNotifications["id:" + parts[1]];
+        }
+        if (notif) {
             try {
-                if (root.activeNotifications[key].dismiss) root.activeNotifications[key].dismiss();
+                if (notif.dismiss) notif.dismiss();
             } catch (e) {}
-            delete root.activeNotifications[key];
+            if (root.activeNotifications) {
+                delete root.activeNotifications[key];
+                if (parts.length > 1) delete root.activeNotifications["id:" + parts[1]];
+            }
         }
         if (root.notificationCenterService) root.notificationCenterService.remove(key);
     }

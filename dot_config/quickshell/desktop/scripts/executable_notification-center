@@ -153,8 +153,8 @@ ingest_file() {
 
   if [[ -s $archive ]]; then
     local recent_dup
-    recent_dup=$(tail -n 10 "$archive" 2>/dev/null | jq -r --arg app "$app_text" --arg sum "$sum_text" --arg body "$body_text" \
-      'select(.app == $app and .summary == $sum and .body == $body) | .key' 2>/dev/null | head -n 1)
+    recent_dup=$(jq -r --arg app "$app_text" --arg sum "$sum_text" --arg body "$body_text" \
+      'select(.app == $app and .summary == $sum and .body == $body) | .key' "$archive" 2>/dev/null | head -n 1)
     if [[ -n $recent_dup ]]; then
       rm -f -- "$file"
       return 0
