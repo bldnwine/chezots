@@ -3,3 +3,8 @@
 .config/quickshell/desktop/scripts/calendar-sync/omarchy_calendar_sync/__pycache__
 .config/quickshell/desktop/scripts/calendar-sync/omarchy_calendar_sync/__pycache__/**
 
+.local/bin/agy
+.local/bin/A704F_Mouse
+.local/bin/dmcams
+.local/bin/zen
+.local/bin/localsend

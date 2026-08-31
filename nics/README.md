@@ -95,6 +95,7 @@ nics doctor
 | `nics channel list` | Show configured channels and flake registries | `nics channel list` |
 | `nics channel update` | Update channels and flake registry caches | `nics channel update` |
 | `nics channel set-default <stable\|unstable>` | Change default channel for `nics install` | `nics channel set-default stable` |
+| `nics channel set-stable <release>` | Upgrade stable channel to a new NixOS release | `nics channel set-stable 25.05` |
 | `nics gc [--all]` | Free disk space and optimize store hardlinks | `nics gc --all` |
 | `nics doctor` | Run installation health diagnostics | `nics doctor` |
 

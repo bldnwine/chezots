@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+USER_FLAGS_FILE="$XDG_CONFIG_HOME/brave-origin-beta-flags.conf"
+FLAG_LIST=()
+
+if [[ -f "${USER_FLAGS_FILE}" ]]; then
+    mapfile -t CONF_LIST < "${USER_FLAGS_FILE}"
+    for CONF_LINE in "${CONF_LIST[@]}"; do
+        if ! [[ "${CONF_LINE}" =~ ^[[:space:]]*(#|$) ]]; then
+            FLAG_LIST+=("${CONF_LINE}")
+        fi
+    done
+fi
+
+if [[ -z "${CHROME_USER_DATA_DIR}" ]]; then
+    export CHROME_USER_DATA_DIR="$HOME/.config/BraveSoftware/Brave-Origin-Beta"
+fi
+
+exec "/opt/brave.com/brave-origin-beta/brave-origin" "${FLAG_LIST[@]}" "${@}"

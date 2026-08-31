@@ -5,7 +5,7 @@ browser=$(xdg-settings get default-web-browser)
 
 # Categorize: chromium-based gets --app mode, firefox-based gets normal window
 case $browser in
-    google-chrome*|brave-browser*|microsoft-edge*|opera*|vivaldi*|helium*|chromium*)
+    google-chrome*|brave*|com.brave*|microsoft-edge*|opera*|vivaldi*|helium*|chromium*)
         APP_MODE="--app" ;;
     zen*|firefox*)
         APP_MODE="" ;;

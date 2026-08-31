@@ -359,40 +359,50 @@ cmd_check_updates() {
     esac
   done
 
-  local effective_channel="${channel_flag:-$(get_default_channel)}"
-  local target_flake="nixpkgs"
-  if [ "$effective_channel" = "stable" ]; then
-    target_flake="nixpkgs-stable"
-  fi
+  log_info "Checking upstream channels for updates..."
+  echo ""
 
-  log_info "Checking for package updates against ${CYAN}[$effective_channel]${NC}..."
+  fetch_channel_status() {
+    local label="$1"
+    local flake="$2"
+    local meta
+    meta=$(nix flake metadata "$flake" 2>/dev/null || true)
+    if [ -n "$meta" ]; then
+      local branch rev date
+      branch=$(echo "$meta" | grep -i 'Resolved URL:' | awk '{print $NF}' | sed 's#.*/##' || echo "$flake")
+      rev=$(echo "$meta" | grep -i 'Revision:' | awk '{print $2}' || true)
+      date=$(echo "$meta" | grep -i 'Last modified:' | cut -d: -f2- | sed 's/^[ \t]*//' || true)
+      echo -e "  • ${BOLD}${CYAN}[$label]${NC} Branch: ${BOLD}$branch${NC} | Rev: ${BOLD}${rev:0:10}${NC} (${DIM}$date${NC})"
+    else
+      echo -e "  • ${BOLD}${CYAN}[$label]${NC} ${YELLOW}Could not fetch remote metadata${NC}"
+    fi
+  }
 
-  # 1. Check upstream Flake metadata
-  echo -n "Fetching latest upstream Flake metadata... "
-  local latest_info
-  latest_info=$(nix flake metadata "$target_flake" 2>/dev/null || true)
-  if [ -n "$latest_info" ]; then
-    echo -e "${GREEN}OK${NC}"
-    local latest_rev latest_date
-    latest_rev=$(echo "$latest_info" | grep -E '^Revision:' | awk '{print $2}' || true)
-    latest_date=$(echo "$latest_info" | grep -E '^Last modified:' | cut -d: -f2- | sed 's/^[ \t]*//' || true)
-    if [ -n "$latest_rev" ]; then
-      echo -e "  Latest Upstream Revision: ${BOLD}${latest_rev:0:10}${NC} (${DIM}$latest_date${NC})"
+  if [ -n "$channel_flag" ]; then
+    if [ "$channel_flag" = "stable" ]; then
+      fetch_channel_status "stable" "nixpkgs-stable"
+    else
+      fetch_channel_status "unstable" "nixpkgs"
     fi
   else
-    echo -e "${YELLOW}Could not fetch remote metadata${NC}"
+    fetch_channel_status "unstable" "nixpkgs"
+    fetch_channel_status "stable" "nixpkgs-stable"
   fi
 
   # 2. Check installed packages
   echo ""
   log_info "Installed packages in user profile:"
+  echo ""
   if ! nix profile list 2>/dev/null; then
     log_warn "No packages currently installed in user profile."
     return 0
   fi
 
   echo ""
-  log_info "To upgrade installed packages to the latest revisions, run: ${BOLD}nics update${NC}"
+  log_info "Actions:"
+  echo -e "  • Upgrade packages to latest channel revisions: ${BOLD}nics update${NC} (or ${BOLD}nics update <pkg>${NC})"
+  echo -e "  • Change default channel:                        ${BOLD}nics channel set-default <stable|unstable>${NC}"
+  echo -e "  • Upgrade stable channel to newer release:       ${BOLD}nics channel set-stable <e.g. 25.05>${NC}"
 }
 
 cmd_history() {
@@ -614,8 +624,21 @@ cmd_channel() {
       fi
       set_default_channel "$1"
       ;;
+    set-stable|upgrade-stable)
+      if [ -z "${1:-}" ]; then
+        log_error "Specify the NixOS release version. e.g., 'nics channel set-stable 25.05'"
+        return 1
+      fi
+      local rel="$1"
+      rel="${rel#nixos-}"
+      log_info "Updating stable channel to NixOS release: ${BOLD}$rel${NC}..."
+      nix-channel --add "https://channels.nixos.org/nixos-$rel" stable
+      nix registry add nixpkgs-stable "github:NixOS/nixpkgs/nixos-$rel"
+      nix-channel --update
+      log_success "Stable channel and registry successfully updated to ${BOLD}nixos-$rel${NC}."
+      ;;
     *)
-      echo "Usage: nics channel [list | update | set-default <stable|unstable>]"
+      echo "Usage: nics channel [list | update | set-default <stable|unstable> | set-stable <release>]"
       ;;
   esac
 }

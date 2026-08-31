@@ -109,6 +109,7 @@ hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "wayland")
 hl.env("OZONE_PLATFORM", "wayland")
 hl.env("HYPRCURSOR_SIZE", "24")
+hl.env("LIBVA_DRIVER_NAME", "iHD")
 
 -----------------------
 ---- LOOK AND FEEL ----
@@ -334,6 +335,8 @@ hl.bind(mainMod .. " + CONTROL + G", function()
 end)
 --hl.bind("ALT + F", hl.dsp.exec_cmd(launch("helium-browser")))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(launch("zen -P default")))
+hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(launch("brave-origin-beta")))
+hl.bind(mainMod .. " + ALT + SHIFT + B", hl.dsp.exec_cmd(launch("brave-origin-beta --incognito")))
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(launch("zen --private-window")))
 hl.bind(mainMod .. " + ALT", hl.dsp.exec_cmd("sh -c 'killall -SIGUSR1 waybar'"))
 hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("capture-screenshot smart slurp"))
@@ -533,7 +536,13 @@ hl.window_rule({
 	center = true,
 	size = { 1460, 912 },    --  1460, 912 / 1447, 1009
 })
-
+hl.window_rule({
+        name = "Brave Origin",
+        match = { class = "^brave-origin-beta$" },
+        float = true,
+        center = true,
+        size = { 1837, 922 },   
+})
 -----------------------
 ---- QUAKE CONSOLE ----
 -----------------------
