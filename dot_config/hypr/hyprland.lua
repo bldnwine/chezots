@@ -107,7 +107,7 @@ end)
 
 hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "wayland")
-hl.env("OZONE_PLATFORM", "wayland")
+-- hl.env("OZONE_PLATFORM", "wayland")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("LIBVA_DRIVER_NAME", "iHD")
 
@@ -534,7 +534,7 @@ hl.window_rule({
 	match = { class = "zen", title = "Zen Browser" },
 	float = true,
 	center = true,
-	size = { 1460, 912 },    --  1460, 912 / 1447, 1009
+	size = { 1837, 922 },    --  1460, 912 / 1447, 1009 / 1875, 917
 })
 hl.window_rule({
         name = "Brave Origin",

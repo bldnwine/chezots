@@ -179,14 +179,12 @@ CardWindow {
         if (index < 0 || index >= rows.count) return;
         var item = rows.get(index);
         if (!item) return;
+        var key = item.key;
         if (popup.root && popup.root.removeNotification) {
-            popup.root.removeNotification(item.key);
+            popup.root.removeNotification(key);
         } else if (service) {
-            service.remove(item.key);
+            service.remove(key);
         }
-        rows.remove(index);
-        if (popup.selectedIndex >= rows.count && rows.count > 0)
-            popup.selectedIndex = rows.count - 1;
     }
 
     function clearAll() {
@@ -195,7 +193,6 @@ CardWindow {
         } else if (service) {
             service.clearAll();
         }
-        rows.clear();
         popup.clearArmed = false;
         popup.selectedIndex = 0;
     }
