@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [ $# -eq 0 ]; then echo "Usage: snix <command> [args...]" >&2; exit 1; fi
+
+CMD="$1"; shift
+if [[ "$CMD" == */* ]]; then exec sudo "$CMD" "$@"; fi
+
+CANDIDATE="$HOME/.nix-profile/bin/$CMD"
+if [ -x "$CANDIDATE" ]; then
+    REAL=$(realpath "$CANDIDATE")
+    # Only allow immutable store paths
+    if [[ "$REAL" == /nix/store/* ]]; then
+        exec sudo "$REAL" "$@"
+    else
+        echo "Refusing to sudo non-store binary: $REAL" >&2
+        exit 1
+    fi
+fi
+
+exec sudo "$CMD" "$@"

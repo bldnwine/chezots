@@ -35,7 +35,7 @@ echo "Installing AUR packages..."
 xargs -a yays --no-run-if-empty yay -S --needed --noconfirm || true
 
 # 4. Add user to groups
-sudo usermod -aG realtime,gamemode,video,input,wheel "$USER"
+sudo usermod -aG realtime,gamemode,wheel "$USER"
 echo "User added to groups (re-login required for changes to take effect)"
 
 echo "Setup completed successfully"
