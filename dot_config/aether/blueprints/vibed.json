@@ -1,7 +1,8 @@
 {
+  "name": "vibed",
   "palette": {
     "colors": [
-      "#0c1018",
+      "#090d0f",
       "#c8c083",
       "#6cb964",
       "#c3c17b",
@@ -19,52 +20,27 @@
       "#e5cdcd"
     ],
     "wallpaper": "/home/bldnwine/Wallpapers/minimal-beton-building.jpg",
-    "wallpaperUrl": null,
-    "wallpaperSource": "local",
-    "lightMode": false,
-    "lockedColors": [
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false
-    ],
-    "extendedColors": {}
+    "extendedColors": {
+      "accent": "#8aa1cc",
+      "cursor": "#e1e5cd",
+      "selection_background": "#e1e5cd",
+      "selection_foreground": "#0c1018"
+    }
   },
   "adjustments": {
-    "vibrance": 23.33333333333333,
-    "saturation": 0,
-    "contrast": 0,
+    "blackPoint": 0,
     "brightness": 0,
-    "shadows": 0,
+    "contrast": 0,
+    "gamma": 1,
     "highlights": 0,
     "hueShift": 0,
+    "saturation": 0,
+    "shadows": 0,
     "temperature": 0,
     "tint": 0,
-    "blackPoint": 0,
-    "whitePoint": 0,
-    "gamma": 1
+    "vibrance": 0,
+    "whitePoint": 0
   },
-  "appOverrides": {},
-  "settings": {
-    "includeNeovim": true,
-    "includeZed": false,
-    "includeVscode": false,
-    "includeGtk": true,
-    "lightMode": false,
-    "selectedNeovimConfig": null
-  },
-  "timestamp": 1772717932393,
-  "name": "vibed"
+  "settings": {},
+  "timestamp": 1788427215845
 }

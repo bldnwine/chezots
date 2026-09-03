@@ -18,6 +18,8 @@ CardWindow {
     layerNamespace: "omarchy-network"
     title: "NETWORK"
     subtitle: {
+        if (root.netKind === "eth" && root.wifiSsid)
+            return "ETHERNET · " + root.wifiSsid + " · " + root.wifiSignal + "%";
         return root.netKind === "eth" ? "ETHERNET"
              : root.netKind === "wifi" ? ((root.wifiSsid || "(hidden)") + " · " + root.wifiSignal + "%")
              : "OFFLINE";

@@ -1896,44 +1896,61 @@ Item {
         id: netProbe
         running: false
         command: ["bash", "-c",
-            "type=none; "
-            + "if ip -o addr show | grep -qE '^[0-9]+: (en|eth)[^ ]*.*inet '; then type=eth; fi; "
-            + "if [ \"$type\" = none ]; then "
-            + "  for w in $(iw dev 2>/dev/null | awk '/Interface/{print $2}'); do "
-            + "    link=$(iw dev \"$w\" link 2>/dev/null); "
-            + "    dbm=$(printf '%s\\n' \"$link\" | awk '/signal:/{print $2}'); "
-            + "    if [ -n \"$dbm\" ]; then "
-            + "      pct=$((2 * (dbm + 100))); "
-            + "      [ $pct -lt 0 ] && pct=0; "
-            + "      [ $pct -gt 100 ] && pct=100; "
-            + "      ssid=$(printf '%s\\n' \"$link\" | sed -n 's/^[[:space:]]*SSID: //p'); "
-            + "      type=\"wifi:$pct:$ssid\"; break; "
-            + "    fi; "
-            + "  done; "
-            + "fi; printf '%s' \"$type\""]
+            "eth=off; "
+            + "if ip -o addr show | grep -qE '^[0-9]+: (en|eth)[^ ]*.*inet '; then eth=on; fi; "
+            + "echo \"ETH|$eth\"; "
+            + "found=\"\"; "
+            + "for w in $(iw dev 2>/dev/null | awk '/Interface/{print $2}'); do "
+            + "  link=$(iw dev \"$w\" link 2>/dev/null); "
+            + "  dbm=$(printf '%s\\n' \"$link\" | awk '/signal:/{print $2}'); "
+            + "  if [ -n \"$dbm\" ]; then "
+            + "    pct=$((2 * (dbm + 100))); "
+            + "    [ $pct -lt 0 ] && pct=0; "
+            + "    [ $pct -gt 100 ] && pct=100; "
+            + "    ssid=$(printf '%s\\n' \"$link\" | sed -n 's/^[[:space:]]*SSID: //p'); "
+            + "    echo \"WIFI|$pct|$ssid\"; found=1; break; "
+            + "  fi; "
+            + "done; "
+            + "[ -z \"$found\" ] && echo 'WIFI|off'"]
         stdout: StdioCollector {
             onStreamFinished: {
-                const t = this.text.trim();
-                if (t === "eth") {
+                // Two independent signals: ETH|on|off + WIFI|off|pct|ssid.
+                // Ethernet keeps icon/kind priority, but wifi state is
+                // preserved so the scan list keeps its inUse highlight
+                // when both links are up. Only split on the first "|"
+                // after WIFI| so SSIDs containing "|" or ":" survive.
+                const lines = this.text.split("\n").map(s => s.trim()).filter(s => s.length > 0);
+                let ethOn = false;
+                let wifiOn = false;
+                let wifiSig = 0;
+                let wifiSsid = "";
+                for (const line of lines) {
+                    if (line === "ETH|on") {
+                        ethOn = true;
+                    } else if (line.startsWith("WIFI|")) {
+                        const rest = line.slice(5);
+                        if (rest !== "off") {
+                            wifiOn = true;
+                            const c = rest.indexOf("|");
+                            if (c < 0) {
+                                wifiSig = parseInt(rest) || 0;
+                            } else {
+                                wifiSig = parseInt(rest.slice(0, c)) || 0;
+                                wifiSsid = rest.slice(c + 1);
+                            }
+                        }
+                    }
+                }
+                if (ethOn) {
                     root.netIcon = "󰀂"; root.netKind = "eth";
-                    root.wifiSsid = ""; root.wifiSignal = 0;
-                    root.syncWifiActiveState("");
-                } else if (t.startsWith("wifi:")) {
-                    // Split on the first two colons: signal pct, then SSID
-                    // (which may itself contain colons, so a naive split
-                    // would truncate networks like "Foo:Bar").
-                    const rest = t.slice(5);
-                    const c = rest.indexOf(":");
-                    const sig = parseInt(c < 0 ? rest : rest.slice(0, c)) || 0;
-                    const ssid = c < 0 ? "" : rest.slice(c + 1);
-                    root.netIcon = root.wifiBarsGlyph(sig); root.netKind = "wifi";
-                    root.wifiSignal = sig; root.wifiSsid = ssid;
-                    root.syncWifiActiveState(ssid);
+                } else if (wifiOn) {
+                    root.netIcon = root.wifiBarsGlyph(wifiSig); root.netKind = "wifi";
                 } else {
                     root.netIcon = "󰤮"; root.netKind = "none";
-                    root.wifiSsid = ""; root.wifiSignal = 0;
-                    root.syncWifiActiveState("");
                 }
+                root.wifiSignal = wifiOn ? wifiSig : 0;
+                root.wifiSsid = wifiOn ? wifiSsid : "";
+                root.syncWifiActiveState(wifiOn ? wifiSsid : "");
             }
         }
     }
