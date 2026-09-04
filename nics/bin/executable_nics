@@ -267,9 +267,14 @@ cmd_install() {
     fi
   fi
 
+  local log_args=()
+  if [ -t 1 ]; then
+    log_args=(--log-format bar-with-logs)
+  fi
+
   for target in "${targets[@]}"; do
     log_info "-> Installing ${BOLD}$target${NC}..."
-    if nix profile add "$target" 2>/dev/null || nix profile install "$target"; then
+    if nix profile add "${log_args[@]}" "$target" || nix profile install "${log_args[@]}" "$target"; then
       log_success "Successfully installed ${BOLD}$target${NC}."
     else
       log_error "Failed to install ${BOLD}$target${NC}."
@@ -323,15 +328,31 @@ cmd_update() {
   log_info "Updating Nix channels..."
   nix-channel --update || log_warn "nix-channel update finished with warnings."
 
+  local log_args=()
+  if [ -t 1 ]; then
+    log_args=(--log-format bar-with-logs)
+  fi
+
   if [[ $# -gt 0 ]]; then
     for pkg in "$@"; do
       log_info "Upgrading package ${BOLD}$pkg${NC}..."
-      nix profile upgrade ".*$pkg.*" || log_error "Failed to upgrade $pkg."
+      if nix profile upgrade --impure "${log_args[@]}" "$pkg"; then
+        log_success "Successfully upgraded ${BOLD}$pkg${NC}."
+      elif nix profile upgrade --impure "${log_args[@]}" --regex ".*$pkg.*"; then
+        log_success "Successfully upgraded ${BOLD}$pkg${NC}."
+      else
+        log_error "Failed to upgrade $pkg. Run 'nics list' to check installed package names."
+      fi
     done
   else
     log_info "Upgrading all installed profile packages..."
-    nix profile upgrade '.*' || log_warn "Some packages may already be at latest revision."
-    log_success "Upgrade completed."
+    if nix profile upgrade --impure "${log_args[@]}" --all; then
+      log_success "All packages upgraded successfully."
+    elif nix profile upgrade --impure "${log_args[@]}" --regex '.*'; then
+      log_success "All packages upgraded successfully."
+    else
+      log_warn "Some packages may already be at the latest revision."
+    fi
   fi
 }
 
@@ -391,18 +412,117 @@ cmd_check_updates() {
 
   # 2. Check installed packages
   echo ""
-  log_info "Installed packages in user profile:"
-  echo ""
-  if ! nix profile list 2>/dev/null; then
+  log_info "Checking installed packages..."
+
+  local json
+  json=$(nix profile list --json 2>/dev/null || true)
+
+  if [ -z "$json" ] || [ "$(echo "$json" | jq -r '.elements | length' 2>/dev/null || echo 0)" -eq 0 ]; then
     log_warn "No packages currently installed in user profile."
     return 0
   fi
 
+  local table_rows=()
+  local updates_available=0
+  local outdated_pkgs=()
+
+  while IFS='|' read -r pkg orig_url store_path locked_url; do
+    [ -z "$pkg" ] && continue
+
+    # Determine channel label & target flake
+    local target_flake=""
+    local channel_label=""
+    if [[ "$orig_url" == "flake:nixpkgs" || "$orig_url" == *"nixpkgs-unstable"* ]]; then
+      target_flake="nixpkgs"
+      channel_label="unstable"
+    elif [[ "$orig_url" == "flake:nixpkgs-stable" || "$orig_url" == *"nixos-"* ]]; then
+      target_flake="nixpkgs-stable"
+      channel_label="stable"
+    else
+      target_flake="$orig_url"
+      channel_label="custom"
+    fi
+
+    # Channel filter if user passed -s or -u
+    if [ -n "$channel_flag" ] && [ "$channel_label" != "$channel_flag" ]; then
+      continue
+    fi
+
+    # Extract version from store path
+    local pkg_base
+    pkg_base=$(basename "$store_path" | sed -E 's/^[a-z0-9]+-//')
+    local cur_ver=""
+    if [[ "$pkg_base" =~ ^(.*)-([0-9].*)$ ]]; then
+      cur_ver="${BASH_REMATCH[2]}"
+    fi
+
+    # Extract locked git commit if no semantic version
+    local locked_commit
+    locked_commit=$(echo "$locked_url" | grep -oE '[a-f0-9]{40}' | head -n1 || true)
+    if [ -z "$cur_ver" ]; then
+      cur_ver="${locked_commit:0:7}"
+    fi
+    [ -z "$cur_ver" ] && cur_ver="current"
+
+    # Query latest upstream version
+    local latest_ver=""
+    if [ "$channel_label" != "custom" ]; then
+      latest_ver=$(nix eval --raw "${target_flake}#${pkg}.version" 2>/dev/null || true)
+      if [ -z "$latest_ver" ]; then
+        local drv_name
+        drv_name=$(nix eval --raw "${target_flake}#${pkg}.name" 2>/dev/null || true)
+        if [[ "$drv_name" =~ ^(.*)-([0-9].*)$ ]]; then
+          latest_ver="${BASH_REMATCH[2]}"
+        fi
+      fi
+    else
+      # Custom flake: compare remote commit
+      local meta_rev
+      meta_rev=$(nix flake metadata "$target_flake" 2>/dev/null | grep -i 'Revision:' | awk '{print $2}' || true)
+      if [ -n "$meta_rev" ]; then
+        latest_ver="${meta_rev:0:7}"
+      else
+        latest_ver="$cur_ver"
+      fi
+    fi
+
+    local status=""
+    if [ -n "$latest_ver" ] && [ "$latest_ver" != "$cur_ver" ]; then
+      status="${YELLOW}${BOLD}UPDATE AVAILABLE${NC}"
+      updates_available=$((updates_available + 1))
+      outdated_pkgs+=("$pkg")
+    elif [ -n "$latest_ver" ]; then
+      status="${GREEN}Up to date${NC}"
+    else
+      status="${DIM}Tracked${NC}"
+      latest_ver="$cur_ver"
+    fi
+
+    table_rows+=("$pkg|$channel_label|$cur_ver|${latest_ver:-$cur_ver}|$status")
+  done < <(echo "$json" | jq -r '.elements | to_entries[] | "\(.key)|\(.value.originalUrl)|\(.value.storePaths[0])|\(.value.url)"' 2>/dev/null)
+
+  if [ ${#table_rows[@]} -eq 0 ]; then
+    log_warn "No installed packages matched filter '${channel_flag:-all}'."
+    return 0
+  fi
+
   echo ""
-  log_info "Actions:"
-  echo -e "  • Upgrade packages to latest channel revisions: ${BOLD}nics update${NC} (or ${BOLD}nics update <pkg>${NC})"
-  echo -e "  • Change default channel:                        ${BOLD}nics channel set-default <stable|unstable>${NC}"
-  echo -e "  • Upgrade stable channel to newer release:       ${BOLD}nics channel set-stable <e.g. 25.05>${NC}"
+  printf "  ${BOLD}%-18s %-12s %-20s %-20s %-20s${NC}\n" "Package" "Channel" "Current Version" "Latest Version" "Status"
+  printf "  ${DIM}%s${NC}\n" "------------------------------------------------------------------------------------------------"
+  for row in "${table_rows[@]}"; do
+    IFS='|' read -r r_pkg r_chan r_cur r_lat r_stat <<< "$row"
+    printf "  %-18s %-12s %-20s %-20s %b\n" "$r_pkg" "$r_chan" "$r_cur" "$r_lat" "$r_stat"
+  done
+  echo ""
+
+  if [ $updates_available -gt 0 ]; then
+    log_info "${BOLD}${YELLOW}$updates_available package update(s) available!${NC}"
+    echo ""
+    echo -e "  • Upgrade all packages:         ${BOLD}nics update${NC}"
+    echo -e "  • Upgrade specific package(s):  ${BOLD}nics update ${outdated_pkgs[*]}${NC}"
+  else
+    log_success "All installed packages are up to date!"
+  fi
 }
 
 cmd_history() {

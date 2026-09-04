@@ -645,7 +645,7 @@ PanelWindow {
                 }
                 onMiddleActivated: bar.root.run("pamixer -t && qs -c desktop ipc call audio refresh")
                 onRightActivated: bar.root.run("~/.config/waybar/scripts/pulse_switch.sh")
-                onWheelActivated: (delta) => bar.root.run(delta > 0 ? "~/.config/quickshell/desktop/scripts/volume +5" : "~/.config/quickshell/desktop/scripts/volume -5")
+                onWheelActivated: (delta) => bar.root.nudgeVolume(delta)
             }
 
             Module {

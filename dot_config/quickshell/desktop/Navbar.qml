@@ -498,6 +498,97 @@ Item {
         audioProbe.running = true;
     }
 
+    // ---------- Snappy bar-wheel volume ----------
+    // Wheel on the bar icon calls nudgeVolume() per scroll event. Same
+    // semantics as the old scripts/volume path (relative pamixer step on
+    // the physical sink, unmuting, ≤100 cap) — only the delivery changed:
+    // UI updates optimistically (0ms feedback) and the backend gets at most
+    // one coalesced relative set per throttle window. Direct argv, no bash,
+    // no qs ipc spawns. Physical sink name is cached from audioProbe (it
+    // already resolves it); fresh every 2s + on every refreshAudio().
+    property int _volAccum: 0
+    property int _volPendingDelta: 0
+    property bool _volDirtySinceFire: false
+    property string _volPhysSink: ""
+    Process { id: volProc; running: false }
+    Timer {
+        id: volThrottle
+        interval: 90
+        repeat: false
+        onTriggered: { if (root._volDirtySinceFire) root._fireVolume(); }
+    }
+    Timer {
+        id: volRefreshDebounce
+        interval: 250
+        repeat: false
+        onTriggered: root.refreshAudio()
+    }
+    // Shared with audioProbe: icon ramps with volume/mute/device type.
+    function updateAudioIcon() {
+        if (root.audioMuted) {
+            root.audioIcon = root.icoMute;
+        } else if (root.audioDevType === "hp") {
+            root.audioIcon = root.icoHeadphone;
+        } else if (root.audioDevType === "bt") {
+            root.audioIcon = root.icoSpeaker;
+        } else if (root.audioDevType === "hdmi") {
+            root.audioIcon = root.icoDisplay;
+        } else if (root.audioVol <= 0) {
+            root.audioIcon = root.icoVol1;
+        } else if (root.audioVol < 34) {
+            root.audioIcon = root.icoVol1;
+        } else if (root.audioVol < 67) {
+            root.audioIcon = root.icoVol2;
+        } else {
+            root.audioIcon = root.icoVol3;
+        }
+    }
+    // Signed accumulation: 120 angleDelta units = one notch = one 5%
+    // step. Sub-notch deltas (touchpads) carry over via _volAccum; the
+    // exact applied delta accumulates in _volPendingDelta and goes out as a
+    // single coalesced relative pamixer op per throttle window, so display
+    // and backend converge exactly even at the 0/100 cap edges.
+    function nudgeVolume(deltaY) {
+        if (!deltaY) return;
+        root._volAccum += deltaY;
+        const steps = Math.trunc(root._volAccum / 120);
+        if (steps === 0) return;
+        root._volAccum -= steps * 120;
+        root.nudgeVolumeSteps(steps);
+    }
+    // Step core shared by the bar wheel (via nudgeVolume) and the media
+    // keys (via the audio IPC target below).
+    function nudgeVolumeSteps(steps) {
+        if (!steps) return;
+        const target = Math.max(0, Math.min(100, root.audioVol + steps * 5));
+        const applied = target - root.audioVol;
+        if (applied === 0 && !root.audioMuted) return;
+        root._volPendingDelta += applied;
+        if (root.audioMuted) root.audioMuted = false;
+        root.audioVol = target;
+        root._lastVolChangeTime = Date.now();
+        root.updateAudioIcon();
+        osdSurface.show("", "", String(target), "100", "", "1200");
+        root._volDirtySinceFire = true;
+        if (!volThrottle.running) {
+            root._fireVolume();
+            volThrottle.start();
+        }
+    }
+    function _fireVolume() {
+        const delta = root._volPendingDelta;
+        root._volPendingDelta = 0;
+        root._volDirtySinceFire = false;
+        let cmd = ["pamixer", "-u"];
+        if (root._volPhysSink !== "") cmd.push("--sink", root._volPhysSink);
+        if (delta > 0) cmd.push("-i", String(delta));
+        else if (delta < 0) cmd.push("-d", String(-delta));
+        volProc.command = cmd;
+        volProc.running = false;
+        volProc.running = true;
+        volRefreshDebounce.restart();
+    }
+
     function setAudioVolume(pct) {
         const v = Math.max(0, Math.min(100, Math.round(pct)));
         root.audioVol = v;
@@ -552,6 +643,10 @@ Item {
 
     function toggleAudioMute() {
         root.audioMuted = !root.audioMuted;
+        root._lastVolChangeTime = Date.now();
+        root.updateAudioIcon();
+        if (root.audioMuted) osdSurface.show("volume-muted", "MUTED", "", "100", "", "1200");
+        else osdSurface.show("", "", String(root.audioVol), "100", "", "1200");
         root.run("target=$(pactl get-default-sink 2>/dev/null); "
             + "if [ \"$target\" = \"effect_input.eq\" ]; then "
             + "  phys=$(pactl list sinks short 2>/dev/null | awk '$2 !~ /effect_/ {print $2; exit}'); "
@@ -1942,7 +2037,7 @@ Item {
                     }
                 }
                 if (ethOn) {
-                    root.netIcon = "󰀂"; root.netKind = "eth";
+                    root.netIcon = "󰈀"; root.netKind = "eth";
                 } else if (wifiOn) {
                     root.netIcon = root.wifiBarsGlyph(wifiSig); root.netKind = "wifi";
                 } else {
@@ -2166,11 +2261,11 @@ Item {
             + "iv=$(pamixer --default-source --get-volume 2>/dev/null || echo 0); "
             + "im=$(pamixer --default-source --get-mute 2>/dev/null || echo false); "
             + "case \"$p\" in *headphone*|*headset*|*hp*) pl=\"Headphones\" ;; *speaker*) pl=\"Speakers\" ;; *) pl=\"$p\" ;; esac; "
-            + "printf '%s|%s|%s|%s|%s|%s|%s' \"$v\" \"$m\" \"$t\" \"${desc:-}\" \"$iv\" \"$im\" \"$pl\""]
+            + "printf '%s|%s|%s|%s|%s|%s|%s|%s' \"$v\" \"$m\" \"$t\" \"${desc:-}\" \"$iv\" \"$im\" \"$pl\" \"$target\""]
         stdout: StdioCollector {
             onStreamFinished: {
                 const p = this.text.split("|");
-                if (p.length !== 7) return;
+                if (p.length < 7) return;
                 const v = parseInt(p[0]);
                 const m = p[1].trim() === "true";
                 const t = p[2].trim();
@@ -2178,6 +2273,8 @@ Item {
                 const iv = parseInt(p[4]);
                 const im = p[5].trim() === "true";
                 const pl = p[6].trim();
+                const phys = (p[7] || "").trim();
+                if (phys !== "") root._volPhysSink = phys;
                 if (Date.now() - root._lastVolChangeTime >= 700) {
                     root.audioVol = isNaN(v) ? 0 : v;
                     root.audioMuted = m;
@@ -2187,23 +2284,7 @@ Item {
                 root.audioDevType = t;
                 root.audioSinkDesc = desc;
                 root.audioPort = pl;
-                if (m) {
-                    root.audioIcon = root.icoMute;
-                } else if (t === "hp") {
-                    root.audioIcon = root.icoHeadphone;
-                } else if (t === "bt") {
-                    root.audioIcon = root.icoSpeaker;
-                } else if (t === "hdmi") {
-                    root.audioIcon = root.icoDisplay;
-                } else if (isNaN(v) || v <= 0) {
-                    root.audioIcon = root.icoVol1;
-                } else if (v < 34) {
-                    root.audioIcon = root.icoVol1;
-                } else if (v < 67) {
-                    root.audioIcon = root.icoVol2;
-                } else {
-                    root.audioIcon = root.icoVol3;
-                }
+                root.updateAudioIcon();
             }
         }
     }
@@ -2877,7 +2958,7 @@ Item {
     }
     Timer { id: keepNotificationCenter; interval: 400; onTriggered: notificationCenterLoader.source = "" }
 
-    Osd              { root: root }
+    Osd              { id: osdSurface; root: root }
     NotificationOverlay { root: root }
 
     IpcHandler {
@@ -3063,6 +3144,9 @@ Item {
         function open(): void  { root.openAudio(); }
         function close(): void { root.audioVisible = false; }
         function refresh(): void { root.refreshAudio(); }
+        function volUp(): void { root.nudgeVolumeSteps(1); }
+        function volDown(): void { root.nudgeVolumeSteps(-1); }
+        function volMute(): void { root.toggleAudioMute(); }
     }
 
     // bind = SUPER, A, exec, qs -c desktop ipc call clipboard toggle

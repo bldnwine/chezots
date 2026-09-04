@@ -398,15 +398,15 @@ hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
 hl.bind(
 	"XF86AudioRaiseVolume",
-	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume +5"),
+	hl.dsp.exec_cmd("qs -c desktop ipc call audio volUp"),
 	{ locked = true, repeating = true }
 )
 hl.bind(
 	"XF86AudioLowerVolume",
-	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume -5"),
+	hl.dsp.exec_cmd("qs -c desktop ipc call audio volDown"),
 	{ locked = true, repeating = true }
 )
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume mute"), { locked = true })
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("qs -c desktop ipc call audio volMute"), { locked = true })
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/mic-mute"), { locked = true })
 hl.bind(
 	"XF86MonBrightnessUp",
