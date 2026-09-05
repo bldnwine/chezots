@@ -70,6 +70,7 @@ pipewire-pulse
 power-profiles-daemon
 python-pip
 qbittorrent
+qt6-imageformats
 quickshell
 realtime-privileges
 reflector

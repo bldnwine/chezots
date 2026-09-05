@@ -1,0 +1,40 @@
+#!/bin/bash
+set -e
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <github_folder_url>"
+    exit 1
+fi
+
+URL="$1"
+
+if [[ "$URL" != *"/tree/"* ]]; then
+    echo "Error: URL must be a specific folder link containing '/tree/'"
+    exit 1
+fi
+
+REPO_URL="${URL%/tree/*}"
+REST="${URL#*/tree/}"
+REPO_NAME=$(basename "$REPO_URL")
+
+if [[ "$REST" == *"/"* ]]; then
+    BRANCH="${REST%%/*}"
+    FOLDER_PATH="${REST#*/}"
+else
+    echo "Error: URL points to a branch root, not a subfolder."
+    exit 1
+fi
+
+# Check if the repository directory already exists locally
+if [ -d "$REPO_NAME" ]; then
+    echo "Repository '$REPO_NAME' already exists. Adding '$FOLDER_PATH' to checkout..."
+    cd "$REPO_NAME"
+    git sparse-checkout add "$FOLDER_PATH"
+    git checkout
+else
+    echo "Cloning new repository and setting folder '$FOLDER_PATH'..."
+    git clone --filter=blob:none --no-checkout --branch "$BRANCH" "$REPO_URL"
+    cd "$REPO_NAME"
+    git sparse-checkout set "$FOLDER_PATH"
+    git checkout
+fi
