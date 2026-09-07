@@ -22,6 +22,7 @@ Item {
     implicitWidth: 360
     implicitHeight: mainCol.implicitHeight
 
+    readonly property int maxBands: 31
     readonly property string scriptPath: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/pipewire-eq"
 
     function loadFromState(txt) {
@@ -35,7 +36,7 @@ Item {
                 eqPanel.activePreset = clean.length > 0 ? clean : "Flat";
             }
             if (Array.isArray(data.bands) && data.bands.length > 0) {
-                eqPanel.bands = data.bands.slice(0, 10);
+                eqPanel.bands = data.bands.slice(0, eqPanel.maxBands);
             }
             eqPanel.isApplied = true;
         } catch (e) {
@@ -112,23 +113,59 @@ Item {
     }
 
     function addBand() {
-        if (eqPanel.bands.length >= 10) return;
+        if (eqPanel.bands.length >= eqPanel.maxBands) return;
+        const isoFreqs = [
+            20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160,
+            200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600,
+            2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000
+        ];
         const list = Array.from(eqPanel.bands);
-        let newFreq = 1000.0;
-        if (list.length > 0) {
-            const last = list[list.length - 1].freq;
-            newFreq = Math.min(20000.0, Math.round(last * 1.5));
+
+        let maxFreq = 0;
+        for (let i = 0; i < list.length; i++) {
+            const f = Number(list[i].freq) || 0;
+            if (f > maxFreq) maxFreq = f;
         }
+
+        let newFreq = 1000.0;
+        let foundNext = false;
+        for (let i = 0; i < isoFreqs.length; i++) {
+            if (isoFreqs[i] > maxFreq * 1.05) {
+                newFreq = isoFreqs[i];
+                foundNext = true;
+                break;
+            }
+        }
+
+        if (!foundNext) {
+            for (let i = 0; i < isoFreqs.length; i++) {
+                const cand = isoFreqs[i];
+                const exists = list.some(b => Math.abs((Number(b.freq) || 0) - cand) / cand < 0.08);
+                if (!exists) {
+                    newFreq = cand;
+                    break;
+                }
+            }
+        }
+
+        let filterType = "peaking";
+        if (newFreq <= 35) filterType = "lowshelf";
+        else if (newFreq >= 16000) filterType = "highshelf";
+
         list.push({
             freq: newFreq,
             gain: 0.0,
-            q: 1.0,
-            type: "peaking"
+            q: 1.4,
+            type: filterType
         });
+        list.sort((a, b) => (Number(a.freq) || 0) - (Number(b.freq) || 0));
         eqPanel.bands = list;
         eqPanel.isApplied = false;
         // Adding band changes graph topology -> full apply
         eqPanel.applyEq();
+        if (list.length > 10) {
+            scrollRevealTimer.restart();
+        }
     }
 
     function removeBand() {
@@ -163,7 +200,7 @@ Item {
             const p = eqPanel.presetsMap[name];
             eqPanel.preamp = p.preamp !== undefined ? p.preamp : 0.0;
             if (Array.isArray(p.bands)) {
-                eqPanel.bands = p.bands.slice(0, 10);
+                eqPanel.bands = p.bands.slice(0, eqPanel.maxBands);
             }
             eqPanel.activePreset = name;
             eqPanel.applyLive();
@@ -229,6 +266,17 @@ Item {
         id: clearStatusTimer
         interval: 2200
         onTriggered: eqPanel.statusMsg = ""
+    }
+
+    Timer {
+        id: scrollRevealTimer
+        interval: 60
+        repeat: false
+        onTriggered: {
+            if (sliderFlick) {
+                sliderFlick.contentX = Math.max(0, sliderFlick.contentWidth - sliderFlick.width);
+            }
+        }
     }
 
     FileView {
@@ -324,10 +372,10 @@ Item {
                     width: 22
                     height: 22
                     radius: eqPanel.root.cornerRadius
-                    color: addMouse.containsMouse && eqPanel.bands.length < 10 ? eqPanel.root.rowHi : "transparent"
+                    color: addMouse.containsMouse && eqPanel.bands.length < eqPanel.maxBands ? eqPanel.root.rowHi : "transparent"
                     border.color: eqPanel.root.sep
                     border.width: 1
-                    opacity: eqPanel.bands.length < 10 ? 1.0 : 0.4
+                    opacity: eqPanel.bands.length < eqPanel.maxBands ? 1.0 : 0.4
 
                     Text {
                         anchors.centerIn: parent
@@ -342,7 +390,7 @@ Item {
                         id: addMouse
                         anchors.fill: parent
                         hoverEnabled: true
-                        cursorShape: eqPanel.bands.length < 10 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        cursorShape: eqPanel.bands.length < eqPanel.maxBands ? Qt.PointingHandCursor : Qt.ArrowCursor
                         onClicked: eqPanel.addBand()
                     }
                 }
@@ -547,33 +595,146 @@ Item {
             border.width: 1
             clip: true
 
-            Row {
-                id: sliderRow
-                anchors.fill: parent
-                anchors.margins: 8
+            readonly property int count: Math.max(1, eqPanel.bands.length)
+            readonly property bool isScrollable: count > 10
 
-                readonly property int count: Math.max(1, eqPanel.bands.length)
-                readonly property real availW: width
-                readonly property real gap: count > 1 ? 4 : 0
-                readonly property real bandW: Math.max(26, Math.min(42, Math.floor((availW - (count - 1) * gap) / count)))
-                spacing: count > 1 ? Math.max(2, Math.floor((availW - count * bandW) / (count - 1))) : 0
+            // Available width inside padding
+            readonly property real deckInnerW: width - 16
+            readonly property real gap: 4
+            // In <= 10 mode, dynamically stretch to fit; in > 10 mode, use comfortable fixed width 35px
+            readonly property real baseBandW: isScrollable
+                ? 35
+                : Math.max(26, Math.min(42, Math.floor((deckInnerW - (count - 1) * gap) / count)))
+            readonly property real bandSpacing: isScrollable
+                ? gap
+                : (count > 1 ? Math.max(2, Math.floor((deckInnerW - count * baseBandW) / (count - 1))) : 0)
+            readonly property real totalRowW: count * baseBandW + Math.max(0, count - 1) * bandSpacing
 
-                Repeater {
-                    model: eqPanel.bands
-                    delegate: EqSlider {
-                        required property var modelData
-                        required property int index
+            Flickable {
+                id: sliderFlick
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: sliderDeck.isScrollable ? scrollTrackContainer.top : parent.bottom
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                anchors.topMargin: 8
+                anchors.bottomMargin: sliderDeck.isScrollable ? 2 : 8
+                contentWidth: Math.max(width, sliderDeck.totalRowW)
+                contentHeight: height
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: sliderDeck.isScrollable ? Flickable.HorizontalFlick : Flickable.AutoFlickDirection
+                interactive: sliderDeck.isScrollable
+                clip: true
 
-                        root: eqPanel.root
-                        width: sliderRow.bandW
-                        height: parent.height
-                        freq: modelData.freq || 1000
-                        gain: modelData.gain !== undefined ? modelData.gain : 0.0
-                        qVal: modelData.q || 1.0
-                        filterType: modelData.type || "peaking"
+                Row {
+                    id: sliderRow
+                    height: parent.height
+                    spacing: sliderDeck.bandSpacing
 
-                        onValueModified: (newGain) => eqPanel.setBandGain(index, newGain)
+                    Repeater {
+                        model: eqPanel.bands
+                        delegate: EqSlider {
+                            required property var modelData
+                            required property int index
+
+                            root: eqPanel.root
+                            width: sliderDeck.baseBandW
+                            height: parent.height
+                            freq: modelData.freq || 1000
+                            gain: modelData.gain !== undefined ? modelData.gain : 0.0
+                            qVal: modelData.q || 1.0
+                            filterType: modelData.type || "peaking"
+
+                            onValueModified: (newGain) => eqPanel.setBandGain(index, newGain)
+                        }
                     }
+                }
+            }
+
+            // Horizontal Scrollbar (visible only when > 10 bands)
+            Item {
+                id: scrollTrackContainer
+                visible: sliderDeck.isScrollable
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                anchors.bottomMargin: 3
+                height: 3
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 1.5
+                    color: Qt.rgba(eqPanel.root.ink.r, eqPanel.root.ink.g, eqPanel.root.ink.b, 0.08)
+                }
+
+                Rectangle {
+                    id: scrollThumb
+                    readonly property real trackW: scrollTrackContainer.width
+                    readonly property real maxScroll: Math.max(1, sliderFlick.contentWidth - sliderFlick.width)
+                    readonly property real ratio: Math.min(1.0, sliderFlick.width / Math.max(1, sliderFlick.contentWidth))
+                    width: Math.max(24, Math.round(trackW * ratio))
+                    height: 3
+                    radius: 1.5
+                    x: Math.max(0, Math.min(trackW - width, Math.round((sliderFlick.contentX / maxScroll) * (trackW - width))))
+                    color: scrollThumbMouse.containsMouse || scrollThumbMouse.drag.active ? eqPanel.root.ink : eqPanel.root.seal
+
+                    MouseArea {
+                        id: scrollThumbMouse
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        drag.target: scrollThumb
+                        drag.axis: Drag.XAxis
+                        drag.minimumX: 0
+                        drag.maximumX: scrollTrackContainer.width - scrollThumb.width
+                        onPositionChanged: {
+                            if (drag.active) {
+                                const range = scrollTrackContainer.width - scrollThumb.width;
+                                if (range > 0) {
+                                    const pct = scrollThumb.x / range;
+                                    sliderFlick.contentX = Math.round(pct * (sliderFlick.contentWidth - sliderFlick.width));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: trackClickMouse
+                    anchors.fill: parent
+                    z: -1
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: (e) => {
+                        const targetX = Math.max(0, Math.min(width, e.x));
+                        const pct = targetX / width;
+                        const maxScroll = sliderFlick.contentWidth - sliderFlick.width;
+                        sliderFlick.contentX = Math.round(Math.max(0, Math.min(maxScroll, pct * maxScroll)));
+                    }
+                }
+            }
+
+            // Wheel Handler for horizontal scrolling across bands
+            WheelHandler {
+                target: null
+                enabled: sliderDeck.isScrollable
+                onWheel: function(event) {
+                    const flick = sliderFlick;
+                    const max = Math.max(0, flick.contentWidth - flick.width);
+                    if (max <= 0) return;
+                    let delta = 0;
+                    if (Math.abs(event.angleDelta.x) > 0) {
+                        delta = -event.angleDelta.x;
+                    } else if (event.modifiers & Qt.ShiftModifier) {
+                        delta = -event.angleDelta.y;
+                    } else {
+                        delta = -event.angleDelta.y;
+                    }
+                    flick.contentX = Math.max(0, Math.min(max, flick.contentX + delta));
+                    event.accepted = true;
                 }
             }
         }

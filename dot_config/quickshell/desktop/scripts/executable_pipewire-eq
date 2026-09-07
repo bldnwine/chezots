@@ -27,10 +27,48 @@ DEFAULT_10_BANDS = [
     {"freq": 16000.0, "gain": 0.0, "q": 0.7, "type": "highshelf"},
 ]
 
+DEFAULT_31_BANDS = [
+    {"freq": 20.0, "gain": 0.0, "q": 1.4, "type": "lowshelf"},
+    {"freq": 25.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 31.5, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 40.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 50.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 63.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 80.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 100.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 125.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 160.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 200.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 250.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 315.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 400.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 500.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 630.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 800.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 1000.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 1250.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 1600.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 2000.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 2500.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 3150.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 4000.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 5000.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 6300.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 8000.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 10000.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 12500.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 16000.0, "gain": 0.0, "q": 1.4, "type": "peaking"},
+    {"freq": 20000.0, "gain": 0.0, "q": 1.4, "type": "highshelf"},
+]
+
 DEFAULT_PRESETS = {
     "Flat": {
         "preamp": 0.0,
         "bands": [dict(b) for b in DEFAULT_10_BANDS]
+    },
+    "Flat (31 Bands)": {
+        "preamp": 0.0,
+        "bands": [dict(b) for b in DEFAULT_31_BANDS]
     }
 }
 
@@ -66,6 +104,8 @@ def load_presets():
                 cleaned[sanitize_preset_name(k)] = v
             if "Flat" not in cleaned:
                 cleaned["Flat"] = DEFAULT_PRESETS["Flat"]
+            if "Flat (31 Bands)" not in cleaned:
+                cleaned["Flat (31 Bands)"] = DEFAULT_PRESETS["Flat (31 Bands)"]
             return cleaned
     except Exception:
         return DEFAULT_PRESETS
@@ -117,9 +157,9 @@ def calculate_auto_preamp(bands: list) -> float:
     return round(-max(0.0, max_gain), 2)
 
 def generate_pipewire_conf(preamp_db: float, bands: list, enabled: bool = True) -> str:
-    """Generates a PipeWire filter-chain configuration for N bands (1 <= N <= 10)."""
+    """Generates a PipeWire filter-chain configuration for N bands (1 <= N <= 31)."""
     clean_bands = []
-    for b in bands[:10]:
+    for b in bands[:31]:
         f = max(20.0, float(b.get("freq", 1000.0)))
         g = float(b.get("gain", 0.0)) if enabled else 0.0
         q = max(0.1, float(b.get("q", 1.0)))
@@ -441,7 +481,7 @@ def parse_autoeq_text(text: str):
                 "q": q_val,
                 "type": ftype
             })
-            if len(bands) >= 10:
+            if len(bands) >= 31:
                 break
     return preamp, bands
 

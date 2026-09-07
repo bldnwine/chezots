@@ -21,9 +21,11 @@ Item {
     function formatFreq(f) {
         if (f >= 1000) {
             const k = f / 1000;
-            return (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + "k";
+            if (k % 1 === 0) return k.toFixed(0) + "k";
+            if ((k * 10) % 1 === 0) return k.toFixed(1) + "k";
+            return k.toFixed(2) + "k";
         }
-        return Math.round(f).toString();
+        return (f % 1 === 0 ? f.toFixed(0) : f.toFixed(1)).toString();
     }
 
     function formatGain(g) {
@@ -139,6 +141,10 @@ Item {
                     eqSlider.valueModified(eqSlider.pendingGain);
                 }
                 onWheel: (wheel) => {
+                    if ((wheel.modifiers & Qt.ShiftModifier) || Math.abs(wheel.angleDelta.x) > Math.abs(wheel.angleDelta.y)) {
+                        wheel.accepted = false;
+                        return;
+                    }
                     const step = (wheel.angleDelta.y > 0 ? 0.5 : -0.5);
                     const nextG = Math.max(eqSlider.minGain, Math.min(eqSlider.maxGain, eqSlider.gain + step));
                     eqSlider.valueModified(nextG);
@@ -156,7 +162,7 @@ Item {
             color: eqSlider.selected ? eqSlider.root.ink : eqSlider.root.inkDeep
             font.family: eqSlider.root.mono
             font.pixelSize: 9
-            font.letterSpacing: 1
+            font.letterSpacing: 0.5
         }
     }
 }

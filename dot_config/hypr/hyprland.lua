@@ -155,8 +155,8 @@ hl.config({
 	decoration = {
 		rounding = look.rounding,
 		rounding_power = 5,
-		active_opacity = 0.97,
-		inactive_opacity = 0.90,
+		active_opacity = 0.95,
+		inactive_opacity = 0.85,
 		fullscreen_opacity = 1.0,
 
 		shadow = {
@@ -356,12 +356,12 @@ hl.bind("SUPER + ALT + Z", function()
 end)
 hl.bind(
 	mainMod .. " + CONTROL + up",
-	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume +5"),
+        hl.dsp.exec_cmd("qs -c desktop ipc call audio volUp"),
 	{ repeating = true }
 )
 hl.bind(
 	mainMod .. " + CONTROL + down",
-	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/volume -5"),
+        hl.dsp.exec_cmd("qs -c desktop ipc call audio volDown"),
 	{ repeating = true }
 )
 hl.bind(mainMod .. " + G", hl.dsp.exec_cmd("qs -c desktop ipc call hyprland toggle"))

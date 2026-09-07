@@ -275,10 +275,13 @@ cmd_watch() {
 
   command -v inotifywait >/dev/null 2>&1 || die "inotifywait is not installed"
 
+  # Terminate any stale or orphaned inotifywait instances from previous runs
+  pkill -f "inotifywait.*$src_dir" 2>/dev/null || true
+
+  trap 'pkill -P $$ 2>/dev/null || true' EXIT INT TERM HUP
+
   exec 3< <(inotifywait -m -q -e close_write -e moved_to --format '%w%f' \
     "$src_dir" "$src_history" 2>/dev/null)
-  watcher=$!
-  trap 'kill "$watcher" 2>/dev/null' EXIT INT TERM
 
   while IFS= read -r file <&3; do
     [[ $file == *.json ]] || continue
