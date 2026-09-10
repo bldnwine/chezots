@@ -28,6 +28,7 @@ Item {
         id: mainLayout
         visible: trayRoot.isHorizontal
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: -1
         spacing: 2
 
         // 1. Expandable overflow drawer (6th item onwards) to the left of the chevron

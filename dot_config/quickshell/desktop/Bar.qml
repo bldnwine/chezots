@@ -347,7 +347,7 @@ PanelWindow {
             Module {
                 root: bar.root
                 glyph: "󰍛"
-                fontSize: 14
+                fontSize: 15
                 tooltip: "CPU " + Math.round(bar.root.cpuVal) + "% · MEM " + Math.round(bar.root.memVal) + "%"
                 color: bar.root.cpuVal > 80 ? bar.root.seal : bar.root.ink
                 Component.onCompleted: bar.root.systemAnchorItem = this
@@ -683,3 +683,4 @@ PanelWindow {
         }
     }
 }
+
