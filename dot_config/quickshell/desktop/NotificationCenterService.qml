@@ -13,7 +13,7 @@ Item {
     property int keepDays: 30
     property int maxItems: 1000
     property bool showPreview: true
-    property int pageSize: 500
+    property int pageSize: 25
 
     property var entries: []
     property double lastSeen: 0
@@ -125,8 +125,8 @@ Item {
     }
 
     Timer {
-        interval: 15000
-        running: true
+        interval: 60000
+        running: false
         repeat: true
         onTriggered: root.load()
     }

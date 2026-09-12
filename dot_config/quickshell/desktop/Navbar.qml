@@ -72,7 +72,7 @@ Item {
     readonly property string icoSpeaker: String.fromCodePoint(0xf04c3)
 
     readonly property int barHeight: 26
-    readonly property int barExtraThickness: round && isHorizontal ? 11 : 0
+    readonly property int barExtraThickness: barType !== "slab" && isHorizontal ? 11 : 0
     // Effective strip the bar occupies along its edge; 0 when hidden so
     // popups/osd/notifications hug the edge instead of a phantom gap.
     readonly property int barOffset: barHidden ? 0 : (barHeight + barExtraThickness)
@@ -164,6 +164,44 @@ Item {
         }
         // Missing file -> keep the opaque default.
         onExited: function(code) { if (code !== 0) root.barTransparent = false; }
+    }
+
+    // ---------- Bar type ----------
+    // Bar geometry mode: "floating" (cloud pill with air/pad margins) or
+    // "slab" (edge-to-edge full width). Persisted to its own one-line state
+    // file so the choice survives a relogin.
+    readonly property var barTypes: ["floating", "slab"]
+    readonly property string barTypeStatePath:
+        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-type"
+    property string barType: "floating"
+
+    function setBarType(type) {
+        const want = (type === "slab") ? "slab" : "floating";
+        root.barType = want;
+        barTypeWriter.command = ["bash", "-c",
+            "mkdir -p " + JSON.stringify(root.barTypeStatePath.replace(/\/[^/]+$/, ""))
+            + " && printf '%s' " + JSON.stringify(want)
+            + " > " + JSON.stringify(root.barTypeStatePath)];
+        barTypeWriter.running = false;
+        barTypeWriter.running = true;
+    }
+
+    function toggleBarType() {
+        root.setBarType(root.barType === "floating" ? "slab" : "floating");
+    }
+
+    Process { id: barTypeWriter; running: false }
+    Process {
+        id: barTypeReader
+        running: true
+        command: ["cat", root.barTypeStatePath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const v = this.text.trim();
+                root.barType = (v === "slab") ? "slab" : "floating";
+            }
+        }
+        onExited: function(code) { if (code !== 0) root.barType = "floating"; }
     }
 
     // ---------- Tooltips ----------
@@ -2886,8 +2924,13 @@ Item {
 
     Loader { id: warpLoader }
     onWarpVisibleChanged: {
-        if (root.warpVisible) { keepWarp.stop(); warpLoader.setSource("WarpPopup.qml", { root: root }); }
-        else keepWarp.restart();
+        if (root.warpVisible) {
+            keepWarp.stop();
+            warpLoader.setSource("WarpPopup.qml", { root: root });
+            if (root.warpService) root.warpService.refresh();
+        } else {
+            keepWarp.restart();
+        }
     }
     Timer { id: keepWarp; interval: 400; onTriggered: warpLoader.source = "" }
 
@@ -2942,8 +2985,13 @@ Item {
 
     Loader { id: aiLoader }
     onAiVisibleChanged: {
-        if (root.aiVisible) { keepAi.stop(); aiLoader.setSource("AiPopup.qml", { root: root }); }
-        else keepAi.restart();
+        if (root.aiVisible) {
+            keepAi.stop();
+            aiLoader.setSource("AiPopup.qml", { root: root });
+            if (root.aiService) root.aiService.refresh(true);
+        } else {
+            keepAi.restart();
+        }
     }
     Timer { id: keepAi; interval: 400; onTriggered: aiLoader.source = "" }
 
@@ -2952,6 +3000,7 @@ Item {
         if (root.notificationCenterVisible) {
             keepNotificationCenter.stop();
             notificationCenterLoader.setSource("NotificationPopup.qml", { root: root });
+            if (root.notificationCenterService) root.notificationCenterService.load();
         } else {
             keepNotificationCenter.restart();
         }
@@ -3171,6 +3220,28 @@ Item {
         function hide(): void      { root.barHidden = true; }
         function show(): void      { root.barHidden = false; }
         function transparent(): void { root.setBarTransparent(!root.barTransparent); }
+        function toggleType(): void  { root.toggleBarType(); }
+        function floating(): void    { root.setBarType("floating"); }
+        function cloud(): void       { root.setBarType("floating"); }
+        function slab(): void        { root.setBarType("slab"); }
+    }
+
+    IpcHandler {
+        target: "barType"
+        function set(type: string): void { root.setBarType(type); }
+        function toggle(): void          { root.toggleBarType(); }
+        function floating(): void        { root.setBarType("floating"); }
+        function cloud(): void           { root.setBarType("floating"); }
+        function slab(): void            { root.setBarType("slab"); }
+    }
+
+    IpcHandler {
+        target: "bartype"
+        function set(type: string): void { root.setBarType(type); }
+        function toggle(): void          { root.toggleBarType(); }
+        function floating(): void        { root.setBarType("floating"); }
+        function cloud(): void           { root.setBarType("floating"); }
+        function slab(): void            { root.setBarType("slab"); }
     }
 
     IpcHandler {

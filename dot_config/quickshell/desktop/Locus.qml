@@ -443,6 +443,16 @@ Item {
                 else root.navbar.openSystem();
                 root.close();
                 return;
+            } else if (target === "barType" || target === "bartype") {
+                if (verb === "slab") {
+                    root.navbar.setBarType("slab");
+                } else if (verb === "floating" || verb === "cloud" || verb === "normal") {
+                    root.navbar.setBarType("floating");
+                } else {
+                    root.navbar.toggleBarType();
+                }
+                root.close();
+                return;
             } else if (target === "bar") {
                 if (verb === "transparent") {
                     root.navbar.setBarTransparent(!root.navbar.barTransparent);
@@ -452,6 +462,12 @@ Item {
                     root.navbar.barHidden = false;
                 } else if (verb === "zen") {
                     root.navbar.setBarVariant("zen");
+                } else if (verb === "type" || verb === "toggleType") {
+                    root.navbar.toggleBarType();
+                } else if (verb === "slab") {
+                    root.navbar.setBarType("slab");
+                } else if (verb === "floating" || verb === "cloud" || verb === "normal") {
+                    root.navbar.setBarType("floating");
                 } else {
                     root.navbar.barHidden = !root.navbar.barHidden;
                 }

@@ -17,12 +17,12 @@ PanelWindow {
         left:   bar.root.barEdge !== "right"
         right:  bar.root.barEdge !== "left"
     }
-    // Cloud mode: horizontal+round only. Vertical bars keep the original
+    // Cloud / floating mode: horizontal + barType !== "slab". Vertical bars keep the original
     // slab geometry to avoid breaking the proven layout.
     readonly property int cloudPad: 2
     readonly property int cloudAir: 5
     readonly property int cloudInnerAir: 2
-    readonly property bool cloudMode: bar.root.round && bar.root.isHorizontal
+    readonly property bool cloudMode: bar.root.barType !== "slab" && bar.root.isHorizontal
     readonly property int extraThickness: cloudMode ? 2 * cloudPad + cloudAir + cloudInnerAir : 0
     // innerSign tells which side gets the extra outer air (away from screen).
     readonly property int innerSign: bar.root.barEdge === "top" ? 1 : (bar.root.barEdge === "bottom" ? -1 : 0)

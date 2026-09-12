@@ -199,6 +199,8 @@ Item {
                 id: base
                 anchors.fill: parent
                 source: root.displayedBackground ? root.imageUrl(root.displayedBackground) : ""
+                sourceSize.width: panel.width
+                sourceSize.height: panel.height
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 cache: true
@@ -215,6 +217,8 @@ Item {
                 id: oldFrame
                 anchors.fill: parent
                 source: root.oldBackground ? root.imageUrl(root.oldBackground) : ""
+                sourceSize.width: panel.width
+                sourceSize.height: panel.height
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 cache: false
@@ -241,6 +245,8 @@ Item {
                     id: incomingFrame
                     anchors.fill: parent
                     source: root.incomingBackground ? root.imageUrl(root.incomingBackground) : ""
+                    sourceSize.width: panel.width
+                    sourceSize.height: panel.height
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     cache: false

@@ -112,10 +112,10 @@ Item {
         onTriggered: root.refresh(false)
     }
 
-    // Polling timer when inactive (checks every 2.5s for newly opened sessions)
+    // Polling timer when inactive (checks every 30s for newly opened sessions)
     Timer {
         id: idlePollTimer
-        interval: 2500
+        interval: 30000
         repeat: true
         running: !root.agentRunning
         triggeredOnStart: true

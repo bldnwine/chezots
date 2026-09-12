@@ -74,11 +74,9 @@ const fileIcons = {
 // "App" is the bucket all .desktop entries land in. fileCategory
 // routes to the fd file-search drill.
 const categoryNav = [
-    { title: "Quick",   icon: "󱎫", category: "Browse", isCategory: true, target: "Quick",       keywords: "quick settings panel tray toggle popup display weather calendar aether screenshots videos brightness volume mute" },
-    { title: "Favourites", icon: "󰓎", category: "Browse", isCategory: true, target: favCategory,  keywords: "favourites favorites favs starred pinned bookmarks marked" },
+    // { title: "Quick",   icon: "󱎫", category: "Browse", isCategory: true, target: "Quick",       keywords: "quick settings panel tray toggle popup display weather calendar aether screenshots videos brightness volume mute" },
     { title: "Apps",    icon: "󰀻", category: "Browse", isCategory: true, target: "App",         keywords: "apps applications launcher programs software desktop" },
     { title: "Files",   icon: "󰉋", category: "Browse", isCategory: true, target: fileCategory,  keywords: "files file search find folder browse path open image picture document text fd" },
-    { title: "History", icon: "󰋚", category: "Browse", isCategory: true, target: histCategory,    keywords: "history recent recents log past activity used opened" },
     { title: "Style",   icon: "󰏘", category: "Browse", isCategory: true, target: "Style",       keywords: "style theme appearance look font background corners waybar screensaver" },
     { title: "System",  icon: "󰐥", category: "Browse", isCategory: true, target: "System",      keywords: "system lock suspend hibernate logout restart reboot shutdown power" },
     { title: "Toggle",  icon: "󰨚", category: "Browse", isCategory: true, target: "Toggle",      keywords: "toggle nightlight notifications layout gaps scaling sudo touchpad" },
@@ -114,9 +112,11 @@ const omarchyItems = [
 
     // ----- Style -----
     { title: "Aether Menu",      icon: "󰸌", category: "Style",   keywords: "aether theme blueprint palette swatch picker wallpaper generate full menu launcher",                  exec: "qs -c desktop ipc call aether toggle" },
-    { title: "Round Corners",    icon: "󰘇", category: "Style",   keywords: "corners radius round soft rounded border edge shape navbar cloud popup",                              exec: "qs -c desktop ipc call corners round" },
-    { title: "Sharp Corners",    icon: "󰝣", category: "Style",   keywords: "corners radius sharp square hard flat border edge shape navbar slab popup",                            exec: "qs -c desktop ipc call corners sharp" },
-    { title: "Transparent Bar",     icon: "󰚲", rawIcon: "/home/bldnwine/.config/quickshell/desktop/assets/transparentbar.ico", category: "Style", keywords: "toggle transparent bar opacity fade invisible ghost clear background navbar", exec: "qs -c desktop ipc call bar transparent" },
+    { title: "Round Corners",    icon: "󰘇", category: "Style",   keywords: "corners radius round soft rounded border edge shape popup",                                            exec: "qs -c desktop ipc call corners round" },
+    { title: "Sharp Corners",    icon: "󰝣", category: "Style",   keywords: "corners radius sharp square hard flat border edge shape popup",                                          exec: "qs -c desktop ipc call corners sharp" },
+    { title: "Floating Bar",     icon: "󰘇", category: "Style",   keywords: "floating cloud bar island detached navbar style mode type",                                            exec: "qs -c desktop ipc call barType floating" },
+    { title: "Slab Bar",         icon: "󰝣", category: "Style",   keywords: "slab bar edge full flat solid navbar style mode type",                                                exec: "qs -c desktop ipc call barType slab" },
+    { title: "Transparent Bar",  icon: "󰚲", rawIcon: "/home/bldnwine/.config/quickshell/desktop/assets/transparentbar.ico", category: "Style", keywords: "toggle transparent bar opacity fade invisible ghost clear background navbar", exec: "qs -c desktop ipc call bar transparent" },
 
     // ----- System -----
     { title: "Lock Screen",         icon: "󰌾", category: "System", keywords: "lock screen security hyprlock password",                                            exec: "loginctl lock-session" },

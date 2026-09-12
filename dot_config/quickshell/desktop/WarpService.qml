@@ -52,7 +52,7 @@ Item {
   property string actionStatus: ""
   property string lastError: ""
 
-  readonly property int refreshIntervalSec: 20
+  readonly property int refreshIntervalSec: 60
   readonly property bool busy: whichProcess.running || statusProcess.running || settingsProcess.running ||
     registrationProcess.running || statsProcess.running || actionProcess.running || daemonProcess.running
   readonly property var modeRows: Model.modeRows(mode)

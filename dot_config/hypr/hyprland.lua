@@ -110,6 +110,7 @@ hl.env("ELECTRON_OZONE_PLATFORM_HINT", "wayland")
 -- hl.env("OZONE_PLATFORM", "wayland")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("LIBVA_DRIVER_NAME", "iHD")
+hl.env("MOZ_DRM_DEVICE", "/dev/dri/by-path/pci-0000:00:02.0-render")
 
 -----------------------
 ---- LOOK AND FEEL ----
@@ -310,6 +311,8 @@ hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd(terminal .. " -e nano ~/Docs/
 hl.bind(mainMod .. " + SHIFT + L", hl.dsp.exec_cmd(launch("nics gl localsend_app")))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen_state({ action = "toggle", internal = 0, client = 2 }))
+hl.bind(mainMod .. " + ALT + F", hl.dsp.window.fullscreen_state({ action = "toggle", internal = 1, client = 0 }))
+hl.bind(mainMod .. " + ALT + P", hl.dsp.window.pin())
 --hl.bind("SUPER + F", hl.dsp.exec_cmd("toggle-tiled-fullscreen"))
 hl.bind(mainMod .. " + CONTROL + Y", hl.dsp.exec_cmd(launch("cmd-ocr")))
 hl.bind(mainMod .. " + SHIFT + A", hl.dsp.exec_cmd("qs -c desktop ipc call locus toggleCategory Themes"))
