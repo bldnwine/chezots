@@ -121,7 +121,7 @@ PanelWindow {
             }
             Timer {
                 id: clockTipDelay
-                interval: 320
+                interval: 180
                 onTriggered: {
                     const p = clockItem.mapToItem(null, clockItem.width / 2, clockItem.height / 2);
                     wr.root.showTooltip("Calendar", p.x, p.y);

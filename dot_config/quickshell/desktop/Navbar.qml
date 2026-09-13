@@ -107,6 +107,9 @@ Item {
     property string barVariant: "zen"
     property bool  barHidden: false
 
+    AppScan { id: appScan }
+    readonly property alias appScan: appScan
+
     function setBarVariant(name) {
         const want = root.barVariants.indexOf(name) !== -1 ? name : "zen";
         root.barVariant = want;
@@ -1982,12 +1985,29 @@ Item {
             }
         }
     }
-    Timer { interval: 5000; running: true; repeat: true; triggeredOnStart: true
+    Timer { interval: 5000; running: !root.barHidden; repeat: true; triggeredOnStart: true
         onTriggered: { systemProbe.running = false; systemProbe.running = true; } }
 
-    // ---------- Telemetry (1 Hz) ----------
+    // ---------- Native Clock (1 Hz, 0 process forks) ----------
+    function updateClock() {
+        const d = new Date();
+        root.hh = Qt.formatDateTime(d, "hh");
+        root.mm = Qt.formatDateTime(d, "mm");
+        root.dd = Qt.formatDateTime(d, "dd");
+        root.dow = Qt.formatDateTime(d, "ddd");
+        root.mon = Qt.formatDateTime(d, "MMM").toUpperCase();
+    }
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.updateClock()
+    }
+
+    // ---------- Battery status (4s cadence) ----------
     Process {
-        id: tel
+        id: batProbe
         running: false
         command: ["bash", "-c",
             "bat=0; bst=Unknown; pwr=0; batFound=0; "
@@ -2003,26 +2023,21 @@ Item {
             + "  batFound=1; "
             + "fi; "
             + "pwr=${pwr#-}; "  // some kernels prefix '-' on discharge; magnitude is enough, sign comes from $bst
-            + "printf '%d|%s|%s|%s|%s|%s|%s|%d|%d' "
-            + "  \"$bat\" \"$bst\" "
-            + "  \"$(date +%H)\" \"$(date +%M)\" \"$(date +%d)\" \"$(date +%a)\" \"$(date +%b | tr a-z A-Z)\" \"$pwr\" \"$batFound\""]
+            + "printf '%d|%s|%d|%d' \"$bat\" \"$bst\" \"$pwr\" \"$batFound\""]
         stdout: StdioCollector {
             onStreamFinished: {
                 const p = this.text.split("|");
-                if (p.length === 9) {
+                if (p.length === 4) {
                     root.batVal = parseInt(p[0]) || 0;
                     root.batState = p[1] || "Unknown";
-                    root.hh = p[2]; root.mm = p[3];
-                    root.dd = p[4]; root.dow = p[5];
-                    root.mon = p[6];
-                    root.batPower = (parseInt(p[7]) || 0) / 1e6;
-                    root.batPresent = p[8] === "1";
+                    root.batPower = (parseInt(p[2]) || 0) / 1e6;
+                    root.batPresent = p[3] === "1";
                 }
             }
         }
     }
-    Timer { interval: 1000; running: true; repeat: true; triggeredOnStart: true
-        onTriggered: { tel.running = false; tel.running = true; } }
+    Timer { interval: 4000; running: !root.barHidden; repeat: true; triggeredOnStart: true
+        onTriggered: { batProbe.running = false; batProbe.running = true; } }
 
     // ---------- Network status ----------
     Process {
@@ -2087,7 +2102,7 @@ Item {
             }
         }
     }
-    Timer { interval: 3000; running: true; repeat: true; triggeredOnStart: true
+    Timer { interval: 3000; running: !root.barHidden; repeat: true; triggeredOnStart: true
         onTriggered: { netProbe.running = false; netProbe.running = true; } }
 
     // ---------- Network burst detection ----------
@@ -2131,7 +2146,7 @@ Item {
             }
         }
     }
-    Timer { interval: 1000; running: true; repeat: true; triggeredOnStart: true
+    Timer { interval: 1000; running: !root.barHidden; repeat: true; triggeredOnStart: true
         onTriggered: { netBurstProbe.running = false; netBurstProbe.running = true; } }
     Timer { id: burstCooldown; interval: 2000; repeat: false
         onTriggered: root.burstArmed = true }
@@ -2276,7 +2291,7 @@ Item {
             }
         }
     }
-    Timer { interval: 5000; running: true; repeat: true; triggeredOnStart: true
+    Timer { interval: 5000; running: !root.barHidden; repeat: true; triggeredOnStart: true
         onTriggered: { btProbe.running = false; btProbe.running = true; } }
 
     // ---------- Audio status ----------
@@ -2326,7 +2341,7 @@ Item {
             }
         }
     }
-    Timer { interval: 2000; running: true; repeat: true; triggeredOnStart: true
+    Timer { interval: 2000; running: !root.barHidden; repeat: true; triggeredOnStart: true
         onTriggered: { audioProbe.running = false; audioProbe.running = true; } }
 
     // ---------- Bluetooth device probe ----------
@@ -2624,6 +2639,7 @@ Item {
         }
     }
     Component.onCompleted: {
+        updateClock();
         refreshPowerProfile();
         clipboardInitProc.running = true;
         Quickshell.execDetached([root.clipboardPruneScript]);

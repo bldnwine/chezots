@@ -191,12 +191,17 @@ CardWindow {
 
     Timer {
         interval: 60000
-        running: true
+        running: calendarPopup.revealed
         repeat: true
         onTriggered: {
             calendarPopup.today = new Date();
             calendarPopup.nowMs = Date.now();
         }
+    }
+
+    onRevealedChanged: if (calendarPopup.revealed) {
+        calendarPopup.today = new Date();
+        calendarPopup.nowMs = Date.now();
     }
 
     theme: root

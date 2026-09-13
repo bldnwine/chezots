@@ -152,10 +152,6 @@ CardWindow {
         }
     }
 
-    Component.onCompleted: {
-        if (warp) warp.refresh();
-    }
-
     onDismiss: warppopup.root.warpVisible = false
     onKeyPressed: (event) => {
         if (warppopup.kbdHandle(event)) event.accepted = true;

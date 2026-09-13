@@ -21,11 +21,21 @@ Item {
     property string query: ""
     property int selectedIndex: 0
 
-    AppScan { id: appScan }
+    readonly property var apps: (navbar && navbar.appScan) ? navbar.appScan.apps : []
+
+    Connections {
+        target: navbar
+        function onAppMenuVisibleChanged() {
+            if (navbar.appMenuVisible) {
+                root.query = "";
+                root.selectedIndex = 0;
+            }
+        }
+    }
 
     readonly property var filteredApps: {
         const q = root.query.trim().toLowerCase();
-        const apps = appScan.apps;
+        const apps = root.apps;
         if (q.length === 0) return apps;
         return apps.filter(a => a._t.includes(q) || a._k.includes(q));
     }

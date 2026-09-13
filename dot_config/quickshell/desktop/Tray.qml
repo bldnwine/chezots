@@ -93,7 +93,7 @@ Item {
 
             Timer {
                 id: chevronTipDelayH
-                interval: 320
+                interval: 180
                 onTriggered: {
                     const p = chevronBtnH.mapToItem(null, chevronBtnH.width / 2, chevronBtnH.height / 2);
                     root.showTooltip(root.trayExpanded ? "Collapse tray" : "Expand tray", p.x, p.y);
@@ -209,7 +209,7 @@ Item {
 
             Timer {
                 id: chevronTipDelayV
-                interval: 320
+                interval: 180
                 onTriggered: {
                     const p = chevronBtnV.mapToItem(null, chevronBtnV.width / 2, chevronBtnV.height / 2);
                     root.showTooltip(root.trayExpanded ? "Collapse tray" : "Expand tray", p.x, p.y);

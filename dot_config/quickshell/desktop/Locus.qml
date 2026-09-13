@@ -348,16 +348,21 @@ Item {
     // selection mid-type.
     onQueryChanged: root.resetMouseGuard()
 
-    // ---------- Icon resolution ----------
-    // `.desktop` Icon field is either an absolute path or an icon-theme
-    // name. Qt's QQmlEngine doesn't know about XDG themes, so theme names
-    // get pushed through Quickshell.iconPath for resolution; absolute paths
-    // just need a file:// prefix. Returns "" when nothing resolves so the
-    // delegate can fall back to its nerd-font glyph.
+    // ---------- Icon resolution with memoization ----------
+    property var _iconCache: ({})
+
     function resolveIconUrl(raw) {
         if (!raw) return "";
         if (raw.charAt(0) === "/") return "file://" + raw;
-        return Quickshell.iconPath(raw, "");
+        if (root._iconCache.hasOwnProperty(raw)) return root._iconCache[raw];
+        const res = Quickshell.iconPath(raw, "") || "";
+        root._iconCache[raw] = res;
+        return res;
+    }
+
+    Connections {
+        target: root.theme
+        function onPaperChanged() { root._iconCache = ({}); }
     }
 
     // ---------- Search index annotation ----------
@@ -368,6 +373,7 @@ Item {
     property var omarchy: []
     property var nav: []
     readonly property var allItems: root.omarchy.concat(appScan.apps).concat(navbarApps.items).concat(tuis.items)
+    readonly property var defaultPool: root.navRows.concat(root.allItems)
 
     // ---------- Launcher ----------
     // Matches omarchy's launch convention (see omarchy-launch-or-focus):
@@ -661,7 +667,7 @@ Item {
         else if (root.procMode)  pool = root.procItems;
         else if (root.themeMode) pool = root.themeItems;
         else if (filter !== "")  pool = root.allItems.filter(it => it.category === filter);
-        else                     pool = root.navRows.concat(root.allItems);
+        else                     pool = root.defaultPool;
 
         // Empty query, default view: drill-ins first, then up to 5
         // favourites, then leaf actions/apps. TUIs and themes are
@@ -724,7 +730,7 @@ Item {
             // Within the same kind, fall back to total score (keyword
             // and category bonuses) and finally alpha.
             if (b.s !== a.s) return b.s - a.s;
-            return a.item.title.localeCompare(b.item.title);
+            return a.item.title < b.item.title ? -1 : (a.item.title > b.item.title ? 1 : 0);
         });
         const lim = Math.min(scored.length, cap);
         const out = new Array(lim);

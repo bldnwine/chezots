@@ -117,7 +117,7 @@ PanelWindow {
                 font.pixelSize: 11
                 font.letterSpacing: 2
                 font.weight: Font.Light
-                Behavior on color { ColorAnimation { duration: 180 } }
+                Behavior on color { ColorAnimation { duration: 90 } }
             }
             Text {
                 id: clockHH
@@ -130,7 +130,7 @@ PanelWindow {
                 font.family: bar.root.mono
                 font.pixelSize: 9
                 font.weight: Font.Light
-                Behavior on color { ColorAnimation { duration: 180 } }
+                Behavior on color { ColorAnimation { duration: 90 } }
             }
             Text {
                 id: clockMM
@@ -143,12 +143,12 @@ PanelWindow {
                 font.family: bar.root.mono
                 font.pixelSize: 11
                 font.weight: Font.Light
-                Behavior on color { ColorAnimation { duration: 180 } }
+                Behavior on color { ColorAnimation { duration: 90 } }
             }
 
             Timer {
                 id: clockTipDelay
-                interval: 320
+                interval: 180
                 onTriggered: {
                     const p = clockItem.mapToItem(null, clockItem.width / 2, clockItem.height / 2);
                     bar.root.showTooltip("Calendar", p.x, p.y);
@@ -221,7 +221,7 @@ PanelWindow {
                 readonly property bool present: bar.root.isHorizontal && bar.root.musicTitle.length > 0
                 readonly property real contentW: musicRow.width + 12
                 property real openW: present ? contentW + 8 : 0
-                Behavior on openW { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                Behavior on openW { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
                 Component.onCompleted: bar.root.musicAnchorItem = musicItem
 
@@ -244,7 +244,7 @@ PanelWindow {
                     color: bar.root.accent
                     clip: true
                     opacity: musicMouse.containsMouse ? 1.0 : 0.9
-                    Behavior on opacity { NumberAnimation { duration: 180 } }
+                    Behavior on opacity { NumberAnimation { duration: 90 } }
 
                     Row {
                         id: musicRow
@@ -301,7 +301,7 @@ PanelWindow {
 
                 Timer {
                     id: musicTipDelay
-                    interval: 320
+                    interval: 180
                     onTriggered: {
                         const p = musicItem.mapToItem(null, musicItem.width / 2, musicItem.height / 2);
                         bar.root.showTooltip(musicItem.tipText, p.x, p.y);
@@ -372,7 +372,7 @@ PanelWindow {
                     anchors.margins: 3
                     radius: bar.root.cornerRadius
                     color: aiMouse.containsMouse ? Qt.rgba(bar.root.ink.r, bar.root.ink.g, bar.root.ink.b, 0.08) : "transparent"
-                    Behavior on color { ColorAnimation { duration: 180 } }
+                    Behavior on color { ColorAnimation { duration: 90 } }
                 }
 
                 Bloom { id: aiBloom; root: bar.root }
@@ -393,7 +393,7 @@ PanelWindow {
 
                 Timer {
                     id: aiTipDelay
-                    interval: 320
+                    interval: 180
                     onTriggered: {
                         const p = aiMod.mapToItem(null, aiMod.width / 2, aiMod.height / 2);
                         bar.root.showTooltip(aiMod.tipText, p.x, p.y);
@@ -563,7 +563,7 @@ PanelWindow {
                     anchors.margins: 3
                     radius: bar.root.cornerRadius
                     color: warpMouse.containsMouse ? Qt.rgba(bar.root.ink.r, bar.root.ink.g, bar.root.ink.b, 0.08) : "transparent"
-                    Behavior on color { ColorAnimation { duration: 180 } }
+                    Behavior on color { ColorAnimation { duration: 90 } }
                 }
 
                 Bloom { id: warpBloom; root: bar.root }
@@ -595,7 +595,7 @@ PanelWindow {
 
                 Timer {
                     id: warpTipDelay
-                    interval: 320
+                    interval: 180
                     onTriggered: {
                         const p = warpMod.mapToItem(null, warpMod.width / 2, warpMod.height / 2);
                         bar.root.showTooltip(warpMod.tipText, p.x, p.y);

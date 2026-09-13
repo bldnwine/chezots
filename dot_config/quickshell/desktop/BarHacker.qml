@@ -177,7 +177,7 @@ PanelWindow {
                     font.pixelSize: 12
                     font.letterSpacing: 2
                     font.weight: Font.Medium
-                    Behavior on color { ColorAnimation { duration: 180 } }
+                    Behavior on color { ColorAnimation { duration: 90 } }
                 }
             }
 
@@ -557,7 +557,7 @@ PanelWindow {
                 font.family: hk.root.mono
                 font.pixelSize: 11
                 font.weight: Font.Medium
-                Behavior on color { ColorAnimation { duration: 180 } }
+                Behavior on color { ColorAnimation { duration: 90 } }
             }
             Text {
                 id: mmTxt
@@ -568,7 +568,7 @@ PanelWindow {
                 font.family: hk.root.mono
                 font.pixelSize: 11
                 font.weight: Font.Medium
-                Behavior on color { ColorAnimation { duration: 180 } }
+                Behavior on color { ColorAnimation { duration: 90 } }
             }
             MouseArea {
                 id: clockMouseV

@@ -188,10 +188,12 @@ CardWindow {
     }
 
     onRevealedChanged: if (popup.revealed) {
+        popup.filterText = "";
         popup.selectedIndex = 0;
         popup.cursorActive = true;
         popup.disarmPointer();
         popup.rebuildDisplay();
+        armTimer.restart();
     }
 
     onDismiss: root.clipboardVisible = false
