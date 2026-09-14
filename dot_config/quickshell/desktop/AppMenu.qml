@@ -29,7 +29,16 @@ Item {
             if (navbar.appMenuVisible) {
                 root.query = "";
                 root.selectedIndex = 0;
+                if (navbar.appScan && navbar.appScan.checkFreshness) {
+                    navbar.appScan.checkFreshness();
+                }
             }
+        }
+    }
+
+    Component.onCompleted: {
+        if (navbar && navbar.appScan && navbar.appScan.checkFreshness) {
+            navbar.appScan.checkFreshness();
         }
     }
 

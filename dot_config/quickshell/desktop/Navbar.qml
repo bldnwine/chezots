@@ -1006,6 +1006,7 @@ Item {
     property bool appMenuVisible: false
     function openAppMenu() {
         root.appMenuVisible = true;
+        if (root.appScan && root.appScan.checkFreshness) root.appScan.checkFreshness();
     }
 
     // ---------- Videos popup state ----------

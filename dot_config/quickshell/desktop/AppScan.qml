@@ -2,15 +2,16 @@ import QtQuick
 import Quickshell.Io
 import "Data.js" as Data
 
-// One-shot scan of XDG application directories. configparser handles the
-// gnarly bits — section headers, continuation lines, encodings, comments,
-// mixed quoting. Result is cached on `apps` (annotated) for the session
-// and re-runs only on demand via refresh().
+// Scans XDG application directories and provides demand-driven freshness checking.
+// configparser handles the gnarly bits — section headers, continuation lines,
+// encodings, comments, mixed quoting. Result is cached on `apps` (annotated)
+// and re-evaluates on demand via refresh() or checkFreshness().
 Item {
     id: appScan
 
     property var apps: []
     property bool loaded: false
+    property string lastFingerprint: ""
 
     signal scanned()
 
@@ -19,10 +20,39 @@ Item {
         proc.running = true;
     }
 
+    function checkFreshness() {
+        if (!proc.running && !mtimeChecker.running) {
+            mtimeChecker.running = true;
+        }
+    }
+
+    // Asynchronous demand-driven freshness check (Tofi model).
+    // Checks timestamps of XDG application directories and user .desktop files (~4ms).
+    // Completely non-blocking and zero idle CPU.
+    Process {
+        id: mtimeChecker
+        running: false
+        command: ["bash", "-c",
+            "stat -c %Y $HOME/.local/share/applications $HOME/.local/share/applications/*.desktop /usr/share/applications /var/lib/flatpak/exports/share/applications $HOME/.local/share/flatpak/exports/share/applications /var/lib/snapd/desktop/applications 2>/dev/null | sort -n | tail -n 5 | tr '\\n' '|'"
+        ]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const fp = this.text.trim();
+                if (!appScan.lastFingerprint) {
+                    appScan.lastFingerprint = fp;
+                } else if (fp !== appScan.lastFingerprint) {
+                    console.log("[AppScan] Freshness mismatch detected (" + fp + " vs " + appScan.lastFingerprint + "), refreshing apps");
+                    appScan.lastFingerprint = fp;
+                    appScan.refresh();
+                }
+            }
+        }
+    }
+
     Process {
         id: proc
         running: false
-        command: ["python3", "-c", "import os, glob, re, configparser, sys\n" +
+        command: ["python3", "-c", "import os, re, configparser, sys\n" +
             "dirs = [\n" +
             "    os.path.expanduser('~/.local/share/applications'),\n" +
             "    '/usr/share/applications',\n" +
@@ -36,10 +66,16 @@ Item {
             "for d in dirs:\n" +
             "    if not os.path.isdir(d):\n" +
             "        continue\n" +
-            "    for f in sorted(glob.glob(os.path.join(d, '*.desktop'))):\n" +
+            "    dir_files = []\n" +
+            "    for root_dir, _, files in os.walk(d):\n" +
+            "        for f in files:\n" +
+            "            if f.endswith('.desktop'):\n" +
+            "                dir_files.append(os.path.join(root_dir, f))\n" +
+            "    dir_files.sort()\n" +
+            "    for full_path in dir_files:\n" +
             "        cp = configparser.RawConfigParser(strict=False, interpolation=None)\n" +
             "        try:\n" +
-            "            cp.read(f, encoding='utf-8')\n" +
+            "            cp.read(full_path, encoding='utf-8')\n" +
             "        except Exception:\n" +
             "            continue\n" +
             "        if 'Desktop Entry' not in cp:\n" +
@@ -96,7 +132,11 @@ Item {
                 apps.length = n;
                 appScan.apps = Data.annotate(apps);
                 appScan.loaded = true;
+                console.log("[AppScan] Scanned " + appScan.apps.length + " applications");
                 appScan.scanned();
+                if (!appScan.lastFingerprint) {
+                    appScan.checkFreshness();
+                }
             }
         }
     }

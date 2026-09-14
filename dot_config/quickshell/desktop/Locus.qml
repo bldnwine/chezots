@@ -54,14 +54,17 @@ Item {
 
     readonly property int cornerRadius: theme.cornerRadius
 
-    // Sources that feed `allItems`. AppScan reads .desktop files;
-    // NavbarApps probes the navbar shell for its IpcHandler widgets and
-    // surfaces only the ones it actually exposes (so users on a
-    // navbar-less setup see nothing instead of broken rows).
-    AppScan { id: appScan }
+    // Sources that feed `allItems`. Uses shared AppScan from navbar when hosted
+    // together in shell.qml, with a lazy Loader fallback for standalone testing.
+    Loader {
+        id: standaloneAppScan
+        active: !root.navbar || !root.navbar.appScan
+        sourceComponent: AppScan {}
+    }
+    readonly property var appScan: (root.navbar && root.navbar.appScan) ? root.navbar.appScan : standaloneAppScan.item
+    readonly property bool appsLoaded: appScan ? appScan.loaded : false
     NavbarApps { id: navbarApps }
     Tuis { id: tuis }
-    readonly property alias appsLoaded: appScan.loaded
 
     // ---------- Visibility / state ----------
     // Trailing underscore avoids shadowing Item.visible — read by the
@@ -308,6 +311,7 @@ Item {
         root.resetMouseGuard();
         root.visible_ = true;
         navbarApps.probe();
+        if (root.appScan && root.appScan.checkFreshness) root.appScan.checkFreshness();
     }
     function close() {
         root.visible_ = false;
@@ -318,6 +322,17 @@ Item {
         ollamaChat.clear();
     }
     function toggle() { if (root.visible_) close(); else open(); }
+
+    // While Locus is actively open, periodically check freshness so live installs
+    // appear without closing and reopening. Stops immediately when closed (0% idle CPU).
+    Timer {
+        interval: 4000
+        running: root.visible_
+        repeat: true
+        onTriggered: {
+            if (root.appScan && root.appScan.checkFreshness) root.appScan.checkFreshness();
+        }
+    }
     function goUp() {
         // Step back one level. At root this is a no-op so the caller can
         // chain "goUp or close" without a branch.
@@ -365,6 +380,11 @@ Item {
         function onPaperChanged() { root._iconCache = ({}); }
     }
 
+    Connections {
+        target: root.appScan || null
+        function onScanned() { root._iconCache = ({}); }
+    }
+
     // ---------- Search index annotation ----------
     // Annotated indexes. Assigned in Component.onCompleted and in the
     // appScan handler so they stay plain `var` assignments rather than
@@ -372,7 +392,7 @@ Item {
     // 200+ entry array on unrelated property touches.
     property var omarchy: []
     property var nav: []
-    readonly property var allItems: root.omarchy.concat(appScan.apps).concat(navbarApps.items).concat(tuis.items)
+    readonly property var allItems: root.omarchy.concat((appScan && appScan.apps) ? appScan.apps : []).concat(navbarApps.items).concat(tuis.items)
     readonly property var defaultPool: root.navRows.concat(root.allItems)
 
     // ---------- Launcher ----------
@@ -780,7 +800,7 @@ Item {
         function toggle(): void { root.toggle() }
         function open(): void { root.open() }
         function close(): void { root.close() }
-        function refresh(): void { appScan.refresh(); }
+        function refresh(): void { if (appScan) appScan.refresh(); }
         // Open OmniMenu pre-pivoted to a drill-down category (e.g. "Quick").
         // Lets Hyprland bind a shortcut straight into a category without
         // exposing the visual grid as a separate surface.
