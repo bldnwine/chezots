@@ -140,6 +140,9 @@ local function save_look()
 end
 
 hl.config({
+	render = {
+		direct_scanout = 2,
+	},
 	general = {
 		gaps_in = look.gaps_in,
 		gaps_out = look.gaps_out,

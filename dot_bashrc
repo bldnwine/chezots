@@ -81,7 +81,7 @@ export PATH="$HOME/.local/bin:$PATH"
 cd() {
     builtin cd "$@" && [ -n "$1" ] && ls -AF || true
 }
-amd() {
+amdx() {
     DRI_PRIME=1 "$@"
 }
 yta() {

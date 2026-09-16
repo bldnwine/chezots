@@ -237,14 +237,16 @@ print("  gwsPath set to", gws_path)
 print("  profile set to", profile)
 PYEOF
 
-step "Installing the systemd timer"
+step "Installing the systemd service"
 mkdir -p "$HOME/.config/systemd/user"
-cp "$SCRIPT_DIR/systemd/omarchy-calendar-sync."{service,timer} "$HOME/.config/systemd/user/"
+cp "$SCRIPT_DIR/systemd/omarchy-calendar-sync.service" "$HOME/.config/systemd/user/"
+# Disable persistent timer if previously enabled
+systemctl --user disable --now omarchy-calendar-sync.timer 2>/dev/null || true
+rm -f "$HOME/.config/systemd/user/omarchy-calendar-sync.timer"
 # The shipped unit assumes the standard plugin directory. Point it at wherever
 # this checkout actually lives, so a hand-cloned repo works too.
 sed -i "s|^ExecStart=.*|ExecStart=$SYNC_BIN|" "$HOME/.config/systemd/user/omarchy-calendar-sync.service"
 systemctl --user daemon-reload
-systemctl --user enable --now omarchy-calendar-sync.timer
 
 step "Running the first sync"
 systemctl --user start omarchy-calendar-sync.service || true
@@ -252,7 +254,8 @@ systemctl --user status omarchy-calendar-sync.service --no-pager || true
 
 cat <<EOF
 
-Done. Events land in ~/.local/state/omarchy/calendar-events.json every 5 minutes.
+Done. Events land in ~/.local/state/omarchy/calendar-events.json.
+The calendar syncs automatically when the popup is open or on manual sync.
 
   Logs:    journalctl --user -u omarchy-calendar-sync -f
   Choose which calendars to show: click the clock, then the gear icon.

@@ -131,7 +131,20 @@ CardWindow {
 
     function syncNow() {
         if (syncProcess.running) return;
+        syncProcess.running = false;
         syncProcess.running = true;
+    }
+
+    function checkAndSyncOnOpen() {
+        if (syncProcess.running) return;
+        var lastSync = 0;
+        if (calendarPopup.eventDoc && calendarPopup.eventDoc.syncedAt) {
+            lastSync = new Date(calendarPopup.eventDoc.syncedAt).getTime();
+        }
+        // If missing/invalid syncedAt, or older than 2 minutes (120000ms), sync now
+        if (isNaN(lastSync) || lastSync === 0 || (Date.now() - lastSync) > 120000) {
+            calendarPopup.syncNow();
+        }
     }
 
     Process {
@@ -180,11 +193,17 @@ CardWindow {
                 calendarPopup.allEvents = [];
                 calendarPopup.eventIndex = ({});
             }
+            if (calendarPopup.revealed) {
+                calendarPopup.checkAndSyncOnOpen();
+            }
         }
         onLoadFailed: {
             calendarPopup.eventDoc = null;
             calendarPopup.allEvents = [];
             calendarPopup.eventIndex = ({});
+            if (calendarPopup.revealed) {
+                calendarPopup.syncNow();
+            }
         }
         onFileChanged: reload()
     }
@@ -199,9 +218,20 @@ CardWindow {
         }
     }
 
+    Timer {
+        id: openSyncTimer
+        interval: 300000
+        running: calendarPopup.revealed
+        repeat: true
+        onTriggered: calendarPopup.syncNow()
+    }
+
     onRevealedChanged: if (calendarPopup.revealed) {
         calendarPopup.today = new Date();
         calendarPopup.nowMs = Date.now();
+        if (calendarPopup.eventDoc) {
+            calendarPopup.checkAndSyncOnOpen();
+        }
     }
 
     theme: root

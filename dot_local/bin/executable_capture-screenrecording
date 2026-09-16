@@ -9,8 +9,9 @@
 # start.
 #
 # Env: SCR_DEBUG=true appends gpu-screen-recorder's stderr (and
-# the picker target it was launched with) to /tmp/capture-screenrecord.log so
-# users can attach a log when reporting capture failures.
+# the picker target it was launched with) to
+# $XDG_RUNTIME_DIR/capture-screenrecord.log so users can attach a log when
+# reporting capture failures.
 
 OUTPUT_DIR="${SCR_DIR:-$HOME/Videos/sr}"
 
@@ -26,8 +27,15 @@ WEBCAM_DEVICE=""
 RESOLUTION=""
 FULLSCREEN="false"
 STOP_RECORDING="false"
-RECORDING_FILE="/tmp/capture-screenrecord-filename"
-LOG_FILE=$([[ ${SCR_DEBUG:-false} == "true" ]] && echo "/tmp/capture-screenrecord.log" || echo "/dev/null")
+# Per-user runtime directory keeps recording state out of world-writable /tmp.
+# What RECORDING_FILE holds is read back on stop and used as a path, so a name
+# in /tmp is a name any other local account can create first and point wherever
+# it likes. Fall back to the state directory when there is no session runtime
+# dir -- :-/tmp would put both files back at fixed names in a shared location.
+RUNTIME_DIR="${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/owlcat}"  # resolves to empty when unset
+: "${RUNTIME_DIR:=${XDG_STATE_HOME:-$HOME/.local/state}/owlcat}"
+RECORDING_FILE="$RUNTIME_DIR/capture-screenrecord-filename"
+LOG_FILE=$([[ ${SCR_DEBUG:-false} == "true" ]] && echo "$RUNTIME_DIR/capture-screenrecord.log" || echo "/dev/null")
 
 for arg in "$@"; do
   case "$arg" in
@@ -105,6 +113,11 @@ select_capture_target() {
 }
 
 start_screenrecording() {
+  mkdir -p "$RUNTIME_DIR" || return 1
+  if [[ -z ${XDG_RUNTIME_DIR:-} ]]; then
+    chmod 700 "$RUNTIME_DIR" || return 1
+  fi
+
   local capture_args=()
   local target
 

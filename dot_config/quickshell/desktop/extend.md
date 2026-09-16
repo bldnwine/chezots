@@ -192,7 +192,7 @@ function mapKeys(raw) {
 
 `CalendarPopup.qml` reads `~/.local/state/omarchy/calendar-events.json` and renders a month grid with calendar-colored event dots, day agenda, and one-click **Join** buttons for Google Meet, Zoom, and Teams meetings.
 
-- **Sync Google Calendar**: run `~/.config/quickshell/desktop/scripts/calendar-sync/setup` to link your Google account and install the systemd timer (`omarchy-calendar-sync.timer`).
+- **Sync Google Calendar**: run `~/.config/quickshell/desktop/scripts/calendar-sync/setup` to link your Google account and install the systemd service (`omarchy-calendar-sync.service`). Syncs automatically when the calendar popup is open or on manual sync.
 - **Other Sources**: any tool (`khal`, `vdirsyncer`, Nextcloud, custom ICS script) can write to `~/.local/state/omarchy/calendar-events.json`.
 - **Keyboard Navigation**:
   - `Left` / `Right` / `Up` / `Down`: navigate day selection across the grid.
