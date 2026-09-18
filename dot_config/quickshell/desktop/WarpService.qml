@@ -63,6 +63,18 @@ Item {
   property string _statusError: ""
   property double _lastRegistrationMs: 0
 
+  // Tracks a `sudo -n systemctl` start/stop while the Unit is settling.
+  // Status polls that land mid-transition must not clobber the optimistic
+  // daemonDown state (previously: the next `warp-cli status` poll flipped the
+  // popup straight back before systemctl finished).
+  property bool daemonTransition: false
+  property string _daemonAction: ""
+
+  // Paused while the bar is hidden to stop background forks. Bound from
+  // Navbar as `!barHidden || warpVisible` so the popup stays live.
+  // Direct refresh() calls (popup open, IPC, post-action) still run.
+  property bool pollingEnabled: true
+
   function modeLabel(value) {
     return Model.modeLabel(value)
   }
@@ -155,6 +167,9 @@ Item {
   }
 
   function applyStatus(raw, exitCode, stderr) {
+    // A start/stop is in flight (systemctl settling):
+    // keep the optimistic state; daemonProcess.onExited re-polls afterwards.
+    if (daemonTransition) return
     var parsed = Model.parseStatus(raw, exitCode, stderr)
     daemonDown = parsed.daemonDown === true
     needsTos = parsed.needsTos === true
@@ -267,27 +282,43 @@ Item {
   }
 
   function startDaemon() {
+    if (daemonProcess.running) return
     lastError = ""
+    _daemonAction = "start"
+    daemonTransition = true
     actionStatus = "Starting WARP daemon…"
-    Quickshell.execDetached(["sudo", "/usr/bin/systemctl", "start", "warp-svc"])
-    delayedRefresh.restart()
-    settleRefresh.restart()
+    // Passwordless via sudoers NOPASSWD for `systemctl start/stop/restart/is-active
+    // warp-svc`. `-n` fails fast instead of hanging on a hidden password prompt.
+    // Argv must stay exact to match the sudoers rule.
+    daemonProcess.command = ["sudo", "-n", "/usr/bin/systemctl", "start", "warp-svc"]
+    daemonProcess.running = true
   }
 
   function stopDaemon() {
+    if (daemonProcess.running) return
     lastError = ""
+    _daemonAction = "stop"
+    daemonTransition = true
     actionStatus = "Stopping WARP daemon…"
     daemonDown = true
     connected = false
     connecting = false
+    _desired = -1
     status = "DaemonDown"
     statusText = "WARP daemon is not running"
-    Quickshell.execDetached(["pkill", "-9", "-f", "warp-taskbar"])
-    Quickshell.execDetached(["pkill", "-9", "-f", "crashpad_handler"])
-    Quickshell.execDetached(["sudo", "/usr/bin/systemctl", "stop", "warp-svc"])
-    flash("WARP daemon stopped")
-    delayedRefresh.restart()
-    settleRefresh.restart()
+    reasonText = ""
+    registered = false
+    mode = ""
+    accountLabel = ""
+    accountType = ""
+    organization = ""
+    deviceId = ""
+    deviceName = ""
+    splitTunnel = ({})
+    splitTunnelText = ""
+    tunnelStats = ({})
+    daemonProcess.command = ["sudo", "-n", "/usr/bin/systemctl", "stop", "warp-svc"]
+    daemonProcess.running = true
   }
 
   function runAction(args, label) {
@@ -301,7 +332,7 @@ Item {
     id: refreshTimer
     interval: root.refreshIntervalSec * 1000
     repeat: true
-    running: root.installed || !root.probed
+    running: (root.installed || !root.probed) && root.pollingEnabled
     triggeredOnStart: true
     onTriggered: root.refresh()
   }
@@ -311,7 +342,7 @@ Item {
     property int ticks: 0
     interval: 2000
     repeat: true
-    running: root.installed || !root.probed
+    running: (root.installed || !root.probed) && root.pollingEnabled
     onTriggered: {
       ticks += 1
       if (root.available || ticks >= 15) startupRamp.running = false
@@ -443,25 +474,45 @@ Item {
     id: daemonProcess
     running: false
     command: []
-    stdout: StdioCollector { id: daemonStdout }
-    stderr: StdioCollector { id: daemonStderr }
+    stdout: StdioCollector { id: daemonStdout; waitForEnd: true }
+    stderr: StdioCollector { id: daemonStderr; waitForEnd: true }
     onExited: function(exitCode) {
+      var action = root._daemonAction
+      root._daemonAction = ""
+      root.daemonTransition = false
       if (exitCode !== 0) {
+        // Auth cancelled/dismissed or systemctl failed: drop the optimistic
+        // state and re-poll so the popup snaps back to reality (daemon up).
         root.lastError = Model.elide(String(daemonStderr.text || daemonStdout.text || "Could not manage warp-svc"))
+        if (root.lastError === "") root.lastError = "Could not manage warp-svc"
         root.flash(root.lastError)
       } else {
         root.lastError = ""
-        if (root.actionStatus.indexOf("Stopping") !== -1) {
+        if (action === "stop") {
           root.daemonDown = true
           root.connected = false
           root.connecting = false
+          root._desired = -1
           root.status = "DaemonDown"
           root.statusText = "WARP daemon is not running"
+          root.reasonText = ""
+          root.registered = false
+          root.mode = ""
+          root.accountLabel = ""
+          root.accountType = ""
+          root.organization = ""
+          root.deviceId = ""
+          root.deviceName = ""
+          root.splitTunnel = ({})
+          root.splitTunnelText = ""
+          root.tunnelStats = ({})
+          Quickshell.execDetached(["pkill", "-9", "-f", "warp-taskbar"])
+          Quickshell.execDetached(["pkill", "-9", "-f", "crashpad_handler"])
           root.flash("WARP daemon stopped")
         } else {
           root.daemonDown = false
           root.flash("WARP daemon started")
-          Quickshell.execDetached(warpCommand(["debug", "connectivity-check", "disable"]))
+          Quickshell.execDetached(root.warpCommand(["debug", "connectivity-check", "disable"]))
         }
       }
       delayedRefresh.restart()

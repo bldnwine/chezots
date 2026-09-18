@@ -846,7 +846,8 @@ Item {
     Timer {
         interval: 2000
         repeat: true
-        running: true
+        running: !root.barHidden
+        triggeredOnStart: true
         onTriggered: {
             screenRecordProbe.running = false;
             screenRecordProbe.running = true;
@@ -901,7 +902,7 @@ Item {
 
     // ---------- Cloudflare WARP state ----------
     property bool warpVisible: false
-    WarpService { id: warpService; settings: ({}) }
+    WarpService { id: warpService; settings: ({}); pollingEnabled: !root.barHidden || root.warpVisible }
     readonly property var warpService: warpService
     function openWarp() {
         if (root.warpAnchorItem) root.anchorPopupTo(root.warpAnchorItem);
@@ -910,7 +911,7 @@ Item {
 
     // ---------- Antigravity AI CLI state ----------
     property bool aiVisible: false
-    AiService { id: aiService }
+    AiService { id: aiService; pollingEnabled: !root.barHidden || root.aiVisible }
     readonly property var aiService: aiService
     function openAi() {
         if (root.aiAnchorItem) root.anchorPopupTo(root.aiAnchorItem);
@@ -2404,7 +2405,7 @@ Item {
             }
         }
     }
-    Timer { interval: 30000; running: true; repeat: true; triggeredOnStart: true
+    Timer { interval: 30000; running: !root.barHidden; repeat: true; triggeredOnStart: true
         onTriggered: { btDevicesProbe.running = false; btDevicesProbe.running = true; } }
 
     // ---------- Wi-Fi scan probe ----------

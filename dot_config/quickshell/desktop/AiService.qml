@@ -23,6 +23,11 @@ Item {
     property bool ready: false
     property bool refreshing: false
 
+    // Paused while the bar is hidden to stop background CLI scans. Bound
+    // from Navbar as `!barHidden || aiVisible`. Direct refresh() calls
+    // (popup open, manual) still run; the in-flight active poll is kept.
+    property bool pollingEnabled: true
+
     readonly property string scannerScript:
         Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/antigravity_usage_scanner.py"
 
@@ -117,7 +122,7 @@ Item {
         id: idlePollTimer
         interval: 30000
         repeat: true
-        running: !root.agentRunning
+        running: !root.agentRunning && root.pollingEnabled
         triggeredOnStart: true
         onTriggered: root.refresh(false)
     }

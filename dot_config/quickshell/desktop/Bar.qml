@@ -355,6 +355,7 @@ PanelWindow {
                     if (bar.root.systemVisible) bar.root.systemVisible = false;
                     else bar.root.openSystem();
                 }
+                onRightActivated: bar.root.openDisplay()
             }
 
             Item {
