@@ -44,6 +44,7 @@ Item {
     signal activated()
     signal middleActivated()
     signal rightActivated()
+    signal wheelActivated(real delta)
 
     Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
     Layout.preferredWidth: root.isHorizontal
@@ -168,6 +169,9 @@ Item {
             if (e.button === Qt.RightButton) cell.rightActivated();
             else if (e.button === Qt.MiddleButton) cell.middleActivated();
             else cell.activated();
+        }
+        onWheel: (wheel) => {
+            if (wheel.angleDelta.y !== 0) cell.wheelActivated(wheel.angleDelta.y);
         }
     }
 }

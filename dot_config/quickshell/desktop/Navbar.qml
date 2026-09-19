@@ -71,7 +71,7 @@ Item {
     readonly property string icoHeadphone: String.fromCodePoint(0xf025)
     readonly property string icoSpeaker: String.fromCodePoint(0xf04c3)
 
-    readonly property int barHeight: 26
+    property int barHeight: 26
     readonly property int barExtraThickness: barType !== "slab" && isHorizontal ? 11 : 0
     // Effective strip the bar occupies along its edge; 0 when hidden so
     // popups/osd/notifications hug the edge instead of a phantom gap.
@@ -205,6 +205,262 @@ Item {
             }
         }
         onExited: function(code) { if (code !== 0) root.barType = "floating"; }
+    }
+
+    // ---------- Bar height ----------
+    // Thickness of the bar strip in px. Same one-line state file scheme;
+    // every face and module binds root.barHeight so it applies live.
+    readonly property string barHeightStatePath:
+        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-height"
+    function setBarHeight(h) {
+        const want = Math.max(22, Math.min(40, Math.round(h)));
+        root.barHeight = want;
+        barHeightWriter.command = ["bash", "-c",
+            "mkdir -p " + JSON.stringify(root.barHeightStatePath.replace(/\/[^/]+$/, ""))
+            + " && printf '%s' " + JSON.stringify(String(want))
+            + " > " + JSON.stringify(root.barHeightStatePath)];
+        barHeightWriter.running = false;
+        barHeightWriter.running = true;
+    }
+
+    Process { id: barHeightWriter; running: false }
+    Process {
+        id: barHeightReader
+        running: true
+        command: ["cat", root.barHeightStatePath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const v = parseInt(this.text.trim(), 10);
+                if (!isNaN(v)) root.barHeight = Math.max(22, Math.min(40, v));
+            }
+        }
+        onExited: function(code) { if (code !== 0) root.barHeight = 26; }
+    }
+
+    // ---------- Bar opacity ----------
+    // Background fill opacity, independent from the barTransparent toggle
+    // (which drops the background entirely). Applies to the slab/cloud
+    // backplates; glyphs and hairlines stay full-strength.
+    readonly property string barOpacityStatePath:
+        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-opacity"
+    property real barOpacity: 1.0
+    function setBarOpacity(o) {
+        const want = Math.max(0.2, Math.min(1.0, o));
+        root.barOpacity = want;
+        barOpacityWriter.command = ["bash", "-c",
+            "mkdir -p " + JSON.stringify(root.barOpacityStatePath.replace(/\/[^/]+$/, ""))
+            + " && printf '%s' " + JSON.stringify(String(want))
+            + " > " + JSON.stringify(root.barOpacityStatePath)];
+        barOpacityWriter.running = false;
+        barOpacityWriter.running = true;
+    }
+
+    Process { id: barOpacityWriter; running: false }
+    Process {
+        id: barOpacityReader
+        running: true
+        command: ["cat", root.barOpacityStatePath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const v = parseFloat(this.text.trim());
+                if (!isNaN(v)) root.barOpacity = Math.max(0.2, Math.min(1.0, v));
+            }
+        }
+        onExited: function(code) { if (code !== 0) root.barOpacity = 1.0; }
+    }
+
+    // ---------- Bar air ----------
+    // End/edge gap of the floating pill in px (replaces the hardcoded
+    // cloudAir). Same one-line state file scheme.
+    readonly property string barAirStatePath:
+        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-air"
+    property int barAir: 5
+    function setBarAir(a) {
+        const want = Math.max(0, Math.min(360, Math.round(a)));
+        root.barAir = want;
+        barAirWriter.command = ["bash", "-c",
+            "mkdir -p " + JSON.stringify(root.barAirStatePath.replace(/\/[^/]+$/, ""))
+            + " && printf '%s' " + JSON.stringify(String(want))
+            + " > " + JSON.stringify(root.barAirStatePath)];
+        barAirWriter.running = false;
+        barAirWriter.running = true;
+    }
+
+    Process { id: barAirWriter; running: false }
+    Process {
+        id: barAirReader
+        running: true
+        command: ["cat", root.barAirStatePath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const v = parseInt(this.text.trim(), 10);
+                if (!isNaN(v)) root.barAir = Math.max(0, Math.min(360, v));
+            }
+        }
+        onExited: function(code) { if (code !== 0) root.barAir = 5; }
+    }
+
+    // ---------- Bar rounding ----------
+    // Floating-pill corner radius in px.
+    readonly property string barRoundingStatePath:
+        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-rounding"
+    property int barRounding: 6
+    function setBarRounding(r) {
+        const want = Math.max(0, Math.min(12, Math.round(r)));
+        root.barRounding = want;
+        barRoundingWriter.command = ["bash", "-c",
+            "mkdir -p " + JSON.stringify(root.barRoundingStatePath.replace(/\/[^/]+$/, ""))
+            + " && printf '%s' " + JSON.stringify(String(want))
+            + " > " + JSON.stringify(root.barRoundingStatePath)];
+        barRoundingWriter.running = false;
+        barRoundingWriter.running = true;
+    }
+
+    Process { id: barRoundingWriter; running: false }
+    Process {
+        id: barRoundingReader
+        running: true
+        command: ["cat", root.barRoundingStatePath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const v = parseInt(this.text.trim(), 10);
+                if (!isNaN(v)) root.barRounding = Math.max(0, Math.min(12, v));
+            }
+        }
+        onExited: function(code) { if (code !== 0) root.barRounding = 6; }
+    }
+
+    // ---------- Bar templates ----------
+    // Named snapshots of the bar-style settings (see BarStylePopup).
+    // "zen" is the builtin default and is never stored; anything else
+    // lives in one JSON object file. The selected name persists
+    // separately so an unsaved "custom" (dirty) state also survives a
+    // relogin — every control writes through the persisted setters
+    // above, so live values always restore even without a template.
+    readonly property string barTemplatesPath:
+        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-templates.json"
+    readonly property string barTemplateSelPath:
+        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-template"
+    property var barTemplates: ({})
+    property string barTemplateSelected: "zen"
+
+    function barZenDefaults() {
+        return { variant: "zen", type: "floating", transparent: false,
+                 opacity: 1.0, height: 26, air: 5, rounding: 6 };
+    }
+    function barLiveSettings() {
+        return { variant: root.barVariant, type: root.barType,
+                 transparent: root.barTransparent, opacity: root.barOpacity,
+                 height: root.barHeight, air: root.barAir,
+                 rounding: root.barRounding };
+    }
+    function barSettingsMatch(a, b) {
+        return a && b
+            && a.variant === b.variant
+            && a.type === b.type
+            && a.transparent === b.transparent
+            && Math.abs(a.opacity - b.opacity) < 0.001
+            && a.height === b.height
+            && a.air === b.air
+            && a.rounding === b.rounding;
+    }
+    readonly property bool barTemplateDirty: {
+        const cur = root.barLiveSettings();
+        if (root.barTemplateSelected === "zen")
+            return !root.barSettingsMatch(cur, root.barZenDefaults());
+        const ref = root.barTemplates[root.barTemplateSelected];
+        if (!ref) return true;
+        return !root.barSettingsMatch(cur, ref);
+    }
+    readonly property string barTemplateLabel: {
+        const base = root.barTemplateNames.indexOf(root.barTemplateSelected) !== -1
+                     || root.barTemplateSelected === "zen"
+                     ? root.barTemplateSelected : "zen";
+        return (root.barTemplateDirty ? base + " custom" : base).toUpperCase();
+    }
+    readonly property var barTemplateNames: Object.keys(root.barTemplates)
+    function barTemplateRef(name) {
+        if (name === "zen") return root.barZenDefaults();
+        return root.barTemplates[name] || null;
+    }
+
+    function applyBarTemplate(name) {
+        const ref = root.barTemplateRef(name);
+        if (!ref) return;
+        root.setBarVariant(ref.variant || "zen");
+        root.setBarType(ref.type || "floating");
+        root.setBarTransparent(!!ref.transparent);
+        root.setBarOpacity(typeof ref.opacity === "number" ? ref.opacity : 1.0);
+        root.setBarHeight(typeof ref.height === "number" ? ref.height : 26);
+        root.setBarAir(typeof ref.air === "number" ? ref.air : 5);
+        root.setBarRounding(typeof ref.rounding === "number" ? ref.rounding : 6);
+        root.setBarTemplateSelected(name);
+    }
+    function setBarTemplateSelected(name) {
+        root.barTemplateSelected = name;
+        barTemplateSelWriter.command = ["bash", "-c",
+            "mkdir -p " + JSON.stringify(root.barTemplateSelPath.replace(/\/[^/]+$/, ""))
+            + " && printf '%s' " + JSON.stringify(name)
+            + " > " + JSON.stringify(root.barTemplateSelPath)];
+        barTemplateSelWriter.running = false;
+        barTemplateSelWriter.running = true;
+    }
+    function saveBarTemplate(name) {
+        const clean = (name || "").trim();
+        if (!/^[A-Za-z0-9 _-]{1,24}$/.test(clean)) return false;
+        const next = Object.assign({}, root.barTemplates);
+        next[clean] = root.barLiveSettings();
+        root.writeBarTemplates(next);
+        root.setBarTemplateSelected(clean);
+        return true;
+    }
+    function deleteBarTemplate(name) {
+        if (name === "zen" || !root.barTemplates[name]) return;
+        const next = Object.assign({}, root.barTemplates);
+        delete next[name];
+        root.writeBarTemplates(next);
+        if (root.barTemplateSelected === name) root.setBarTemplateSelected("zen");
+    }
+    function writeBarTemplates(obj) {
+        root.barTemplates = obj;
+        barTemplatesWriter.command = ["bash", "-c",
+            "mkdir -p " + JSON.stringify(root.barTemplatesPath.replace(/\/[^/]+$/, ""))
+            + " && printf '%s' " + JSON.stringify(JSON.stringify(obj))
+            + " > " + JSON.stringify(root.barTemplatesPath)];
+        barTemplatesWriter.running = false;
+        barTemplatesWriter.running = true;
+    }
+
+    Process { id: barTemplatesWriter; running: false }
+    Process { id: barTemplateSelWriter; running: false }
+    Process {
+        id: barTemplatesReader
+        running: true
+        command: ["cat", root.barTemplatesPath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const v = JSON.parse(this.text);
+                    if (v && typeof v === "object") root.barTemplates = v;
+                } catch (e) { /* corrupt file -> start empty */ }
+                if (root.barTemplateSelected !== "zen"
+                    && !root.barTemplates[root.barTemplateSelected])
+                    root.barTemplateSelected = "zen";
+            }
+        }
+        onExited: function(code) { if (code !== 0) root.barTemplates = ({}); }
+    }
+    Process {
+        id: barTemplateSelReader
+        running: true
+        command: ["cat", root.barTemplateSelPath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const v = this.text.trim();
+                if (v.length > 0) root.barTemplateSelected = v;
+            }
+        }
+        onExited: function(code) { if (code !== 0) root.barTemplateSelected = "zen"; }
     }
 
     // ---------- Tooltips ----------
@@ -1334,6 +1590,15 @@ Item {
         displayProbe.running = true;
         root.displayRow = 0;
         root.displayVisible = true;
+    }
+
+    // ---------- Bar style popup state ----------
+    property bool barStyleVisible: false
+    property int  barStyleRow: 0
+    function openBarStyle() {
+        if (root.systemAnchorItem) root.anchorPopupTo(root.systemAnchorItem);
+        root.barStyleRow = 0;
+        root.barStyleVisible = true;
     }
 
     // ---------- System popup state ----------
@@ -2912,6 +3177,13 @@ Item {
     }
     Timer { id: keepDisplay; interval: 400; onTriggered: displayLoader.source = "" }
 
+    Loader { id: barStyleLoader }
+    onBarStyleVisibleChanged: {
+        if (root.barStyleVisible) { keepBarStyle.stop(); barStyleLoader.setSource("BarStylePopup.qml", { root: root }); }
+        else keepBarStyle.restart();
+    }
+    Timer { id: keepBarStyle; interval: 400; onTriggered: barStyleLoader.source = "" }
+
     Loader { id: weatherLoader }
     onWeatherVisibleChanged: {
         if (root.weatherVisible) { keepWeather.stop(); weatherLoader.setSource("WeatherPopup.qml", { root: root }); }
@@ -3260,6 +3532,17 @@ Item {
         function floating(): void        { root.setBarType("floating"); }
         function cloud(): void           { root.setBarType("floating"); }
         function slab(): void            { root.setBarType("slab"); }
+    }
+
+    // Bar style popup: qs -c desktop ipc call barstyle toggle
+    IpcHandler {
+        target: "barstyle"
+        function toggle(): void {
+            if (root.barStyleVisible) root.barStyleVisible = false;
+            else root.openBarStyle();
+        }
+        function open(): void  { root.openBarStyle(); }
+        function close(): void { root.barStyleVisible = false; }
     }
 
     IpcHandler {

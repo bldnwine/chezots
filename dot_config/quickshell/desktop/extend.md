@@ -108,8 +108,13 @@ Icons live as `icoFoo` properties on `Navbar.qml`'s `root`. Add new ones with `S
 
 | Property | What it does |
 | --- | --- |
-| `barHeight: 26` | Pixel height (or width when bar is vertical). |
+| `barHeight: 26` | Pixel height (or width when bar is vertical). Persisted, adjustable 22–40 in the Bar Style popup. |
+| `barAir: 5` | Floating-pill end/edge gap in px. Persisted, adjustable 0–16 in the Bar Style popup. |
+| `barOpacity: 1.0` | Bar background opacity (independent from the transparent toggle). Persisted, adjustable 20–100% in the Bar Style popup. |
+| `barRounding: 6` | Floating-pill corner radius in px. Persisted, adjustable 0–12 in the Bar Style popup. |
 | `barEdge: "top"` | Initial edge. One of `top`, `right`, `bottom`, `left`. Click the edge arrow in the bar to cycle. |
+
+Bar templates (named snapshots of the above + face/type/transparent) live in `~/.local/state/quickshell-desktop/bar-templates.json`, selected via the Template row in the Bar Style popup (`qs -c desktop ipc call barstyle toggle`). Unsaved tweaks show as `<name> custom` and still persist across restarts through the individual setting files.
 
 Workspace count lives in `Bar.qml`:
 

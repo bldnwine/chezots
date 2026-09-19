@@ -499,6 +499,17 @@ Item {
                 }
                 root.close();
                 return;
+            } else if (target === "barstyle") {
+                if (verb === "open" || verb === "show") {
+                    root.navbar.openBarStyle();
+                } else if (verb === "close" || verb === "hide") {
+                    root.navbar.barStyleVisible = false;
+                } else {
+                    if (root.navbar.barStyleVisible) root.navbar.barStyleVisible = false;
+                    else root.navbar.openBarStyle();
+                }
+                root.close();
+                return;
             } else if (target === "corners") {
                 if (verb === "round") {
                     if (root.navbar.theme) root.navbar.theme.setCorners("round");

@@ -96,19 +96,19 @@ const omarchyItems = [
     // Mirrors the standalone QuickSettings sheet's targets: popup togglers
     // and one-shot device toggles. Reached as a drill-down (Quick) or by
     // typing the action name; Alt+Space binds straight into this category.
-    { title: "Display",          icon: "󰍹", category: "Quick", keywords: "display monitor brightness warmth gamma night light blue temperature dim screen",       exec: "qs -c desktop ipc call display toggle" },
-    { title: "Calendar",         icon: "󰃭", category: "Quick", keywords: "calendar date month day today schedule planner agenda holidays",                       exec: "qs -c desktop ipc call calendar toggle" },
-    { title: "Aether Themes",    icon: "󰏘", category: "Quick", keywords: "aether theme blueprint palette swatch picker wallpaper generate",                      exec: "qs -c desktop ipc call aether toggle" },
-    { title: "Screenshots",      icon: "󰄀", category: "Quick", keywords: "screenshots shots browse pictures captures images recent gallery",                      exec: "qs -c desktop ipc call screenshots toggle" },
-    { title: "Videos",           icon: "󰟞", category: "Quick", keywords: "videos films clips recordings recent browse gallery library",                          exec: "qs -c desktop ipc call videos toggle" },
-    { title: "Mute Audio",       icon: "󰝟", category: "Quick", keywords: "mute audio unmute silence toggle volume sound speaker pamixer quick",                  exec: "pamixer -t && qs -c desktop ipc call audio refresh" },
-    { title: "Reset Display",    icon: "󰜉", category: "Quick", keywords: "reset display brightness warmth gamma default daylight identity full restore",          exec: "qs -c desktop ipc call display reset" },
-    { title: "Blank Screen",     icon: "󰹐", category: "Quick", keywords: "blank screen off dpms suspend display monitor sleep dark",                              exec: "qs -c desktop ipc call display blank" },
-    { title: "Audio Mixer",      icon: "󰕾", category: "Quick", keywords: "audio mixer pavucontrol pipewire pulse volume sink source device level",                exec: "pavucontrol" },
-    { title: "Wi-Fi Picker",     icon: "󰖩", category: "Quick", keywords: "wifi wireless network connect picker chooser ssid signal nmcli",                       exec: "omarchy-launch-wifi" },
-    { title: "Bluetooth Picker", icon: "󰂯", category: "Quick", keywords: "bluetooth bt pair connect device picker headset speaker keyboard mouse",                exec: "omarchy-launch-bluetooth" },
-    { title: "System Monitor",   icon: "󰍛", category: "Quick", keywords: "cpu memory process monitor btop top htop performance load activity",                   exec: "omarchy-launch-or-focus-tui btop" },
-    { title: "Power Menu",       icon: "󰐥", category: "Quick", keywords: "power menu battery suspend hibernate logout restart reboot shutdown lock",              exec: "omarchy-menu power" },
+    // { title: "Display",          icon: "󰍹", category: "Quick", keywords: "display monitor brightness warmth gamma night light blue temperature dim screen",       exec: "qs -c desktop ipc call display toggle" },
+    // { title: "Calendar",         icon: "󰃭", category: "Quick", keywords: "calendar date month day today schedule planner agenda holidays",                       exec: "qs -c desktop ipc call calendar toggle" },
+    // { title: "Aether Themes",    icon: "󰏘", category: "Quick", keywords: "aether theme blueprint palette swatch picker wallpaper generate",                      exec: "qs -c desktop ipc call aether toggle" },
+    // { title: "Screenshots",      icon: "󰄀", category: "Quick", keywords: "screenshots shots browse pictures captures images recent gallery",                      exec: "qs -c desktop ipc call screenshots toggle" },
+    // { title: "Videos",           icon: "󰟞", category: "Quick", keywords: "videos films clips recordings recent browse gallery library",                          exec: "qs -c desktop ipc call videos toggle" },
+    // { title: "Mute Audio",       icon: "󰝟", category: "Quick", keywords: "mute audio unmute silence toggle volume sound speaker pamixer quick",                  exec: "pamixer -t && qs -c desktop ipc call audio refresh" },
+    // { title: "Reset Display",    icon: "󰜉", category: "Quick", keywords: "reset display brightness warmth gamma default daylight identity full restore",          exec: "qs -c desktop ipc call display reset" },
+    // { title: "Blank Screen",     icon: "󰹐", category: "Quick", keywords: "blank screen off dpms suspend display monitor sleep dark",                              exec: "qs -c desktop ipc call display blank" },
+    // { title: "Audio Mixer",      icon: "󰕾", category: "Quick", keywords: "audio mixer pavucontrol pipewire pulse volume sink source device level",                exec: "pavucontrol" },
+    // { title: "Wi-Fi Picker",     icon: "󰖩", category: "Quick", keywords: "wifi wireless network connect picker chooser ssid signal nmcli",                       exec: "omarchy-launch-wifi" },
+    // { title: "Bluetooth Picker", icon: "󰂯", category: "Quick", keywords: "bluetooth bt pair connect device picker headset speaker keyboard mouse",                exec: "omarchy-launch-bluetooth" },
+    // { title: "System Monitor",   icon: "󰍛", category: "Quick", keywords: "cpu memory process monitor btop top htop performance load activity",                   exec: "omarchy-launch-or-focus-tui btop" },
+    // { title: "Power Menu",       icon: "󰐥", category: "Quick", keywords: "power menu battery suspend hibernate logout restart reboot shutdown lock",              exec: "omarchy-menu power" },
 
     // ----- Style -----
     { title: "Aether Menu",      icon: "󰸌", category: "Style",   keywords: "aether theme blueprint palette swatch picker wallpaper generate full menu launcher",                  exec: "qs -c desktop ipc call aether toggle" },
@@ -117,6 +117,7 @@ const omarchyItems = [
     { title: "Floating Bar",     icon: "󰘇", category: "Style",   keywords: "floating cloud bar island detached navbar style mode type",                                            exec: "qs -c desktop ipc call barType floating" },
     { title: "Slab Bar",         icon: "󰝣", category: "Style",   keywords: "slab bar edge full flat solid navbar style mode type",                                                exec: "qs -c desktop ipc call barType slab" },
     { title: "Transparent Bar",  icon: "󰚲", rawIcon: "/home/bldnwine/.config/quickshell/desktop/assets/transparentbar.ico", category: "Style", keywords: "toggle transparent bar opacity fade invisible ghost clear background navbar", exec: "qs -c desktop ipc call bar transparent" },
+    { title: "Bar Style",        icon: "󰒓", category: "Style", keywords: "bar style face zen whiterose editor customize appearance height opacity corners popup", exec: "qs -c desktop ipc call barstyle toggle" },
 
     // ----- System -----
     { title: "Lock Screen",         icon: "󰌾", category: "System", keywords: "lock screen security hyprlock password",                                            exec: "loginctl lock-session" },

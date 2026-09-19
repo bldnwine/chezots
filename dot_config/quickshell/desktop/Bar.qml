@@ -20,10 +20,14 @@ PanelWindow {
     // Cloud / floating mode: horizontal + barType !== "slab". Vertical bars keep the original
     // slab geometry to avoid breaking the proven layout.
     readonly property int cloudPad: 2
-    readonly property int cloudAir: 5
+    readonly property int cloudAir: bar.root.barAir
     readonly property int cloudInnerAir: 2
+    // Fixed outer screen-edge gap. Air (cloudAir) only sets the
+    // left/right end margins so the slider never shifts the bar
+    // vertically; this preserves the original 5px outer look.
+    readonly property int cloudOuter: 5
     readonly property bool cloudMode: bar.root.barType !== "slab" && bar.root.isHorizontal
-    readonly property int extraThickness: cloudMode ? 2 * cloudPad + cloudAir + cloudInnerAir : 0
+    readonly property int extraThickness: cloudMode ? 2 * cloudPad + cloudOuter + cloudInnerAir : 0
     // innerSign tells which side gets the extra outer air (away from screen).
     readonly property int innerSign: bar.root.barEdge === "top" ? 1 : (bar.root.barEdge === "bottom" ? -1 : 0)
 
@@ -49,11 +53,11 @@ PanelWindow {
         id: cloudBg
         visible: bar.cloudMode
         x: bar.cloudAir
-        y: bar.innerSign === 1 ? bar.cloudAir : bar.cloudInnerAir
+        y: bar.innerSign === 1 ? bar.cloudOuter : bar.cloudInnerAir
         width: parent.width - 2 * bar.cloudAir
         height: bar.root.barHeight + 2 * bar.cloudPad
-        radius: bar.root.cornerRadius
-        color: bar.root.barTransparent ? "transparent" : bar.root.bg
+        radius: bar.root.barRounding
+        color: bar.root.barTransparent ? "transparent" : Qt.rgba(bar.root.bg.r, bar.root.bg.g, bar.root.bg.b, bar.root.barOpacity)
         z: 0
     }
 
@@ -63,7 +67,7 @@ PanelWindow {
     Rectangle {
         id: slabBg
         anchors.fill: parent
-        color: bar.cloudMode ? "transparent" : (bar.root.barTransparent ? "transparent" : bar.root.bg)
+        color: bar.cloudMode || bar.root.barTransparent ? "transparent" : Qt.rgba(bar.root.bg.r, bar.root.bg.g, bar.root.bg.b, bar.root.barOpacity)
 
 
         // Inner-edge hairline (facing the rest of the screen). Hidden in
@@ -184,12 +188,12 @@ PanelWindow {
                                   : 0
             anchors.topMargin:    bar.root.isHorizontal
                                   ? (bar.cloudMode
-                                     ? (bar.root.barEdge === "top" ? bar.cloudAir + bar.cloudPad : bar.cloudInnerAir + bar.cloudPad)
+                                     ? (bar.root.barEdge === "top" ? bar.cloudOuter + bar.cloudPad : bar.cloudInnerAir + bar.cloudPad)
                                      : 0)
                                   : 10
             anchors.bottomMargin: bar.root.isHorizontal
                                   ? (bar.cloudMode
-                                     ? (bar.root.barEdge === "top" ? bar.cloudInnerAir + bar.cloudPad : bar.cloudAir + bar.cloudPad)
+                                     ? (bar.root.barEdge === "top" ? bar.cloudInnerAir + bar.cloudPad : bar.cloudOuter + bar.cloudPad)
                                      : 0)
                                   : 10
             flow: bar.root.isHorizontal ? GridLayout.LeftToRight : GridLayout.TopToBottom
@@ -356,6 +360,10 @@ PanelWindow {
                     else bar.root.openSystem();
                 }
                 onRightActivated: bar.root.openDisplay()
+                onMiddleActivated: {
+                    if (bar.root.barStyleVisible) bar.root.barStyleVisible = false;
+                    else bar.root.openBarStyle();
+                }
             }
 
             Item {
