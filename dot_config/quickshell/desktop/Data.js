@@ -111,6 +111,7 @@ const omarchyItems = [
     // { title: "Power Menu",       icon: "󰐥", category: "Quick", keywords: "power menu battery suspend hibernate logout restart reboot shutdown lock",              exec: "omarchy-menu power" },
 
     // ----- Style -----
+    { title: "Wallpapers",       icon: "󰸉", category: "Style",   keywords: "wallpaper wallpapers background bg image picker selector carousel photos aether",                       exec: "qs -c desktop ipc call wallpapers toggle" },
     { title: "Aether Menu",      icon: "󰸌", category: "Style",   keywords: "aether theme blueprint palette swatch picker wallpaper generate full menu launcher",                  exec: "qs -c desktop ipc call aether toggle" },
     { title: "Round Corners",    icon: "󰘇", category: "Style",   keywords: "corners radius round soft rounded border edge shape popup",                                            exec: "qs -c desktop ipc call corners round" },
     { title: "Sharp Corners",    icon: "󰝣", category: "Style",   keywords: "corners radius sharp square hard flat border edge shape popup",                                          exec: "qs -c desktop ipc call corners sharp" },

@@ -236,6 +236,7 @@ CardWindow {
                         width: ListView.view.width
                         height: 48
                         radius: root.cornerRadius
+                        clip: true
                         color: hasCursor ? root.rowSel : "transparent"
 
                         Row {
@@ -260,6 +261,7 @@ CardWindow {
                                 width: parent.width - (parent.parent.previewImage.length > 0 ? parent.height + parent.spacing : 0)
                                 height: parent.height
                                 text: parent.parent.previewText
+                                textFormat: Text.PlainText
                                 color: parent.parent.hasCursor ? root.ink : root.fg
                                 font.family: root.mono
                                 font.pixelSize: 13
@@ -306,6 +308,7 @@ CardWindow {
                     anchors.leftMargin: 14
                     anchors.topMargin: 2
                     text: parent.activeRow ? parent.activeRow.fullText : ""
+                    textFormat: Text.PlainText
                     color: root.inkDeep
                     font.family: root.mono
                     font.pixelSize: 12

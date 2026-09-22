@@ -234,8 +234,8 @@ CardWindow {
                     iconSize: 22
                     color: warp && warp.active ? root.seal : root.inkDeep
                     badgeColor: root.warn
-                    crossed: warp && !warp.active && !warp.daemonDown
-                    warning: warp && (warp.daemonDown || warp.needsRegistration)
+                    crossed: warp && warp.probed && !warp.active && !warp.daemonDown
+                    warning: warp && warp.probed && (warp.daemonDown || warp.needsRegistration)
                     Layout.alignment: Qt.AlignVCenter
                 }
 
@@ -269,8 +269,9 @@ CardWindow {
 
                 QuickButton {
                     root: warppopup.root
-                    label: warp && warp.active ? "DISCONNECT" : "CONNECT"
-                    selected: warppopup.focusSection === "header" && !warp.daemonDown
+                    label: warp && warp.daemonDown ? "START" : (warp && warp.active ? "DISCONNECT" : "CONNECT")
+                    selected: warppopup.focusSection === "header" && warp && warp.canToggle
+                    opacity: !warp || warp.canToggle || warp.daemonDown ? 1.0 : 0.45
                     onClicked: {
                         if (warp) {
                             if (warp.daemonDown) warp.startDaemon();
@@ -296,7 +297,7 @@ CardWindow {
 
         // Live Telemetry Grid
         Column {
-            visible: warp && !warp.daemonDown
+            visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.needsTos
             width: col.width
             spacing: 4
 
@@ -353,10 +354,10 @@ CardWindow {
         }
 
         // Operating Mode Selector
-        Rectangle { width: col.width; height: 1; color: root.sep; visible: warp && !warp.daemonDown }
+        Rectangle { width: col.width; height: 1; color: root.sep; visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.needsTos }
 
         Column {
-            visible: warp && !warp.daemonDown
+            visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.needsTos
             width: col.width
             spacing: 6
 
@@ -460,11 +461,11 @@ CardWindow {
             width: col.width
             height: 1
             color: root.sep
-            visible: warp && !warp.daemonDown && warp.splitTunnelEntries.length > 0
+            visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.needsTos && warp.splitTunnelEntries.length > 0
         }
 
         Column {
-            visible: warp && !warp.daemonDown && warp.splitTunnelEntries.length > 0
+            visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.needsTos && warp.splitTunnelEntries.length > 0
             width: col.width
             spacing: 4
 
@@ -584,7 +585,7 @@ CardWindow {
 
         // Daemon Stop Action (when daemon is running and disconnected)
         RowLayout {
-            visible: warp && !warp.daemonDown && !warp.active
+            visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.active
             width: col.width
 
             Item { Layout.fillWidth: true }

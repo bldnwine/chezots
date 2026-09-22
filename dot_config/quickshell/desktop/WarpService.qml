@@ -191,6 +191,9 @@ Item {
     connecting = parsed.connecting === true
     if (_desired !== -1 && connected === (_desired === 1)) _desired = -1
     if (daemonDown || needsTos) {
+      _desired = -1
+      connected = false
+      connecting = false
       registered = false
       mode = ""
       accountLabel = ""
@@ -232,6 +235,7 @@ Item {
     deviceId = parsed.deviceId
     deviceName = parsed.deviceName
     if (!registered) needsRegistration = true
+    else needsRegistration = false
   }
 
   function toggleConnection() {

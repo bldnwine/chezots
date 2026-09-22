@@ -560,7 +560,7 @@ PanelWindow {
             Item {
                 id: warpMod
                 readonly property var warp: bar.root.warpService
-                visible: bar.root.warpVisible || (warpMod.warp && (warpMod.warp.active || warpMod.warp.connecting))
+                visible: bar.root.warpVisible || (warpMod.warp && warpMod.warp.probed && warpMod.warp.installed && !warpMod.warp.daemonDown)
                 Layout.alignment: bar.root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
                 Layout.preferredWidth: visible ? (bar.root.isHorizontal ? 24 : bar.root.barHeight) : 0
                 Layout.preferredHeight: visible ? (bar.root.isHorizontal ? bar.root.barHeight : 24) : 0
@@ -582,8 +582,8 @@ PanelWindow {
                     iconSize: 13
                     color: warpMod.warp && warpMod.warp.active ? bar.root.accent : (warpMod.warp && warpMod.warp.daemonDown ? bar.root.sumi : bar.root.ink)
                     badgeColor: bar.root.warn
-                    crossed: warpMod.warp && !warpMod.warp.active && !warpMod.warp.daemonDown
-                    warning: warpMod.warp && (warpMod.warp.daemonDown || warpMod.warp.needsRegistration)
+                    crossed: warpMod.warp && warpMod.warp.probed && !warpMod.warp.active && !warpMod.warp.daemonDown
+                    warning: warpMod.warp && warpMod.warp.probed && (warpMod.warp.daemonDown || warpMod.warp.needsRegistration)
                 }
 
                 readonly property string tipText: {

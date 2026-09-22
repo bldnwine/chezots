@@ -158,7 +158,7 @@ hl.config({
 
 	decoration = {
 		rounding = look.rounding,
-		rounding_power = 5,
+		rounding_power = 12,
 		active_opacity = 0.95,
 		inactive_opacity = 0.85,
 		fullscreen_opacity = 1.0,
@@ -299,6 +299,7 @@ hl.bind(mainMod .. " + SHIFT + J", hl.dsp.exec_cmd(launch("power.sh")))
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("qs -c desktop ipc call locus toggleCategory System"))
 hl.bind(mainMod .. " + TAB", hl.dsp.exec_cmd(terminal .. " -e sh -c 'btop; exec sh'"))
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("qs -c desktop ipc call clipboard toggle"))
+hl.bind(mainMod .. " + ALT + A", hl.dsp.exec_cmd("qs -c desktop ipc call wallpapers toggle"))
 hl.bind(mainMod .. " + CONTROL + B", hl.dsp.exec_cmd("qs -c desktop ipc call bluetooth toggle"))
 hl.bind(mainMod .. " + CONTROL + N", hl.dsp.exec_cmd("qs -c desktop ipc call network toggle"))
 hl.bind(mainMod .. " + CONTROL + Q", hl.dsp.exec_cmd("qs -c desktop ipc call system toggle"))

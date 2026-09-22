@@ -995,6 +995,16 @@ Item {
     property string mon: "---"
     property string dow: "--"
 
+    // ---------- Wallpapers popup state ----------
+    property bool wallpapersVisible: false
+    property string pendingWallpaperSort: ""
+    function openWallpapers() {
+        root.wallpapersVisible = true;
+    }
+    function toggleWallpapers() {
+        root.wallpapersVisible = !root.wallpapersVisible;
+    }
+
     // ---------- Screenshots popup state ----------
     property bool screenshotsVisible: false
     property int screenshotPage: 0
@@ -3296,6 +3306,16 @@ Item {
         }
     }
     Timer { id: keepNotificationCenter; interval: 400; onTriggered: notificationCenterLoader.source = "" }
+    Loader { id: wallpapersLoader }
+    onWallpapersVisibleChanged: {
+        if (root.wallpapersVisible) {
+            keepWallpapers.stop();
+            wallpapersLoader.setSource("WallpaperPopup.qml", { root: root });
+        } else {
+            keepWallpapers.restart();
+        }
+    }
+    Timer { id: keepWallpapers; interval: 400; onTriggered: wallpapersLoader.source = "" }
 
     Osd              { id: osdSurface; root: root }
     NotificationOverlay { root: root }
@@ -3357,6 +3377,76 @@ Item {
         }
         function open(): void { root.openScreenshots(); }
         function close(): void { root.screenshotsVisible = false; }
+    }
+
+    IpcHandler {
+        target: "wallpapers"
+        function toggle(): void {
+            if (root.wallpapersVisible) root.wallpapersVisible = false;
+            else root.openWallpapers();
+        }
+        function open(): void { root.openWallpapers(); }
+        function close(): void { root.wallpapersVisible = false; }
+        function search(): void {
+            root.openWallpapers();
+            if (wallpapersLoader.item) wallpapersLoader.item.searchActive = true;
+        }
+        function sort(mode: string): void {
+            root.openWallpapers();
+            if (wallpapersLoader.item) wallpapersLoader.item.setSort(mode);
+            else root.pendingWallpaperSort = mode;
+        }
+        function favorites(): void {
+            root.openWallpapers();
+            if (wallpapersLoader.item) wallpapersLoader.item.toggleFavoritesCategory();
+        }
+        function fav(): void {
+            root.openWallpapers();
+            if (wallpapersLoader.item) wallpapersLoader.item.toggleFavoritesCategory();
+        }
+        function star(): void {
+            root.openWallpapers();
+            if (wallpapersLoader.item) {
+                const it = wallpapersLoader.item;
+                const entry = it.filteredWallpapers[it.selectedIndex];
+                if (entry) it.toggleFavorite(entry);
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "wallpaper"
+        function toggle(): void {
+            if (root.wallpapersVisible) root.wallpapersVisible = false;
+            else root.openWallpapers();
+        }
+        function open(): void { root.openWallpapers(); }
+        function close(): void { root.wallpapersVisible = false; }
+        function search(): void {
+            root.openWallpapers();
+            if (wallpapersLoader.item) wallpapersLoader.item.searchActive = true;
+        }
+        function sort(mode: string): void {
+            root.openWallpapers();
+            if (wallpapersLoader.item) wallpapersLoader.item.setSort(mode);
+            else root.pendingWallpaperSort = mode;
+        }
+        function favorites(): void {
+            root.openWallpapers();
+            if (wallpapersLoader.item) wallpapersLoader.item.toggleFavoritesCategory();
+        }
+        function fav(): void {
+            root.openWallpapers();
+            if (wallpapersLoader.item) wallpapersLoader.item.toggleFavoritesCategory();
+        }
+        function star(): void {
+            root.openWallpapers();
+            if (wallpapersLoader.item) {
+                const it = wallpapersLoader.item;
+                const entry = it.filteredWallpapers[it.selectedIndex];
+                if (entry) it.toggleFavorite(entry);
+            }
+        }
     }
 
     // bind = SUPER, V, exec, qs ipc call videos toggle
