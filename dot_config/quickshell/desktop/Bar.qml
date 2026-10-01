@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
@@ -17,8 +18,10 @@ PanelWindow {
         left:   bar.root.barEdge !== "right"
         right:  bar.root.barEdge !== "left"
     }
-    // Cloud / floating mode: horizontal + barType !== "slab". Vertical bars keep the original
-    // slab geometry to avoid breaking the proven layout.
+    // Floating: horizontal + barType === "floating". Slab/notch are
+    // horizontal slab variants with barAir left/right insets. Vertical
+    // bars keep the original slab geometry to avoid breaking the proven
+    // layout.
     readonly property int cloudPad: 2
     readonly property int cloudAir: bar.root.barAir
     readonly property int cloudInnerAir: 2
@@ -26,7 +29,14 @@ PanelWindow {
     // left/right end margins so the slider never shifts the bar
     // vertically; this preserves the original 5px outer look.
     readonly property int cloudOuter: 5
-    readonly property bool cloudMode: bar.root.barType !== "slab" && bar.root.isHorizontal
+    readonly property bool cloudMode: bar.root.barType === "floating" && bar.root.isHorizontal
+    readonly property bool notchMode: bar.root.barType === "notch" && bar.root.isHorizontal
+    // Horizontal slab-like inset from barAir (flat slab + notch). Zero on
+    // vertical bars and in floating mode (which uses cloudAir instead).
+    readonly property int slabAir: bar.root.isHorizontal && !bar.cloudMode ? bar.root.barAir : 0
+    // Notch taper: how far the inner edge pulls in on each side, scaled
+    // to bar height so the angle stays constant across HEIGHT sizes.
+    readonly property int notchCut: bar.notchMode ? Math.round(bar.root.barHeight * 0.5) : 0
     readonly property int extraThickness: cloudMode ? 2 * cloudPad + cloudOuter + cloudInnerAir : 0
     // innerSign tells which side gets the extra outer air (away from screen).
     readonly property int innerSign: bar.root.barEdge === "top" ? 1 : (bar.root.barEdge === "bottom" ? -1 : 0)
@@ -61,19 +71,67 @@ PanelWindow {
         z: 0
     }
 
-    // Container for clock + modules + hairlines. In cloud mode the bg
-    // becomes transparent so the cloud rectangle above shows through;
-    // in slab mode this acts as the bar background.
+    // Notch mode: slab bar with angular outward-tapering left/right
+    // ends. Wider at the screen edge, narrower at the inner edge; the
+    // taper scales with barHeight. Inset left/right by barAir
+    // (horizontal only), same as flat slab.
+    Shape {
+        id: notchBg
+        visible: bar.notchMode
+        x: bar.root.barAir
+        y: 0
+        width: parent.width - 2 * bar.root.barAir
+        height: bar.root.barHeight
+        antialiasing: true
+        layer.enabled: true
+        layer.samples: 4
+        preferredRendererType: Shape.CurveRenderer
+        z: 0
+
+        readonly property int cut: bar.notchCut
+        readonly property real yOuter: bar.root.barEdge === "bottom" ? height : 0
+        readonly property real yInner: bar.root.barEdge === "bottom" ? 0 : height
+
+        ShapePath {
+            fillColor: bar.root.barTransparent ? "transparent" : Qt.rgba(bar.root.bg.r, bar.root.bg.g, bar.root.bg.b, bar.root.barOpacity)
+            strokeWidth: 0
+            startX: 0
+            startY: notchBg.yOuter
+            PathLine { x: notchBg.width; y: notchBg.yOuter }
+            PathLine { x: notchBg.width - notchBg.cut; y: notchBg.yInner }
+            PathLine { x: notchBg.cut; y: notchBg.yInner }
+            PathLine { x: 0; y: notchBg.yOuter }
+        }
+        // Inner perimeter hairline following the visible notch profile
+        // (left diagonal + inner edge + right diagonal).
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: bar.root.barTransparent ? "transparent" : bar.root.sep
+            strokeWidth: 1
+            startX: 0
+            startY: notchBg.yOuter
+            PathLine { x: notchBg.cut; y: notchBg.yInner }
+            PathLine { x: notchBg.width - notchBg.cut; y: notchBg.yInner }
+            PathLine { x: notchBg.width; y: notchBg.yOuter }
+        }
+    }
+
+    // Container for clock + modules + hairlines. In cloud/notch mode the
+    // bg becomes transparent so the backdrop above shows through; in flat
+    // slab mode this acts as the bar background (inset by slabAir).
     Rectangle {
         id: slabBg
         anchors.fill: parent
-        color: bar.cloudMode || bar.root.barTransparent ? "transparent" : Qt.rgba(bar.root.bg.r, bar.root.bg.g, bar.root.bg.b, bar.root.barOpacity)
+        anchors.leftMargin: bar.slabAir
+        anchors.rightMargin: bar.slabAir
+        color: bar.cloudMode || bar.notchMode || bar.root.barTransparent ? "transparent" : Qt.rgba(bar.root.bg.r, bar.root.bg.g, bar.root.bg.b, bar.root.barOpacity)
 
 
         // Inner-edge hairline (facing the rest of the screen). Hidden in
-        // cloud mode — the rounded backdrop replaces it visually.
+        // cloud/notch mode — the rounded backdrop / notch perimeter
+        // replaces it visually.
         Rectangle {
-            visible: !bar.cloudMode && bar.root.isHorizontal
+            visible: !bar.cloudMode && !bar.notchMode && bar.root.isHorizontal
             anchors.left:   parent.left
             anchors.right:  parent.right
             anchors.top:    bar.root.barEdge === "bottom" ? parent.top    : undefined
@@ -182,9 +240,9 @@ PanelWindow {
 
         GridLayout {
             anchors.fill: parent
-            anchors.leftMargin:   bar.root.isHorizontal ? (bar.cloudMode ? bar.cloudAir + bar.cloudPad : 10) : 0
+            anchors.leftMargin:   bar.root.isHorizontal ? (bar.cloudMode ? bar.cloudAir + bar.cloudPad : bar.notchCut + 10) : 0
             anchors.rightMargin:  bar.root.isHorizontal
-                                  ? (bar.cloudMode ? bar.cloudAir + bar.cloudPad : 10)
+                                  ? (bar.cloudMode ? bar.cloudAir + bar.cloudPad : bar.notchCut + 10)
                                   : 0
             anchors.topMargin:    bar.root.isHorizontal
                                   ? (bar.cloudMode

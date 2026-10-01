@@ -84,7 +84,7 @@ CardWindow {
     function adjustRow(dir) {
         const r = barStylePopup.root;
         if (r.barStyleRow === 0)      cycleTemplates(dir);
-        else if (r.barStyleRow === 1) r.toggleBarType();
+        else if (r.barStyleRow === 1) r.cycleBarType(dir);
         else if (r.barStyleRow === 2) r.setBarTransparent(dir > 0 ? true : dir < 0 ? false : !r.barTransparent);
         else if (r.barStyleRow === 3) r.setBarOpacity(r.barOpacity + dir * 0.05);
         else if (r.barStyleRow === 4) r.setBarHeight(r.barHeight + dir);
@@ -98,7 +98,7 @@ CardWindow {
             barStylePopup.expanded = !barStylePopup.expanded;
             barStylePopup.saving = false;
         }
-        else if (r.barStyleRow === 1) r.toggleBarType();
+        else if (r.barStyleRow === 1) r.cycleBarType(1);
         else if (r.barStyleRow === 2) r.setBarTransparent(!r.barTransparent);
     }
 
@@ -283,8 +283,8 @@ CardWindow {
             label: "TYPE"
             value: barStylePopup.root.barType.toUpperCase()
             selected: barStylePopup.root.barStyleRow === 1
-            onChosen: { barStylePopup.root.barStyleRow = 1; barStylePopup.root.toggleBarType(); }
-            onStepped: (dir) => { barStylePopup.root.barStyleRow = 1; barStylePopup.root.toggleBarType(); }
+            onChosen: { barStylePopup.root.barStyleRow = 1; barStylePopup.root.cycleBarType(1); }
+            onStepped: (dir) => { barStylePopup.root.barStyleRow = 1; barStylePopup.root.cycleBarType(dir); }
         }
         SelRow {
             sty: barStylePopup.root

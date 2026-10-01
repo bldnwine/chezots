@@ -472,6 +472,8 @@ Item {
             } else if (target === "barType" || target === "bartype") {
                 if (verb === "slab") {
                     root.navbar.setBarType("slab");
+                } else if (verb === "notch") {
+                    root.navbar.setBarType("notch");
                 } else if (verb === "floating" || verb === "cloud" || verb === "normal") {
                     root.navbar.setBarType("floating");
                 } else {
@@ -492,6 +494,8 @@ Item {
                     root.navbar.toggleBarType();
                 } else if (verb === "slab") {
                     root.navbar.setBarType("slab");
+                } else if (verb === "notch") {
+                    root.navbar.setBarType("notch");
                 } else if (verb === "floating" || verb === "cloud" || verb === "normal") {
                     root.navbar.setBarType("floating");
                 } else {
@@ -518,6 +522,58 @@ Item {
                 } else {
                     if (root.navbar.theme) root.navbar.theme.toggleCorners();
                 }
+                root.close();
+                return;
+            } else if (target === "clipboard") {
+                root.navbar.toggleClipboard();
+                root.close();
+                return;
+            } else if (target === "bluetooth") {
+                root.navbar.toggleBluetooth();
+                root.close();
+                return;
+            } else if (target === "network") {
+                root.navbar.toggleNetwork();
+                root.close();
+                return;
+            } else if (target === "audio") {
+                root.navbar.toggleAudio();
+                root.close();
+                return;
+            } else if (target === "wallpapers" || target === "wallpaper") {
+                root.navbar.toggleWallpapers();
+                root.close();
+                return;
+            } else if (target === "screenshots") {
+                if (root.navbar.screenshotsVisible) root.navbar.screenshotsVisible = false;
+                else root.navbar.openScreenshots();
+                root.close();
+                return;
+            } else if (target === "hyprland") {
+                root.navbar.toggleHyprland();
+                root.close();
+                return;
+            } else if (target === "screenrecord") {
+                root.navbar.toggleScreenRecord();
+                root.close();
+                return;
+            } else if (target === "locusfavs") {
+                root.navbar.toggleLocusfavs();
+                root.close();
+                return;
+            } else if (target === "ai" || target === "aipopup") {
+                if (root.navbar.aiVisible) root.navbar.aiVisible = false;
+                else root.navbar.openAi();
+                root.close();
+                return;
+            } else if (target === "media") {
+                if (root.navbar.mediaVisible) root.navbar.mediaVisible = false;
+                else root.navbar.openMedia();
+                root.close();
+                return;
+            } else if (target === "reminder") {
+                if (root.navbar.reminderVisible) root.navbar.reminderVisible = false;
+                else root.navbar.openReminder();
                 root.close();
                 return;
             }
@@ -808,18 +864,18 @@ Item {
     // ---------- IPC ----------
     IpcHandler {
         target: "locus"
-        function toggle(): void { root.toggle() }
-        function open(): void { root.open() }
-        function close(): void { root.close() }
-        function refresh(): void { if (appScan) appScan.refresh(); }
+        function toggle() { root.toggle() }
+        function open() { root.open() }
+        function close() { root.close() }
+        function refresh() { if (appScan) appScan.refresh(); }
         // Open OmniMenu pre-pivoted to a drill-down category (e.g. "Quick").
         // Lets Hyprland bind a shortcut straight into a category without
         // exposing the visual grid as a separate surface.
-        function openCategory(cat: string): void {
+        function openCategory(cat: string) {
             root.open();
             root.categoryFilter = cat;
         }
-        function toggleCategory(cat: string): void {
+        function toggleCategory(cat: string) {
             if (root.visible_ && root.categoryFilter === cat) {
                 root.close();
             } else {

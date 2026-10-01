@@ -1,30 +1,167 @@
 #!/bin/bash
+# omarchy-launch-webapp: open a webapp URL in the currently running browser
+# when possible, falling back to the default browser.
+#
+# Why not omarchy-cmd-browser-handoff (omacom/omarchy@97a9fce)?
+# That handoff only fast-paths the *default* browser via socat + SingletonSocket
+# and only for /usr/bin/{chromium,google-chrome-stable,brave,brave-origin,
+# microsoft-edge-stable}. Here the running browser is often NOT the default
+# (e.g. wrappers like brave-origin-beta, tarball zen), and socat may be absent.
+# Plainly launching the running browser's own executable reuses it natively
+# (chromium singleton / firefox remoting) with no extra dependency.
 
-# Get default browser
-browser=$(xdg-settings get default-web-browser)
+URL="$1"
+if [[ -z $URL ]]; then
+    echo "Usage: omarchy-launch-webapp <url> [extra args...]" >&2
+    exit 1
+fi
 
-# Categorize: chromium-based gets --app mode, firefox-based gets normal window
+# Map a Hyprland window class / process tag to "<desktop-file>:<family>".
+# family is "chromium" (--app mode) or "firefox" (--new-window mode).
+class_to_desktop() {
+    case "${1,,}" in
+    brave-origin-beta) echo "brave-origin-beta.desktop:chromium" ;;
+    brave-browser | brave) echo "brave-browser.desktop:chromium" ;;
+    chromium) echo "chromium.desktop:chromium" ;;
+    google-chrome | chrome) echo "google-chrome.desktop:chromium" ;;
+    microsoft-edge | msedge | edge) echo "microsoft-edge.desktop:chromium" ;;
+    opera) echo "opera.desktop:chromium" ;;
+    vivaldi) echo "vivaldi.desktop:chromium" ;;
+    helium) echo "helium.desktop:chromium" ;;
+    zen | zen-browser) echo "zen.desktop:firefox" ;;
+    firefox) echo "firefox.desktop:firefox" ;;
+    *) return 1 ;;
+    esac
+}
+
+# Resolve Exec binary from a .desktop file (first token of first Exec= line).
+resolve_exec() {
+    local desktop="$1" exec_path cmd
+    exec_path=$(sed -n 's/^Exec=\([^ ]*\).*/\1/p' \
+        ~/.local/share/applications/"$desktop" \
+        /usr/share/applications/"$desktop" \
+        ~/.nix-profile/share/applications/"$desktop" \
+        2>/dev/null | head -1)
+    if [[ -n $exec_path ]]; then
+        echo "$exec_path"
+        return 0
+    fi
+    cmd="${desktop%.desktop}"
+    if command -v "$cmd" >/dev/null 2>&1; then
+        echo "$cmd"
+        return 0
+    fi
+    return 1
+}
+
+# A desktop entry is usable if its Exec resolves to something runnable.
+desktop_usable() {
+    local exec_path
+    exec_path=$(resolve_exec "$1") || return 1
+    [[ $exec_path == /* ]] && [[ -x $exec_path ]] && return 0
+    command -v "$exec_path" >/dev/null 2>&1
+}
+
+RUNNING_DESKTOP=""
+RUNNING_FAMILY=""
+
+# 1. Prefer the focused browser window (the "current" browser).
+# 2. Else the most recently focused browser window.
+if command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    active_class=$(hyprctl activewindow -j 2>/dev/null | jq -r '.class // empty' 2>/dev/null)
+    if [[ -n $active_class ]] && mapping=$(class_to_desktop "$active_class"); then
+        desktop="${mapping%%:*}"
+        if desktop_usable "$desktop"; then
+            RUNNING_DESKTOP="$desktop"
+            RUNNING_FAMILY="${mapping##*:}"
+        fi
+    fi
+    if [[ -z $RUNNING_DESKTOP ]]; then
+        while IFS= read -r cls; do
+            [[ -z $cls ]] && continue
+            mapping=$(class_to_desktop "$cls") || continue
+            desktop="${mapping%%:*}"
+            if desktop_usable "$desktop"; then
+                RUNNING_DESKTOP="$desktop"
+                RUNNING_FAMILY="${mapping##*:}"
+                break
+            fi
+        done < <(hyprctl clients -j 2>/dev/null | jq -r 'sort_by(.focusHistoryID) | .[].class // empty' 2>/dev/null)
+    fi
+fi
+
+# 3. Fallback when Hyprland info is unavailable: any live browser process.
+# Exact process names only — substring matching (-f) would also hit unrelated
+# processes whose cmdline merely mentions a browser (editors, URLs, ...).
+if [[ -z $RUNNING_DESKTOP ]]; then
+    newest_pid=0
+    newest_tag=""
+    for tag in brave brave-origin chromium chrome google-chrome microsoft-edge msedge \
+        opera vivaldi helium firefox zen zen-browser; do
+        pid=$(pgrep -nx "$tag" 2>/dev/null) || continue
+        if ((pid > newest_pid)); then
+            newest_pid=$pid
+            newest_tag=$tag
+        fi
+    done
+    case $newest_tag in
+    chrome | google-chrome) newest_tag="google-chrome" ;;
+    esac
+    if [[ -n $newest_tag ]]; then
+        # Distinguish same-comm variants by the real binary path, e.g. the
+        # brave-origin-beta browser's comm is just "brave".
+        exe=$(readlink -f "/proc/$newest_pid/exe" 2>/dev/null)
+        case $exe in
+        *brave-origin-beta* | *brave-origin*) newest_tag="brave-origin-beta" ;;
+        *BraveSoftware* | *brave-bin/* | */brave) newest_tag="brave" ;;
+        esac
+        mapping=$(class_to_desktop "$newest_tag") || mapping=""
+        desktop="${mapping%%:*}"
+        if [[ -n $mapping ]] && desktop_usable "$desktop"; then
+            RUNNING_DESKTOP="$desktop"
+            RUNNING_FAMILY="${mapping##*:}"
+        fi
+    fi
+fi
+
+if [[ -n $RUNNING_DESKTOP ]]; then
+    EXEC_PATH=$(resolve_exec "$RUNNING_DESKTOP")
+    if [[ -n $EXEC_PATH ]]; then
+        if [[ ${OMARCHY_LAUNCH_WEBAPP_DRYRUN:-} == 1 ]]; then
+            echo "running:$RUNNING_DESKTOP:$RUNNING_FAMILY:$EXEC_PATH"
+            exit 0
+        fi
+        if [[ $RUNNING_FAMILY == firefox ]]; then
+            exec "$EXEC_PATH" --new-window "$URL" "${@:2}"
+        else
+            exec "$EXEC_PATH" --app="$URL" "${@:2}"
+        fi
+    fi
+    # Resolved desktop went stale; fall through to default browser.
+fi
+
+# 4. No usable running browser: original default-browser behavior.
+browser=$(env -u BROWSER xdg-settings get default-web-browser)
+
 case $browser in
-    google-chrome*|brave*|com.brave*|microsoft-edge*|opera*|vivaldi*|helium*|chromium*)
-        APP_MODE="--app" ;;
-    zen*|firefox*)
-        APP_MODE="" ;;
-    *)
-        browser="chromium.desktop"
-        APP_MODE="--app" ;;
+google-chrome* | brave* | com.brave* | microsoft-edge* | opera* | vivaldi* | helium* | chromium*)
+    APP_MODE="--app" ;;
+zen* | firefox*)
+    APP_MODE="" ;;
+*)
+    browser="chromium.desktop"
+    APP_MODE="--app" ;;
 esac
 
-# Extract Exec path from desktop file
 EXEC_PATH=$(sed -n 's/^Exec=\([^ ]*\).*/\1/p' \
     ~/.local/share/applications/$browser \
     /usr/share/applications/$browser \
     ~/.nix-profile/share/applications/$browser \
     2>/dev/null | head -1)
 
-# Fallback: try command name from desktop file
-if [ -z "$EXEC_PATH" ]; then
+if [[ -z $EXEC_PATH ]]; then
     cmd=$(echo "$browser" | sed 's/.desktop$//')
-    if command -v "$cmd" &> /dev/null; then
+    if command -v "$cmd" &>/dev/null; then
         EXEC_PATH="$cmd"
     else
         notify-send "Web App Error" "Could not find browser executable: $browser"
@@ -32,9 +169,14 @@ if [ -z "$EXEC_PATH" ]; then
     fi
 fi
 
+if [[ ${OMARCHY_LAUNCH_WEBAPP_DRYRUN:-} == 1 ]]; then
+    echo "default:$browser:$EXEC_PATH"
+    exit 0
+fi
+
 # Launch
-if [ -n "$APP_MODE" ]; then
-    exec "$EXEC_PATH" "$APP_MODE=$1" "${@:2}"
+if [[ -n $APP_MODE ]]; then
+    exec "$EXEC_PATH" "$APP_MODE=$URL" "${@:2}"
 else
-    exec "$EXEC_PATH" --blank-window "$1" "${@:2}"
+    exec "$EXEC_PATH" --new-window "$URL" "${@:2}"
 fi

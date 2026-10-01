@@ -117,6 +117,7 @@ const omarchyItems = [
     { title: "Sharp Corners",    icon: "󰝣", category: "Style",   keywords: "corners radius sharp square hard flat border edge shape popup",                                          exec: "qs -c desktop ipc call corners sharp" },
     { title: "Floating Bar",     icon: "󰘇", category: "Style",   keywords: "floating cloud bar island detached navbar style mode type",                                            exec: "qs -c desktop ipc call barType floating" },
     { title: "Slab Bar",         icon: "󰝣", category: "Style",   keywords: "slab bar edge full flat solid navbar style mode type",                                                exec: "qs -c desktop ipc call barType slab" },
+    { title: "Notch Bar",        icon: "󰝣", category: "Style",   keywords: "notch bar angled tapered slab navbar style mode type",                                               exec: "qs -c desktop ipc call barType notch" },
     { title: "Transparent Bar",  icon: "󰚲", rawIcon: "/home/bldnwine/.config/quickshell/desktop/assets/transparentbar.ico", category: "Style", keywords: "toggle transparent bar opacity fade invisible ghost clear background navbar", exec: "qs -c desktop ipc call bar transparent" },
     { title: "Bar Style",        icon: "󰒓", category: "Style", keywords: "bar style face zen whiterose editor customize appearance height opacity corners popup", exec: "qs -c desktop ipc call barstyle toggle" },
 

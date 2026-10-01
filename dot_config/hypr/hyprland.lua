@@ -284,35 +284,35 @@ local mainMod = "SUPER"
 
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
-hl.bind(mainMod .. " + CONTROL + M", hl.dsp.exec_cmd("qs -c desktop ipc call audio toggle"))
+hl.bind(mainMod .. " + CONTROL + M", hl.dsp.global("quickshell:audio-toggle"))
 hl.bind(mainMod .. " + ALT + M", hl.dsp.exec_cmd("~/.config/waybar/scripts/pulse_switch.sh"))
 hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + Y", hl.dsp.exec_cmd(terminal .. " -e yazi"))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + J", hl.dsp.exec_cmd(menu))
-hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("qs -c desktop ipc call locus toggle"))
+hl.bind(mainMod .. " + Space", hl.dsp.global("quickshell:locus-toggle"))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
-hl.bind(mainMod .. " + H", hl.dsp.exec_cmd("qs -c desktop ipc call bar toggle"))
+hl.bind(mainMod .. " + H", hl.dsp.global("quickshell:bar-toggle"))
 --hl.bind(mainMod .. " + SHIFT + H", hl.dsp.exec_cmd("wayt"))
 hl.bind(mainMod .. " + CONTROL + I", hl.dsp.exec_cmd(launch("~/owlcat/omacalc/build/omacalc")))
 hl.bind(mainMod .. " + SHIFT + J", hl.dsp.exec_cmd(launch("power.sh")))
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("qs -c desktop ipc call locus toggleCategory System"))
 hl.bind(mainMod .. " + TAB", hl.dsp.exec_cmd(terminal .. " -e sh -c 'btop; exec sh'"))
-hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("qs -c desktop ipc call clipboard toggle"))
-hl.bind(mainMod .. " + ALT + A", hl.dsp.exec_cmd("qs -c desktop ipc call wallpapers toggle"))
-hl.bind(mainMod .. " + CONTROL + B", hl.dsp.exec_cmd("qs -c desktop ipc call bluetooth toggle"))
-hl.bind(mainMod .. " + CONTROL + N", hl.dsp.exec_cmd("qs -c desktop ipc call network toggle"))
-hl.bind(mainMod .. " + CONTROL + Q", hl.dsp.exec_cmd("qs -c desktop ipc call system toggle"))
+hl.bind(mainMod .. " + A", hl.dsp.global("quickshell:clipboard-toggle"))
+hl.bind(mainMod .. " + ALT + A", hl.dsp.global("quickshell:wallpapers-toggle"))
+hl.bind(mainMod .. " + CONTROL + B", hl.dsp.global("quickshell:bluetooth-toggle"))
+hl.bind(mainMod .. " + CONTROL + N", hl.dsp.global("quickshell:network-toggle"))
+hl.bind(mainMod .. " + CONTROL + Q", hl.dsp.global("quickshell:system-toggle"))
 --hl.bind(mainMod .. " + X", hl.dsp.exec_cmd(launch("waypaper")))
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd(terminal .. " -e nvim"))
 hl.bind(mainMod .. " + ALT + N", hl.dsp.exec_cmd(terminal .. " -e nano"))
 --hl.bind(mainMod .. " + Y", hl.dsp.exec_cmd(launch("~/.config/hypr/scripts/ytsearch.sh")))
 --hl.bind(mainMod .. " + SHIFT + Y", hl.dsp.exec_cmd(launch("~/.config/hypr/scripts/ytmusicsearch.sh")))
-hl.bind(mainMod .. " + K", hl.dsp.exec_cmd("qs -c desktop ipc call wireproton toggle"))
-hl.bind(mainMod .. " + ALT + K", hl.dsp.exec_cmd("qs -c desktop ipc call warp toggle"))
+hl.bind(mainMod .. " + K", hl.dsp.global("quickshell:wireproton-toggle"))
+hl.bind(mainMod .. " + ALT + K", hl.dsp.global("quickshell:warp-toggle"))
 hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd(terminal .. " -e nano ~/Docs/base/notes.md"))
 hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd(terminal .. " -e nano ~/Docs/todo"))
-hl.bind(mainMod .. " + SHIFT + L", hl.dsp.exec_cmd(launch("nics gl localsend_app")))
+hl.bind(mainMod .. " + SHIFT + L", hl.dsp.exec_cmd(launch("localsend")))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen_state({ action = "toggle", internal = 0, client = 2 }))
 hl.bind(mainMod .. " + ALT + F", hl.dsp.window.fullscreen_state({ action = "toggle", internal = 1, client = 0 }))
@@ -348,8 +348,8 @@ hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(launch("zen --private-window"
 hl.bind(mainMod .. " + ALT", hl.dsp.exec_cmd("sh -c 'killall -SIGUSR1 waybar'"))
 hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("capture-screenshot smart slurp"))
 hl.bind(mainMod .. " + SHIFT + Z", hl.dsp.exec_cmd("capture-screenshot smart copy"))
-hl.bind(mainMod .. " + ALT + Space", hl.dsp.exec_cmd("qs -c desktop ipc call locusfavs toggle"))
-hl.bind(mainMod .. " + SHIFT + K", hl.dsp.exec_cmd("qs -c desktop ipc call screenrecord toggle"))
+hl.bind(mainMod .. " + ALT + Space", hl.dsp.global("quickshell:locusfavs-toggle"))
+hl.bind(mainMod .. " + SHIFT + K", hl.dsp.global("quickshell:screenrecord-toggle"))
 hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd("hyprpicker -f hex -a"))
 hl.bind(mainMod .. " + ALT + T", hl.dsp.exec_cmd("notification-time"))
 hl.bind(mainMod .. " + ALT + G", hl.dsp.exec_cmd("hyprland-transparency"))
@@ -363,18 +363,18 @@ hl.bind("SUPER + ALT + Z", function()
 end)
 hl.bind(
 	mainMod .. " + CONTROL + up",
-        hl.dsp.exec_cmd("qs -c desktop ipc call audio volUp"),
+	hl.dsp.global("quickshell:audio-vol-up"),
 	{ repeating = true }
 )
 hl.bind(
 	mainMod .. " + CONTROL + down",
-        hl.dsp.exec_cmd("qs -c desktop ipc call audio volDown"),
+	hl.dsp.global("quickshell:audio-vol-down"),
 	{ repeating = true }
 )
-hl.bind(mainMod .. " + G", hl.dsp.exec_cmd("qs -c desktop ipc call hyprland toggle"))
-hl.bind(mainMod .. " + CONTROL + 6", hl.dsp.exec_cmd("playerctl next"), { locked = true })
-hl.bind(mainMod .. " + CONTROL + 5", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
-hl.bind(mainMod .. " + CONTROL + 4", hl.dsp.exec_cmd("playerctl previous"), { locked = true })
+hl.bind(mainMod .. " + G", hl.dsp.global("quickshell:hyprland-toggle"))
+hl.bind(mainMod .. " + CONTROL + 6", hl.dsp.global("quickshell:media-next"), { locked = true })
+hl.bind(mainMod .. " + CONTROL + 5", hl.dsp.global("quickshell:media-play-pause"), { locked = true })
+hl.bind(mainMod .. " + CONTROL + 4", hl.dsp.global("quickshell:media-prev"), { locked = true })
 
 hl.bind(mainMod .. " + left", hl.dsp.focus({ direction = "left" }))
 hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))
@@ -405,31 +405,31 @@ hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
 hl.bind(
 	"XF86AudioRaiseVolume",
-	hl.dsp.exec_cmd("qs -c desktop ipc call audio volUp"),
+	hl.dsp.global("quickshell:audio-vol-up"),
 	{ locked = true, repeating = true }
 )
 hl.bind(
 	"XF86AudioLowerVolume",
-	hl.dsp.exec_cmd("qs -c desktop ipc call audio volDown"),
+	hl.dsp.global("quickshell:audio-vol-down"),
 	{ locked = true, repeating = true }
 )
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd("qs -c desktop ipc call audio volMute"), { locked = true })
+hl.bind("XF86AudioMute", hl.dsp.global("quickshell:audio-vol-mute"), { locked = true })
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/mic-mute"), { locked = true })
 hl.bind(
 	"XF86MonBrightnessUp",
-	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/brightness +5"),
+	hl.dsp.global("quickshell:brightness-up"),
 	{ locked = true, repeating = true }
 )
 hl.bind(
 	"XF86MonBrightnessDown",
-	hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/brightness -5"),
+	hl.dsp.global("quickshell:brightness-down"),
 	{ locked = true, repeating = true }
 )
 
-hl.bind("XF86AudioNext", hl.dsp.exec_cmd(launch("playerctl next")), { locked = true })
-hl.bind("XF86AudioPause", hl.dsp.exec_cmd(launch("playerctl play-pause")), { locked = true })
-hl.bind("XF86AudioPlay", hl.dsp.exec_cmd(launch("playerctl play-pause")), { locked = true })
-hl.bind("XF86AudioPrev", hl.dsp.exec_cmd(launch("playerctl previous")), { locked = true })
+hl.bind("XF86AudioNext", hl.dsp.global("quickshell:media-next"), { locked = true })
+hl.bind("XF86AudioPause", hl.dsp.global("quickshell:media-play-pause"), { locked = true })
+hl.bind("XF86AudioPlay", hl.dsp.global("quickshell:media-play-pause"), { locked = true })
+hl.bind("XF86AudioPrev", hl.dsp.global("quickshell:media-prev"), { locked = true })
 
 --------------------------------
 ---- WINDOWS AND WORKSPACES ----
@@ -554,4 +554,11 @@ hl.window_rule({
 ---- QUAKE CONSOLE ----
 -----------------------
 dofile(os.getenv("HOME") .. "/.config/hypr/qconsole.lua")
+
+-----------------------
+---- LAYER RULES ------
+-----------------------
+-- Suppress compositor layer animation jitter on native-animated Quickshell surfaces
+hl.layer_rule({ match = { namespace = "^(omarchy-.*|locus-menu|appmenu)$" }, no_anim = true })
+
 

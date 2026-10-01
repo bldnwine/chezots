@@ -12,15 +12,46 @@ qs -n -d -c desktop
 
 See `~/.config/hypr/hyprland.lua` for the autostart entry.
 
-## Surfaces
+## Surfaces & Shortcuts
 
-The palette ships two `GlobalShortcut`s, registered as `quickshell:locus-toggle` and `quickshell:locus-quick` (bind them globally in Hyprland to skip the `qs` client fork on the hot path). `locus-quick` opens pre-pivoted to the Quick-mode tile grid (battery, audio, wifi, bluetooth, weather, display, aether, cpu, calendar, screenshots, videos, power).
+Quickshell registers 22 native `GlobalShortcut`s under `appid: "quickshell"` via the Wayland protocol. Hyprland binds them with `hl.dsp.global("quickshell:<name>")`, triggering actions in-process (<10ms) without spawning a `qs` client process.
 
-Everything else goes through IPC:
+### Primary Global Shortcuts (Bound in `~/.config/hypr/hyprland.lua`)
+
+| Shortcut Name | Target / Action | Keybinding in Hyprland |
+| --- | --- | --- |
+| `quickshell:locus-toggle` | Toggle Locus command palette | `SUPER + Space` |
+| `quickshell:locus-quick` | Open Locus pivoted to Quick-mode tile grid | `ALT + Space` |
+| `quickshell:clipboard-toggle` | Toggle clipboard history popup | `SUPER + A` |
+| `quickshell:wallpapers-toggle` | Toggle wallpaper selector popup | `SUPER + ALT + A` |
+| `quickshell:bluetooth-toggle` | Toggle Bluetooth device manager | `SUPER + CTRL + B` |
+| `quickshell:network-toggle` | Toggle Wi-Fi / network popup | `SUPER + CTRL + N` |
+| `quickshell:system-toggle` | Toggle system performance popup | `SUPER + CTRL + Q` |
+| `quickshell:audio-toggle` | Toggle audio mixer popup | `SUPER + CTRL + M` |
+| `quickshell:bar-toggle` | Toggle top bar visibility | `SUPER + H` |
+| `quickshell:wireproton-toggle` | Toggle WireProton VPN popup | `SUPER + K` |
+| `quickshell:warp-toggle` | Toggle Cloudflare Warp popup | `SUPER + ALT + K` |
+| `quickshell:hyprland-toggle` | Toggle Hyprland cheatsheet popup | `SUPER + G` |
+| `quickshell:screenrecord-toggle` | Toggle screen recording controls | `SUPER + SHIFT + K` |
+| `quickshell:locusfavs-toggle` | Toggle directory bookmarks | `SUPER + ALT + Space` |
+| `quickshell:audio-vol-up` | Step volume up (+5%) + instant OSD | `XF86AudioRaiseVolume` / `SUPER + CTRL + Up` |
+| `quickshell:audio-vol-down` | Step volume down (-5%) + instant OSD | `XF86AudioLowerVolume` / `SUPER + CTRL + Down` |
+| `quickshell:audio-vol-mute` | Toggle audio mute + instant OSD | `XF86AudioMute` |
+| `quickshell:brightness-up` | Step backlight up (+5%) + instant OSD | `XF86MonBrightnessUp` |
+| `quickshell:brightness-down` | Step backlight down (-5%) + instant OSD | `XF86MonBrightnessDown` |
+| `quickshell:media-next` | Skip to next track in active MPRIS player | `XF86AudioNext` / `SUPER + CTRL + 6` |
+| `quickshell:media-play-pause`| Play / pause active MPRIS player | `XF86AudioPlay` / `SUPER + CTRL + 5` |
+| `quickshell:media-prev` | Skip to previous track in active MPRIS player| `XF86AudioPrev` / `SUPER + CTRL + 4` |
+
+### Headless & Scripting IPC
+
+External scripts and terminal sessions can drive all surfaces via `IpcHandler`:
 
 ```sh
 qs -c desktop ipc call locus toggle            # command palette
 qs -c desktop ipc call locus openCategory Quick # palette pinned to Quick mode
+qs -c desktop ipc call clipboard toggle        # clipboard manager
+qs -c desktop ipc call audio toggle            # audio popup
 qs -c desktop ipc call screenshots toggle      # screenshots browser
 qs -c desktop ipc call videos toggle           # video browser
 qs -c desktop ipc call display toggle          # display sliders
@@ -38,7 +69,7 @@ qs -c desktop ipc call background refresh      # re-read background symlink
 qs -c desktop ipc call background set <path>   # transition to new wallpaper
 ```
 
-The navbar menu button calls `toggle()` on the sibling palette in-process, no IPC round-trip or subprocess.
+The navbar menu button calls `toggle()` on the sibling palette in-process, with zero IPC round-trip or subprocess overhead.
 
 ## What's inside
 
@@ -224,7 +255,7 @@ Edit `omarchyItems` in `Data.js`. Each row is:
 
 ## Customization
 
-Everything lives under `desktop/`. The palette is split between `OmniMenu.qml` (state, search, IPC, shortcuts, key handler, panel chrome) and the visual chunks in `omni/`:
+Everything lives under `desktop/`. The palette is split between `Locus.qml` (state, search, IPC, shortcuts, key handler, panel chrome) and the visual chunks in `omni/`:
 
 | File | Owns |
 | --- | --- |
@@ -244,9 +275,9 @@ Common tweaks:
 | Bar height | `barHeight` in `Navbar.qml`. |
 | Workspace count | `Repeater { model: 10 ... }` in `Bar.qml`. |
 | Bar font | `mono` / `serif` in `Navbar.qml`. |
-| Palette font | `mono` / `serif` in `OmniMenu.qml`. |
-| Palette result cap | `maxResults` in `OmniMenu.qml`. |
-| Score weights | `scPrefix`, `scTitle`, `scKw`, `scCat` in `OmniMenu.qml`. |
+| Palette font | `mono` / `serif` in `Locus.qml`. |
+| Palette result cap | `maxResults` in `Locus.qml`. |
+| Score weights | `scPrefix`, `scTitle`, `scKw`, `scCat` in `Locus.qml`. |
 | Quick-tile order / actions | `base` array in `omni/Tiles.js`. |
 | Telemetry interval | `Timer { interval: ... }` blocks in `Navbar.qml`. |
 | Drift animation | `driftDelay` / `driftAnim` in `Theme.qml`. |
@@ -268,7 +299,7 @@ Quickshell hot-reloads on save, so edits show up live.
 | uwsm | `uwsm-app` scope wrapper for spawned apps. |
 | pamixer | Audio mute query. |
 | bluetoothctl | Bluetooth power and connection state. |
-| nmcli | Wifi signal strength when no ethernet is up. |
+| iwd (iwctl) | Wifi scanning, connection, and signal strength. |
 | brightnessctl | Backlight slider in the display popup. |
 | hyprsunset | Color temperature and gamma in the display popup. |
 | jq, curl | Weather popup data fetch from wttr.in. |
@@ -280,7 +311,7 @@ Quickshell hot-reloads on save, so edits show up live.
 | Symptom | Fix |
 | --- | --- |
 | `Could not open config file at "desktop"` | Use `-c desktop`, not `-p desktop`. `-c` resolves to `~/.config/quickshell/desktop/shell.qml`. |
-| Palette doesn't appear on SUPER + SPACE | Confirm the keybind targets `qs -c desktop ipc call locus toggle`. |
+| Palette doesn't appear on SUPER + SPACE | Confirm Hyprland binds `hl.dsp.global("quickshell:locus-toggle")` or fallback `qs -c desktop ipc call locus toggle`. |
 | Theme colours don't update on theme swap | Check that aether is generating `~/.config/aether/theme/colors.toml` and the push script at `~/.config/quickshell/desktop/scripts/aether-push-theme.sh` runs without error. |
 | Workspace switch feels laggy | Bump `wsProbe`'s `Timer { interval: ... }` from 500ms down to 150ms in `Navbar.qml`, or wire it to Hyprland's IPC socket. |
 | Qt version mismatch warning | `quickshell` was built against an older Qt minor. Rebuild the package against your current Qt. |

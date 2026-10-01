@@ -48,7 +48,7 @@ Item {
     )
 
     readonly property string serif: "serif"
-    readonly property string mono:  "IoskeleyMono Nerd Font"
+    readonly property string mono:  "JetBrainsMono Nerd Font"
 
     readonly property color bg:     Qt.rgba(paper.r, paper.g, paper.b, 0.94)
     readonly property color fg:     ink
@@ -97,10 +97,10 @@ Item {
 
     IpcHandler {
         target: "corners"
-        function set(mode: string): void { theme.setCorners(mode); }
-        function round(): void  { theme.setCorners("round"); }
-        function sharp(): void  { theme.setCorners("sharp"); }
-        function toggle(): void { theme.toggleCorners(); }
+        function set(mode: string) { theme.setCorners(mode); }
+        function round()  { theme.setCorners("round"); }
+        function sharp()  { theme.setCorners("sharp"); }
+        function toggle() { theme.toggleCorners(); }
     }
 
     Timer {
@@ -128,7 +128,7 @@ Item {
 
     IpcHandler {
         target: "theme"
-        function apply(payload: string): void {
+        function apply(payload: string) {
             let p;
             try { p = JSON.parse(payload); }
             catch (e) { console.warn("theme.apply: bad payload —", e); return; }
@@ -139,7 +139,7 @@ Item {
                 driftDelay.restart();
             }
         }
-        function reload(): void {
+        function reload() {
             paletteFile.reload();
             driftDelay.restart();
         }

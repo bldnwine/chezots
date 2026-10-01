@@ -10,10 +10,10 @@ x-scheme-handler/discord-424004941485572097=discord-424004941485572097.desktop
 application/x-zerosize=imv-dir.desktop
 image/gif=imv-dir.desktop
 video/webm=mpv.desktop
-x-scheme-handler/http=zen.desktop
-x-scheme-handler/https=zen.desktop
+x-scheme-handler/http=brave-origin-beta.desktop
+x-scheme-handler/https=brave-origin-beta.desktop
 x-scheme-handler/chrome=zen.desktop
-text/html=zen.desktop
+text/html=brave-origin-beta.desktop
 application/x-extension-htm=zen.desktop
 application/x-extension-html=zen.desktop
 application/x-extension-shtml=zen.desktop
@@ -22,6 +22,7 @@ application/x-extension-xhtml=zen.desktop
 application/x-extension-xht=zen.desktop
 x-scheme-handler/about=brave-origin-beta.desktop
 x-scheme-handler/unknown=brave-origin-beta.desktop
+video/mp4=mpv.desktop
 
 [Added Associations]
 image/png=viewnior.desktop;imv.desktop;imv-dir.desktop;
@@ -36,3 +37,4 @@ x-scheme-handler/http=zen.desktop;
 x-scheme-handler/https=zen.desktop;
 text/html=zen.desktop;
 x-scheme-handler/chrome=zen.desktop;
+video/mp4=mpv.desktop;

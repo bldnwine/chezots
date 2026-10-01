@@ -16,8 +16,8 @@ For the high-level overview and IPC surface, see [README.md](./README.md).
 | Add or remove a bar module | `Bar.qml` | the `Module { ... }` blocks |
 | Customize wallpaper transitions | `Background.qml` | `revealAnimation`, `revealMask` |
 | Change Polkit card dimensions or styles | `PolkitAgent.qml` | `cardWidth`, `cardHeight` |
-| Change palette result cap | `OmniMenu.qml` | `maxResults` |
-| Retune search scoring | `OmniMenu.qml` | `scPrefix`, `scTitle`, `scKw`, `scCat` |
+| Change palette result cap | `Locus.qml` | `maxResults` |
+| Retune search scoring | `Locus.qml` | `scPrefix`, `scTitle`, `scKw`, `scCat` |
 | Change fonts | `Theme.qml` | `mono`, `serif` |
 | Tune theme-swap animation | `Theme.qml` | `driftDelay`, `driftAnim` |
 | Remap colors.toml keys to palette roles | `Palette.js` | `mapKeys` |
@@ -109,9 +109,10 @@ Icons live as `icoFoo` properties on `Navbar.qml`'s `root`. Add new ones with `S
 | Property | What it does |
 | --- | --- |
 | `barHeight: 26` | Pixel height (or width when bar is vertical). Persisted, adjustable 22–40 in the Bar Style popup. |
-| `barAir: 5` | Floating-pill end/edge gap in px. Persisted, adjustable 0–16 in the Bar Style popup. |
+| `barAir: 5` | End gap in px: floating-pill end margins, or left/right inset for horizontal slab/notch. Persisted, adjustable 0–360 in the Bar Style popup. |
 | `barOpacity: 1.0` | Bar background opacity (independent from the transparent toggle). Persisted, adjustable 20–100% in the Bar Style popup. |
-| `barRounding: 6` | Floating-pill corner radius in px. Persisted, adjustable 0–12 in the Bar Style popup. |
+| `barRounding: 6` | Floating-pill corner radius in px. Persisted, adjustable 0–12 in the Bar Style popup (floating only; slab is square, notch is angular). |
+| `barType` | One of `floating`, `slab`, `notch`. Notch is a horizontal slab with angular outward-tapering ends (taper scales with `barHeight`). Cycle in the Bar Style popup TYPE row or via `qs -c desktop ipc call barType notch`. |
 | `barEdge: "top"` | Initial edge. One of `top`, `right`, `bottom`, `left`. Click the edge arrow in the bar to cycle. |
 
 Bar templates (named snapshots of the above + face/type/transparent) live in `~/.local/state/quickshell-desktop/bar-templates.json`, selected via the Template row in the Bar Style popup (`qs -c desktop ipc call barstyle toggle`). Unsaved tweaks show as `<name> custom` and still persist across restarts through the individual setting files.
@@ -128,7 +129,7 @@ Bar pollers (cpu, mem, bluetooth, wifi, audio, battery) each have their own `Tim
 
 ## Palette tuning
 
-`OmniMenu.qml`:
+`Locus.qml`:
 
 | Property | Default | Effect |
 | --- | --- | --- |
@@ -210,8 +211,8 @@ function mapKeys(raw) {
 - Quickshell hot-reloads on save. Watch the launch terminal for QML errors.
 - After editing `Data.js`, the palette picks up changes on the next open; force a rescan with `qs -c desktop ipc call palette refresh`.
 - After theme key remaps, push a fresh palette with `qs -c desktop ipc call theme apply '<json>'` (see README "Hook-driven refresh" for payload shape).
-- If something stops painting, the QML import chain in `shell.qml` is the place to start. Each surface (`Navbar`, `OmniMenu`, popups) is wired there.
+- If something stops painting, the QML import chain in `shell.qml` is the place to start. Each surface (`Navbar`, `Locus`, popups) is wired there.
 
 ## Going further
 
-If you find yourself maintaining a long fork of `Data.js`, the cleaner path is to split your additions into a separate JS module and merge them onto `omarchyItems` in `OmniMenu.qml`'s `Component.onCompleted`. That keeps upstream merges painless and your additions in one file.
+If you find yourself maintaining a long fork of `Data.js`, the cleaner path is to split your additions into a separate JS module and merge them onto `omarchyItems` in `Locus.qml`'s `Component.onCompleted`. That keeps upstream merges painless and your additions in one file.
