@@ -1,81 +1,30 @@
 /**
- * Aether Theme with Sharp Corners (Hyprland-inspired)
- * GTK4 / libadwaita + GTK3 legacy
+ * Aether Theme — GTK3 widget stylesheet (Thunar, pavucontrol, etc.)
+ * Pairs with settings.ini (gtk-theme-name=Adwaita) managed by Aether.
  */
 
 /* Dynamic color palette from Aether */
-@define-color background #e6ecf2;
-@define-color foreground #2c2a0d;
+@define-color background #0F1312;
+@define-color foreground #FAF4D8;
 
-@define-color black #e6ecf2;
-@define-color red #00b7db;
-@define-color green #56552a;
-@define-color yellow #686c4e;
-@define-color blue #586a86;
-@define-color magenta #344c6a;
-@define-color cyan #546b88;
-@define-color white #2c2a0d;
-@define-color bright_black #797e83;
-@define-color bright_red #72613d;
-@define-color bright_green #78783e;
-@define-color bright_yellow #8b9068;
-@define-color bright_blue #798db1;
-@define-color bright_magenta #536d94;
-@define-color bright_cyan #758eb3;
-@define-color bright_white #4b4a22;
+@define-color black #0F1312;
+@define-color red #ad9669;
+@define-color green #c8cb8e;
+@define-color yellow #fff9ad;
+@define-color blue #698f67;
+@define-color magenta #d5a472;
+@define-color cyan #ceea9e;
+@define-color white #FAF4D8;
+@define-color bright_black #676e6c;
+@define-color bright_red #c8aa72;
+@define-color bright_green #dfe492;
+@define-color bright_yellow #fff696;
+@define-color bright_blue #77a775;
+@define-color bright_magenta #f6b775;
+@define-color bright_cyan #dfffa2;
+@define-color bright_white #f7f6ea;
 
-/* Adwaita color overrides (libadwaita / GTK4) */
-@define-color accent_bg_color @blue;
-@define-color accent_fg_color @background;
-@define-color accent_color @cyan;
-
-@define-color window_bg_color @background;
-@define-color window_fg_color @foreground;
-
-@define-color view_bg_color @background;
-@define-color view_fg_color @foreground;
-
-@define-color sidebar_bg_color @background;
-@define-color sidebar_fg_color @foreground;
-@define-color sidebar_backdrop_color @background;
-@define-color sidebar_shade_color @background;
-
-@define-color headerbar_bg_color @background;
-@define-color headerbar_fg_color @foreground;
-@define-color headerbar_backdrop_color @background;
-@define-color headerbar_shade_color @background;
-@define-color headerbar_border_color alpha(@foreground, 0.15);
-
-@define-color card_bg_color alpha(@foreground, 0.03);
-@define-color card_fg_color @foreground;
-@define-color card_shade_color @background;
-
-@define-color thumbnail_bg_color @background;
-@define-color thumbnail_fg_color @foreground;
-
-@define-color popover_bg_color @background;
-@define-color popover_fg_color @foreground;
-
-@define-color dialog_bg_color @background;
-@define-color dialog_fg_color @foreground;
-
-@define-color destructive_bg_color @red;
-@define-color destructive_fg_color @background;
-
-@define-color success_bg_color @green;
-@define-color success_fg_color @background;
-
-@define-color warning_bg_color @yellow;
-@define-color warning_fg_color @background;
-
-@define-color error_bg_color @red;
-@define-color error_fg_color @background;
-
-@define-color shade_color alpha(@foreground, 0.07);
-@define-color scrollbar_outline_color alpha(@foreground, 0.15);
-@define-color borders alpha(@foreground, 0.15);
-
-/* GTK3 / Adwaita legacy color variables */
+/* Adwaita legacy color variables (read by GTK3 stock theme + engines) */
 @define-color theme_fg_color @foreground;
 @define-color theme_text_color @foreground;
 @define-color theme_bg_color @background;
@@ -100,102 +49,936 @@
 @define-color placeholder_text_color alpha(@foreground, 0.5);
 @define-color link_color @blue;
 @define-color link_visited_color @magenta;
-
-/* Content view colors */
 @define-color content_view_bg @background;
 @define-color text_view_bg @background;
+@define-color borders alpha(@foreground, 0.15);
 
-/* Text-selection highlight (entries, labels, text views) */
-selection {
-    background-color: @blue;
-    color: @background;
+/* Base window & containers */
+window,
+dialog,
+messagedialog,
+assistant,
+.background {
+    background-color: @theme_bg_color;
+    color: @theme_fg_color;
 }
 
-/* Entry styling — readable pinentry-gnome3 password field, Nautilus search, etc. */
-entry,
-entry > text {
-    background-color: alpha(@foreground, 0.05);
+window:backdrop {
+    background-color: @theme_unfocused_bg_color;
+    color: @theme_unfocused_fg_color;
+}
+
+/* Sharp corners globally */
+* {
+    border-radius: 0;
+    outline-color: alpha(@blue, 0.5);
+}
+
+/* CSD window decoration */
+decoration,
+window.csd decoration,
+window.solid-csd decoration {
+    border: 1px solid @borders;
+    box-shadow: none;
+    border-radius: 0;
+    background-color: @background;
+}
+
+/* Headerbar & titlebar */
+headerbar,
+.titlebar {
+    background-color: @background;
+    background-image: none;
+    color: @foreground;
+    border-bottom: 1px solid @borders;
+    min-height: 38px;
+    padding: 0 6px;
+}
+
+headerbar:backdrop,
+.titlebar:backdrop {
+    background-color: @theme_unfocused_bg_color;
+    color: @theme_unfocused_fg_color;
+}
+
+headerbar .title {
+    font-weight: bold;
     color: @foreground;
 }
 
-entry:focus-within,
-entry:focus-within > text {
+headerbar .subtitle,
+.dim-label {
+    opacity: 0.6;
+    color: @foreground;
+}
+
+label:disabled {
+    color: @insensitive_fg_color;
+}
+
+headerbar.selection-mode {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
+}
+
+toolbar,
+.primary-toolbar {
+    background-color: @background;
+    color: @foreground;
+}
+
+/* Title buttons (close, minimize, maximize) */
+button.titlebutton,
+headerbar button.titlebutton {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    padding: 4px 6px;
+    min-width: 24px;
+    min-height: 24px;
+    color: @foreground;
+}
+
+button.titlebutton:hover,
+headerbar button.titlebutton:hover {
+    background-color: alpha(@foreground, 0.12);
+    border: none;
+    color: @foreground;
+}
+
+button.titlebutton:active,
+headerbar button.titlebutton:active {
+    background-color: alpha(@foreground, 0.2);
+}
+
+button.titlebutton.close:hover,
+headerbar button.titlebutton.close:hover {
+    background-color: @destructive_color;
+    color: @background;
+}
+
+/* General Buttons */
+button {
+    background-color: alpha(@foreground, 0.05);
+    background-image: none;
+    color: @foreground;
+    border: 1px solid @borders;
+    border-radius: 0;
+    padding: 4px 10px;
+    transition: background-color 150ms ease-in-out;
+}
+
+button:hover {
+    background-color: @blue;
+    color: @background;
+    border-color: @blue;
+}
+
+button:active {
+    background-color: @cyan;
+    color: @background;
+    border-color: @cyan;
+}
+
+button:checked {
+    background-color: alpha(@blue, 0.35);
+    color: @foreground;
+    border-color: @blue;
+}
+
+button:disabled {
+    background-color: @insensitive_bg_color;
+    color: @insensitive_fg_color;
+    border-color: @unfocused_borders;
+}
+
+button:backdrop {
+    background-color: @theme_unfocused_bg_color;
+    color: @theme_unfocused_fg_color;
+}
+
+/* Flat buttons (headerbar icons, pathbar toggles, etc.) */
+button.flat,
+headerbar button.flat,
+.path-bar button.flat {
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+button.flat:hover,
+headerbar button.flat:hover {
+    background-color: alpha(@foreground, 0.12);
+    border-color: transparent;
+    color: @foreground;
+}
+
+button.flat:active,
+button.flat:checked,
+headerbar button.flat:checked {
+    background-color: alpha(@foreground, 0.2);
+    border-color: transparent;
+    color: @foreground;
+}
+
+button.flat:disabled {
+    background-color: transparent;
+    border-color: transparent;
+    color: @insensitive_fg_color;
+}
+
+/* Suggested & Destructive Action Buttons */
+button.suggested-action {
+    background-color: @blue;
+    color: @background;
+    border-color: @blue;
+    font-weight: 600;
+}
+
+button.suggested-action:hover {
+    background-color: @cyan;
+    border-color: @cyan;
+    color: @background;
+}
+
+button.destructive-action {
+    background-color: @red;
+    color: @background;
+    border-color: @red;
+    font-weight: 600;
+}
+
+button.destructive-action:hover {
+    background-color: @bright_red;
+    border-color: @bright_red;
+    color: @background;
+}
+
+/* Linked button groups */
+.linked:not(.vertical) > button,
+.linked:not(.vertical) > entry,
+.linked:not(.vertical) > combobox > box > button.combo {
+    border-radius: 0;
+}
+
+.linked:not(.vertical) > button:not(:first-child),
+.linked:not(.vertical) > entry:not(:first-child),
+.linked:not(.vertical) > combobox:not(:first-child) > box > button.combo {
+    border-left-style: none;
+}
+
+/* FileChooser PathBar */
+filechooser #pathbarbox {
+    border-bottom: 1px solid @borders;
+    background-color: @background;
+    padding: 4px;
+}
+
+.path-bar.linked > button {
+    background-color: alpha(@foreground, 0.04);
+    border: 1px solid @borders;
+    padding: 3px 8px;
+    font-weight: normal;
+}
+
+.path-bar.linked > button:not(:first-child) {
+    border-left-style: none;
+}
+
+.path-bar.linked > button:hover {
+    background-color: alpha(@foreground, 0.12);
+    color: @foreground;
+}
+
+.path-bar.linked > button:checked {
+    background-color: alpha(@blue, 0.25);
+    border-color: @blue;
+    color: @foreground;
+    font-weight: 600;
+}
+
+.path-bar button.slider-button {
+    padding: 3px 6px;
+}
+
+/* Search bar & Location bar (Ctrl+F / Ctrl+L in filechooser) */
+searchbar,
+searchbar > revealer > box,
+.location-bar {
+    background-color: @background;
+    border-bottom: 1px solid @borders;
+    padding: 4px 6px;
+}
+
+/* Text entries */
+entry,
+searchentry {
+    background-color: alpha(@foreground, 0.05);
+    background-image: none;
+    color: @theme_text_color;
+    border: 1px solid @borders;
+    border-radius: 0;
+    padding: 4px 8px;
+}
+
+entry:focus,
+searchentry:focus {
     background-color: alpha(@foreground, 0.08);
+    border-color: @blue;
 }
 
 entry:disabled,
-entry:disabled > text {
-    color: @bright_black;
+searchentry:disabled {
+    background-color: @insensitive_bg_color;
+    background-image: none;
+    color: @insensitive_fg_color;
+    border-color: @unfocused_borders;
 }
 
+entry image.left,
+entry image.right {
+    color: alpha(@foreground, 0.6);
+}
+
+entry image.left:hover,
+entry image.right:hover {
+    color: @foreground;
+}
+
+entry selection,
+selection,
+*:selected {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
+}
+
+/* Placeholder */
+placeholder,
 entry > text > placeholder {
-    color: alpha(@foreground, 0.5);
+    color: @placeholder_text_color;
 }
 
-/* GtkMessageDialog */
-messagedialog {
-    background-color: @dialog_bg_color;
+/* Text views */
+textview,
+textview text,
+.view {
+    background-color: @theme_base_color;
+    color: @theme_text_color;
 }
 
-messagedialog label {
-    color: @dialog_fg_color;
-    font-size: 14pt;
-    font-weight: bold;
+textview selection,
+.view:selected {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
 }
 
-messagedialog .secondary-text {
-    font-size: 10pt;
-    font-style: italic;
+/* Treeview (File list) */
+treeview,
+treeview.view {
+    background-color: @theme_base_color;
+    color: @theme_text_color;
+    border: none;
 }
 
-messagedialog button {
+treeview.view:selected,
+treeview.view:selected:focus {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
+}
+
+treeview.view:hover {
+    background-color: alpha(@foreground, 0.04);
+}
+
+treeview.view header button {
+    background-color: @background;
+    background-image: none;
+    color: @foreground;
+    font-weight: 600;
+    border-style: none solid solid none;
+    border-color: @borders;
+    border-radius: 0;
+    padding: 4px 8px;
+}
+
+treeview.view header button:hover {
+    background-color: alpha(@foreground, 0.08);
+    color: @foreground;
+}
+
+treeview.view header button:active {
+    background-color: alpha(@foreground, 0.15);
+}
+
+treeview.view.expander {
+    color: alpha(@foreground, 0.6);
+}
+
+treeview.view.expander:hover {
+    color: @foreground;
+}
+
+/* Iconview (Grid / Thumbnail view) */
+iconview,
+iconview.view {
+    background-color: @theme_base_color;
+    color: @theme_text_color;
+}
+
+iconview:selected,
+iconview:selected:focus {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
+}
+
+iconview:hover {
+    background-color: alpha(@foreground, 0.06);
+}
+
+/* Rubberband drag selection */
+rubberband,
+.rubberband,
+flowbox rubberband,
+treeview.view rubberband {
+    background-color: alpha(@blue, 0.25);
+    border: 1px solid @blue;
+}
+
+/* Places Sidebar */
+sidebar,
+.sidebar,
+placessidebar {
     background-color: @background;
     color: @foreground;
-    border: 1px solid @borders;
+    border-right: 1px solid @borders;
 }
 
-messagedialog button:hover {
+placessidebar row {
+    min-height: 32px;
+    padding: 2px 6px;
+}
+
+placessidebar row:hover {
+    background-color: alpha(@foreground, 0.08);
+}
+
+placessidebar row:selected {
     background-color: @blue;
     color: @background;
 }
 
-banner revealer widget {
-    background: @bright_black;
-    padding: 5px;
+placessidebar row.sidebar-header {
+    font-size: 0.85em;
+    font-weight: bold;
+    color: alpha(@foreground, 0.55);
+    padding: 8px 8px 4px 8px;
+}
+
+placessidebar row image.sidebar-icon {
+    opacity: 0.8;
+}
+
+button.sidebar-button,
+placessidebar button.sidebar-button {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    min-width: 22px;
+    min-height: 22px;
+    color: alpha(@foreground, 0.6);
+}
+
+button.sidebar-button:hover,
+placessidebar button.sidebar-button:hover {
+    background-color: alpha(@foreground, 0.15);
     color: @foreground;
 }
 
-/* Filechooser */
-filechooser .dialog-action-box {
+/* Paned splitter handle */
+paned > separator {
+    min-width: 1px;
+    min-height: 1px;
+    background-color: @borders;
+}
+
+paned > separator:hover,
+paned > separator:selected {
+    background-color: @blue;
+}
+
+paned.horizontal > separator {
+    margin: 0;
+    padding: 0;
+}
+
+/* Placesview (Other Locations) */
+placesview {
+    background-color: @background;
+    color: @foreground;
+}
+
+placesview actionbar {
+    background-color: @background;
     border-top: 1px solid @borders;
 }
 
-filechooser .dialog-action-box:backdrop {
-    border-top-color: @borders;
+/* Action bar & Dialog action area */
+actionbar,
+actionbar > revealer > box,
+.dialog-action-box,
+filechooser .dialog-action-box {
+    background-color: @background;
+    color: @foreground;
+    border-top: 1px solid @borders;
+    padding: 6px;
 }
 
-filechooser #pathbarbox {
-    border-bottom: 1px solid @borders;
+/* Combobox */
+combobox button.combo {
+    background-color: alpha(@foreground, 0.05);
+    background-image: none;
+    color: @foreground;
+    border: 1px solid @borders;
+    border-radius: 0;
+    padding: 4px 8px;
 }
 
-filechooserbutton:drop(active) {
-    box-shadow: none;
-    border-color: transparent;
+combobox button.combo:hover {
+    background-color: alpha(@foreground, 0.1);
 }
 
-/* Toast */
-toast {
+combobox button.combo:disabled {
+    background-color: @insensitive_bg_color;
+    background-image: none;
+    color: @insensitive_fg_color;
+    border-color: @unfocused_borders;
+}
+
+combobox button.combo:disabled cellview {
+    color: @insensitive_fg_color;
+}
+
+combobox arrow {
+    -gtk-icon-source: -gtk-icontheme("pan-down-symbolic");
+    min-height: 16px;
+    min-width: 16px;
+}
+
+combobox button.combo:disabled arrow {
+    color: @insensitive_fg_color;
+}
+
+combobox window menu {
     background-color: @background;
     color: @foreground;
     border: 1px solid @borders;
 }
 
-toast button.circular.flat.image-button:hover {
+/* Check & Radio */
+check,
+radio {
+    background-color: alpha(@foreground, 0.05);
+    color: @foreground;
+    border: 1px solid alpha(@foreground, 0.35);
+    min-width: 16px;
+    min-height: 16px;
+    margin: 2px 4px;
+}
+
+radio {
+    border-radius: 9999px;
+}
+
+check:hover,
+radio:hover {
+    border-color: @blue;
+}
+
+check:checked {
+    background-color: @blue;
     color: @background;
+    border-color: @blue;
+    -gtk-icon-source: -gtk-icontheme("object-select-symbolic");
+}
+
+radio:checked {
+    background-color: @blue;
+    color: @background;
+    border-color: @blue;
+    -gtk-icon-source: -gtk-icontheme("radio-checked-symbolic");
+}
+
+menu menuitem check,
+menu menuitem radio {
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+/* Switch */
+switch {
+    background-color: alpha(@foreground, 0.15);
+    background-image: none;
+    border: 1px solid @borders;
+    border-radius: 12px;
+    min-width: 38px;
+    min-height: 20px;
+    padding: 2px;
+    box-shadow: none;
+}
+
+switch:checked {
+    background-color: @blue;
+    background-image: none;
+    border-color: @blue;
+}
+
+switch:disabled {
+    opacity: 0.5;
+    background-color: alpha(@foreground, 0.08);
+    background-image: none;
+    border-color: @unfocused_borders;
+}
+
+switch slider {
+    background-color: @foreground;
+    background-image: none;
+    border: none;
+    border-radius: 50%;
+    min-width: 16px;
+    min-height: 16px;
+    margin: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+switch:hover slider {
+    background-color: @white;
+}
+
+switch:checked slider {
+    background-color: @background;
+    background-image: none;
+    border: none;
+}
+
+switch:disabled slider {
+    background-color: alpha(@foreground, 0.35);
+    background-image: none;
+    box-shadow: none;
+}
+
+/* Scales (sliders) */
+scale trough {
+    background-color: alpha(@foreground, 0.15);
+    border: 1px solid @borders;
+    border-radius: 0;
+}
+
+scale highlight {
+    background-color: @blue;
+    background-image: none;
+    border-radius: 0;
+}
+
+scale slider {
+    background-color: @blue;
+    border: 1px solid @borders;
+    border-radius: 0;
+    min-width: 14px;
+    min-height: 14px;
+}
+
+scale slider:hover {
+    background-color: @cyan;
+}
+
+/* Levelbar (disk space in places sidebar) */
+levelbar trough {
+    background-color: alpha(@foreground, 0.1);
+    border: 1px solid @borders;
+    min-height: 6px;
+    border-radius: 0;
+}
+
+levelbar block.filled {
+    background-color: @blue;
+}
+
+levelbar block.high {
+    background-color: @green;
+}
+
+levelbar block.low {
+    background-color: @yellow;
+}
+
+levelbar block.full {
     background-color: @red;
 }
 
-/* Sharp corners, Hyprland-inspired */
-* {
+/* Scrolledwindow & Viewport */
+scrolledwindow {
+    background-color: transparent;
+}
+
+scrolledwindow.frame,
+viewport.frame,
+.frame,
+frame > border {
+    border: 1px solid @borders;
+}
+
+frame > label {
+    padding: 0 6px;
+    font-weight: 600;
+    color: @foreground;
+    background-color: @background;
+}
+
+overshoot.top, overshoot.bottom, overshoot.left, overshoot.right,
+undershoot.top, undershoot.bottom, undershoot.left, undershoot.right {
+    background-image: none;
+    background-color: transparent;
+}
+
+/* Scrollbars */
+scrollbar trough {
+    background-color: @background;
+}
+
+scrollbar slider {
+    background-color: alpha(@foreground, 0.25);
+    border: 1px solid @borders;
     border-radius: 0;
+    min-width: 8px;
+    min-height: 8px;
+}
+
+scrollbar slider:hover {
+    background-color: @blue;
+}
+
+/* Separators */
+separator {
+    background-color: @borders;
+    min-width: 1px;
+    min-height: 1px;
+}
+
+/* Lists */
+list,
+listbox,
+row {
+    background-color: @background;
+    color: @foreground;
+}
+
+list row:hover,
+listbox row:hover,
+row:hover {
+    background-color: alpha(@foreground, 0.06);
+}
+
+list row:selected,
+listbox row:selected,
+row:selected {
+    background-color: @blue;
+    color: @background;
+}
+
+/* Menus & Popovers */
+menubar,
+menuitem {
+    background-color: @background;
+    background-image: none;
+    color: @foreground;
+}
+
+menu,
+.popup {
+    background-color: @background;
+    color: @foreground;
+    border: 1px solid @borders;
+}
+
+menu menuitem:hover,
+.menuitem:hover {
+    background-color: @blue;
+    color: @background;
+}
+
+popover,
+popover.background,
+popover contents,
+popover > window {
+    background-color: @background;
+    color: @foreground;
+    border: 1px solid @borders;
+    border-radius: 0;
+}
+
+popover modelbutton,
+modelbutton {
+    color: @foreground;
+    padding: 4px 8px;
+}
+
+popover modelbutton:hover,
+modelbutton:hover {
+    background-color: @blue;
+    color: @background;
+}
+
+popover separator {
+    background-color: @borders;
+}
+
+/* Notebook & Tabs */
+notebook,
+notebook > stack {
+    background-color: @background;
+    color: @foreground;
+}
+
+notebook > header {
+    background-color: alpha(@foreground, 0.02);
+    border-color: @borders;
+    padding: 0;
+}
+
+notebook > header.top {
+    border-bottom: 1px solid @borders;
+}
+
+notebook > header.bottom {
+    border-top: 1px solid @borders;
+}
+
+notebook > header.left {
+    border-right: 1px solid @borders;
+}
+
+notebook > header.right {
+    border-left: 1px solid @borders;
+}
+
+notebook > header tabs {
+    margin: 0;
+}
+
+notebook > header.top > tabs > tab,
+notebook > header.bottom > tabs > tab,
+notebook > header.left > tabs > tab,
+notebook > header.right > tabs > tab,
+notebook > header tab,
+notebook tab {
+    background-color: transparent;
+    background-image: none;
+    color: alpha(@foreground, 0.65);
+    border: 1px solid transparent;
+    padding: 6px 14px;
+    margin: 0 2px;
+    font-weight: 500;
+    box-shadow: none;
+    transition: all 150ms ease-in-out;
+}
+
+notebook > header.top > tabs > tab:hover,
+notebook > header.bottom > tabs > tab:hover,
+notebook > header.left > tabs > tab:hover,
+notebook > header.right > tabs > tab:hover,
+notebook > header tab:hover,
+notebook tab:hover {
+    color: @foreground;
+    background-color: alpha(@foreground, 0.05);
+    box-shadow: none;
+}
+
+notebook > header.top > tabs > tab:checked,
+notebook > header.bottom > tabs > tab:checked,
+notebook > header.left > tabs > tab:checked,
+notebook > header.right > tabs > tab:checked,
+notebook > header tab:checked,
+notebook tab:checked {
+    background-color: alpha(@foreground, 0.08);
+    background-image: none;
+    color: @foreground;
+    font-weight: 600;
+}
+
+notebook > header.top > tabs > tab:checked {
+    box-shadow: inset 0 -3px @blue;
+}
+
+notebook > header.bottom > tabs > tab:checked {
+    box-shadow: inset 0 3px @blue;
+}
+
+notebook > header.left > tabs > tab:checked {
+    box-shadow: inset -3px 0 @blue;
+}
+
+notebook > header.right > tabs > tab:checked {
+    box-shadow: inset 3px 0 @blue;
+}
+
+/* Progressbar */
+progressbar trough {
+    background-color: alpha(@foreground, 0.1);
+    border: 1px solid @borders;
+    border-radius: 0;
+}
+
+progressbar progress {
+    background-color: @blue;
+    background-image: none;
+    border-radius: 0;
+}
+
+/* Spinbutton */
+spinbutton {
+    background-color: alpha(@foreground, 0.05);
+    color: @theme_text_color;
+    border: 1px solid @borders;
+    border-radius: 0;
+}
+
+spinbutton button {
+    background-color: @background;
+    background-image: none;
+    color: @foreground;
+    border: 1px solid @borders;
+    border-radius: 0;
+}
+
+/* Tooltip */
+tooltip {
+    background-color: @background;
+    color: @foreground;
+    border: 1px solid @borders;
+    border-radius: 0;
+}
+
+/* Infobar */
+infobar {
+    background-color: @background;
+    color: @foreground;
+    border-bottom: 1px solid @borders;
+}
+
+infobar.info {
+    background-color: @blue;
+    color: @background;
+}
+
+infobar.warning {
+    background-color: @yellow;
+    color: @background;
+}
+
+infobar.error {
+    background-color: @red;
+    color: @background;
 }

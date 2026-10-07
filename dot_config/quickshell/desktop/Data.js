@@ -120,6 +120,10 @@ const omarchyItems = [
     { title: "Notch Bar",        icon: "󰝣", category: "Style",   keywords: "notch bar angled tapered slab navbar style mode type",                                               exec: "qs -c desktop ipc call barType notch" },
     { title: "Transparent Bar",  icon: "󰚲", rawIcon: "/home/bldnwine/.config/quickshell/desktop/assets/transparentbar.ico", category: "Style", keywords: "toggle transparent bar opacity fade invisible ghost clear background navbar", exec: "qs -c desktop ipc call bar transparent" },
     { title: "Bar Style",        icon: "󰒓", category: "Style", keywords: "bar style face zen whiterose editor customize appearance height opacity corners popup", exec: "qs -c desktop ipc call barstyle toggle" },
+    { title: "Top Bar",          icon: "󰁝", category: "Style", keywords: "top bar position edge north upper horizontal navbar", exec: "qs -c desktop ipc call bar edge top" },
+    { title: "Bottom Bar",       icon: "󰁅", category: "Style", keywords: "bottom bar position edge south lower horizontal navbar", exec: "qs -c desktop ipc call bar edge bottom" },
+    { title: "Left Bar",         icon: "󰁍", category: "Style", keywords: "left bar position edge west vertical navbar", exec: "qs -c desktop ipc call bar edge left" },
+    { title: "Right Bar",        icon: "󰁔", category: "Style", keywords: "right bar position edge east vertical navbar", exec: "qs -c desktop ipc call bar edge right" },
 
     // ----- System -----
     { title: "Lock Screen",         icon: "󰌾", category: "System", keywords: "lock screen security hyprlock password",                                            exec: "loginctl lock-session" },

@@ -5,12 +5,24 @@ CardWindow {
     required property var root
 
     property bool expanded: false
+    property bool posExpanded: false
     property bool saving: false
     property string armedDelete: ""
     Timer {
         id: disarmTimer
         interval: 3000
         onTriggered: barStylePopup.armedDelete = ""
+    }
+
+    Connections {
+        target: barStylePopup.root
+        function onBarStyleVisibleChanged() {
+            if (!barStylePopup.root.barStyleVisible) {
+                barStylePopup.expanded = false;
+                barStylePopup.posExpanded = false;
+                barStylePopup.saving = false;
+            }
+        }
     }
 
     theme: root
@@ -25,6 +37,7 @@ CardWindow {
 
     title: "BAR STYLE"
     subtitle: barStylePopup.root.barTemplateLabel
+              + " · " + barStylePopup.root.barEdge.toUpperCase()
               + " · " + barStylePopup.root.barType.toUpperCase()
               + " · " + barStylePopup.root.barHeight + "PX"
 
@@ -35,7 +48,7 @@ CardWindow {
         if (k === Qt.Key_Q) {
             r.barStyleVisible = false;
         } else if (k === Qt.Key_Down || k === Qt.Key_J) {
-            r.barStyleRow = Math.min(6, r.barStyleRow + 1);
+            r.barStyleRow = Math.min(7, r.barStyleRow + 1);
         } else if (k === Qt.Key_Up || k === Qt.Key_K) {
             r.barStyleRow = Math.max(0, r.barStyleRow - 1);
         } else if (k === Qt.Key_Left || k === Qt.Key_H) {
@@ -44,7 +57,7 @@ CardWindow {
             adjustRow(1);
         } else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) {
             activateRow();
-        } else if (k >= Qt.Key_1 && k <= Qt.Key_7) {
+        } else if (k >= Qt.Key_1 && k <= Qt.Key_8) {
             r.barStyleRow = k - Qt.Key_1;
         } else {
             return;
@@ -84,22 +97,28 @@ CardWindow {
     function adjustRow(dir) {
         const r = barStylePopup.root;
         if (r.barStyleRow === 0)      cycleTemplates(dir);
-        else if (r.barStyleRow === 1) r.cycleBarType(dir);
-        else if (r.barStyleRow === 2) r.setBarTransparent(dir > 0 ? true : dir < 0 ? false : !r.barTransparent);
-        else if (r.barStyleRow === 3) r.setBarOpacity(r.barOpacity + dir * 0.05);
-        else if (r.barStyleRow === 4) r.setBarHeight(r.barHeight + dir);
-        else if (r.barStyleRow === 5) r.setBarAir(r.barAir + dir);
-        else if (r.barStyleRow === 6) r.setBarRounding(r.barRounding + dir);
+        else if (r.barStyleRow === 1) r.cycleBarEdge(dir);
+        else if (r.barStyleRow === 2) r.cycleBarType(dir);
+        else if (r.barStyleRow === 3) r.setBarTransparent(dir > 0 ? true : dir < 0 ? false : !r.barTransparent);
+        else if (r.barStyleRow === 4) r.setBarOpacity(r.barOpacity + dir * 0.05);
+        else if (r.barStyleRow === 5) r.setBarHeight(r.barHeight + dir);
+        else if (r.barStyleRow === 6) r.setBarAir(r.barAir + dir);
+        else if (r.barStyleRow === 7) r.setBarRounding(r.barRounding + dir);
     }
 
     function activateRow() {
         const r = barStylePopup.root;
         if (r.barStyleRow === 0) {
             barStylePopup.expanded = !barStylePopup.expanded;
+            if (barStylePopup.expanded) barStylePopup.posExpanded = false;
             barStylePopup.saving = false;
         }
-        else if (r.barStyleRow === 1) r.cycleBarType(1);
-        else if (r.barStyleRow === 2) r.setBarTransparent(!r.barTransparent);
+        else if (r.barStyleRow === 1) {
+            barStylePopup.posExpanded = !barStylePopup.posExpanded;
+            if (barStylePopup.posExpanded) barStylePopup.expanded = false;
+        }
+        else if (r.barStyleRow === 2) r.cycleBarType(1);
+        else if (r.barStyleRow === 3) r.setBarTransparent(!r.barTransparent);
     }
 
     component SelRow: Item {
@@ -206,6 +225,7 @@ CardWindow {
             onChosen: {
                 barStylePopup.root.barStyleRow = 0;
                 barStylePopup.expanded = !barStylePopup.expanded;
+                if (barStylePopup.expanded) barStylePopup.posExpanded = false;
                 barStylePopup.saving = false;
             }
             onStepped: (dir) => { barStylePopup.root.barStyleRow = 0; barStylePopup.cycleTemplates(dir); }
@@ -280,19 +300,51 @@ CardWindow {
 
         SelRow {
             sty: barStylePopup.root
+            label: "POSITION"
+            value: barStylePopup.root.barEdge.toUpperCase()
+            selected: barStylePopup.root.barStyleRow === 1
+            onChosen: {
+                barStylePopup.root.barStyleRow = 1;
+                barStylePopup.posExpanded = !barStylePopup.posExpanded;
+                if (barStylePopup.posExpanded) barStylePopup.expanded = false;
+            }
+            onStepped: (dir) => { barStylePopup.root.barStyleRow = 1; barStylePopup.cycleBarEdge(dir); }
+        }
+
+        Column {
+            visible: barStylePopup.posExpanded
+            width: parent.width
+            spacing: 2
+
+            Repeater {
+                model: ["top", "bottom", "left", "right"]
+                delegate: TplRow {
+                    sty: barStylePopup.root
+                    name: modelData
+                    selected: modelData === barStylePopup.root.barEdge
+                    armed: false
+                    onChosen: {
+                        barStylePopup.root.setBarEdge(modelData);
+                        barStylePopup.posExpanded = false;
+                    }
+                }
+            }
+        }
+        SelRow {
+            sty: barStylePopup.root
             label: "TYPE"
             value: barStylePopup.root.barType.toUpperCase()
-            selected: barStylePopup.root.barStyleRow === 1
-            onChosen: { barStylePopup.root.barStyleRow = 1; barStylePopup.root.cycleBarType(1); }
-            onStepped: (dir) => { barStylePopup.root.barStyleRow = 1; barStylePopup.root.cycleBarType(dir); }
+            selected: barStylePopup.root.barStyleRow === 2
+            onChosen: { barStylePopup.root.barStyleRow = 2; barStylePopup.root.cycleBarType(1); }
+            onStepped: (dir) => { barStylePopup.root.barStyleRow = 2; barStylePopup.root.cycleBarType(dir); }
         }
         SelRow {
             sty: barStylePopup.root
             label: "TRANSPARENT"
             value: barStylePopup.root.barTransparent ? "ON" : "OFF"
-            selected: barStylePopup.root.barStyleRow === 2
-            onChosen: { barStylePopup.root.barStyleRow = 2; barStylePopup.root.setBarTransparent(!barStylePopup.root.barTransparent); }
-            onStepped: (dir) => { barStylePopup.root.barStyleRow = 2; barStylePopup.adjustRow(dir); }
+            selected: barStylePopup.root.barStyleRow === 3
+            onChosen: { barStylePopup.root.barStyleRow = 3; barStylePopup.root.setBarTransparent(!barStylePopup.root.barTransparent); }
+            onStepped: (dir) => { barStylePopup.root.barStyleRow = 3; barStylePopup.adjustRow(dir); }
         }
         DisplaySlider {
             root: barStylePopup.root
@@ -302,9 +354,9 @@ CardWindow {
             minV: 20
             maxV: 100
             unit: "%"
-            selected: barStylePopup.root.barStyleRow === 3
+            selected: barStylePopup.root.barStyleRow === 4
             onCommit: (v) => barStylePopup.root.setBarOpacity(v / 100)
-            onFocusRequested: barStylePopup.root.barStyleRow = 3
+            onFocusRequested: barStylePopup.root.barStyleRow = 4
         }
         DisplaySlider {
             root: barStylePopup.root
@@ -314,9 +366,9 @@ CardWindow {
             minV: 22
             maxV: 40
             unit: "PX"
-            selected: barStylePopup.root.barStyleRow === 4
+            selected: barStylePopup.root.barStyleRow === 5
             onCommit: (v) => barStylePopup.root.setBarHeight(v)
-            onFocusRequested: barStylePopup.root.barStyleRow = 4
+            onFocusRequested: barStylePopup.root.barStyleRow = 5
         }
         DisplaySlider {
             root: barStylePopup.root
@@ -326,9 +378,9 @@ CardWindow {
             minV: 0
             maxV: 360
             unit: "PX"
-            selected: barStylePopup.root.barStyleRow === 5
+            selected: barStylePopup.root.barStyleRow === 6
             onCommit: (v) => barStylePopup.root.setBarAir(v)
-            onFocusRequested: barStylePopup.root.barStyleRow = 5
+            onFocusRequested: barStylePopup.root.barStyleRow = 6
         }
         DisplaySlider {
             root: barStylePopup.root
@@ -338,9 +390,9 @@ CardWindow {
             minV: 0
             maxV: 12
             unit: "PX"
-            selected: barStylePopup.root.barStyleRow === 6
+            selected: barStylePopup.root.barStyleRow === 7
             onCommit: (v) => barStylePopup.root.setBarRounding(v)
-            onFocusRequested: barStylePopup.root.barStyleRow = 6
+            onFocusRequested: barStylePopup.root.barStyleRow = 7
         }
     }
 }

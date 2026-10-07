@@ -72,6 +72,7 @@ CardWindow {
     // ---------- Actions ----------
     function deviceGlyph(name, kind) {
         const blob = String(name || "").toLowerCase();
+        if (blob.indexOf("equalizer") !== -1 || blob.indexOf("effect_") !== -1) return "󰓃";
         if (blob.indexOf("bluetooth") !== -1) return "󰂯";
         if (blob.indexOf("hdmi") !== -1 || blob.indexOf("display") !== -1) return "󰍹";
         if (blob.indexOf("headset") !== -1 || blob.indexOf("headphone") !== -1) return "󰋋";

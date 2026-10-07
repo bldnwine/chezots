@@ -18,18 +18,15 @@ PanelWindow {
         left:   bar.root.barEdge !== "right"
         right:  bar.root.barEdge !== "left"
     }
-    // Floating: horizontal + barType === "floating". Slab/notch are
-    // horizontal slab variants with barAir left/right insets. Vertical
-    // bars keep the original slab geometry to avoid breaking the proven
-    // layout.
+    // Floating: barType === "floating". Slab/notch are slab variants
+    // with barAir end insets. Notch is horizontal only.
     readonly property int cloudPad: 2
     readonly property int cloudAir: bar.root.barAir
     readonly property int cloudInnerAir: 2
-    // Fixed outer screen-edge gap. Air (cloudAir) only sets the
-    // left/right end margins so the slider never shifts the bar
-    // vertically; this preserves the original 5px outer look.
+    // Fixed outer screen-edge gap. Air (cloudAir) sets the end margins
+    // along the bar axis.
     readonly property int cloudOuter: 5
-    readonly property bool cloudMode: bar.root.barType === "floating" && bar.root.isHorizontal
+    readonly property bool cloudMode: bar.root.barType === "floating"
     readonly property bool notchMode: bar.root.barType === "notch" && bar.root.isHorizontal
     // Horizontal slab-like inset from barAir (flat slab + notch). Zero on
     // vertical bars and in floating mode (which uses cloudAir instead).
@@ -39,11 +36,11 @@ PanelWindow {
     readonly property int notchCut: bar.notchMode ? Math.round(bar.root.barHeight * 0.5) : 0
     readonly property int extraThickness: cloudMode ? 2 * cloudPad + cloudOuter + cloudInnerAir : 0
     // innerSign tells which side gets the extra outer air (away from screen).
-    readonly property int innerSign: bar.root.barEdge === "top" ? 1 : (bar.root.barEdge === "bottom" ? -1 : 0)
+    readonly property int innerSign: (bar.root.barEdge === "top" || bar.root.barEdge === "left") ? 1 : -1
 
     implicitHeight: bar.root.isHorizontal ? bar.root.barHeight + extraThickness : 0
-    implicitWidth:  bar.root.isHorizontal ? 0 : bar.root.barHeight
-    exclusiveZone:  bar.root.isHorizontal ? bar.root.barHeight + extraThickness : bar.root.barHeight
+    implicitWidth:  bar.root.isHorizontal ? 0 : bar.root.barHeight + extraThickness
+    exclusiveZone:  bar.root.barHeight + extraThickness
 
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "omarchy-menu"
@@ -56,16 +53,16 @@ PanelWindow {
     }
 
     // In cloud mode the slab bg is replaced by a single rounded backdrop
-    // sized to match the inner bar (barHeight tall, with cloudAir margins
-    // on each side along the bar axis, sliding toward the inner edge so
-    // outer-side air sits between cloud and screen edge).
+    // sized to match the inner bar (with cloudAir margins on each side
+    // along the bar axis, sliding toward the inner edge so outer-side air
+    // sits between cloud and screen edge).
     Rectangle {
         id: cloudBg
         visible: bar.cloudMode
-        x: bar.cloudAir
-        y: bar.innerSign === 1 ? bar.cloudOuter : bar.cloudInnerAir
-        width: parent.width - 2 * bar.cloudAir
-        height: bar.root.barHeight + 2 * bar.cloudPad
+        x: bar.root.isHorizontal ? bar.cloudAir : (bar.root.barEdge === "left" ? bar.cloudOuter : bar.cloudInnerAir)
+        y: bar.root.isHorizontal ? (bar.innerSign === 1 ? bar.cloudOuter : bar.cloudInnerAir) : bar.cloudAir
+        width: bar.root.isHorizontal ? (parent.width - 2 * bar.cloudAir) : (bar.root.barHeight + 2 * bar.cloudPad)
+        height: bar.root.isHorizontal ? (bar.root.barHeight + 2 * bar.cloudPad) : (parent.height - 2 * bar.cloudAir)
         radius: bar.root.barRounding
         color: bar.root.barTransparent ? "transparent" : Qt.rgba(bar.root.bg.r, bar.root.bg.g, bar.root.bg.b, bar.root.barOpacity)
         z: 0
@@ -155,16 +152,17 @@ PanelWindow {
             id: clockItem
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter:   parent.verticalCenter
-            anchors.verticalCenterOffset: bar.cloudMode ? (bar.innerSign === 1 ? 2 : -2) : 0
+            anchors.verticalCenterOffset:   bar.root.isHorizontal ? (bar.cloudMode ? (bar.innerSign === 1 ? 2 : -2) : 0) : 0
+            anchors.horizontalCenterOffset: !bar.root.isHorizontal ? (bar.cloudMode ? (bar.innerSign === 1 ? 2 : -2) : 0) : 0
             z: 10
             Component.onCompleted: bar.root.calendarAnchorItem = clockItem
 
             implicitWidth:  bar.root.isHorizontal
                             ? clockOneLine.implicitWidth + 14
-                            : Math.max(clockHH.implicitWidth, clockMM.implicitWidth) + 8
+                            : bar.root.barHeight
             implicitHeight: bar.root.isHorizontal
                             ? clockOneLine.implicitHeight + 8
-                            : (clockHH.implicitHeight + clockMM.implicitHeight + 6)
+                            : clockColV.implicitHeight + 8
 
             Bloom { id: clockBloom; root: bar.root }
 
@@ -181,31 +179,66 @@ PanelWindow {
                 font.weight: Font.Light
                 Behavior on color { ColorAnimation { duration: 90 } }
             }
-            Text {
-                id: clockHH
+
+            Column {
+                id: clockColV
                 visible: !bar.root.isHorizontal
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.verticalCenter
-                anchors.bottomMargin: 1
-                text: bar.root.dow + " " + bar.root.dd
-                color: clockMouse.containsMouse ? bar.root.seal : bar.root.ink
-                font.family: bar.root.mono
-                font.pixelSize: 9
-                font.weight: Font.Light
-                Behavior on color { ColorAnimation { duration: 90 } }
-            }
-            Text {
-                id: clockMM
-                visible: !bar.root.isHorizontal
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: parent.verticalCenter
-                anchors.topMargin: 1
-                text: bar.root.hh + ":" + bar.root.mm
-                color: clockMouse.containsMouse ? bar.root.seal : bar.root.ink
-                font.family: bar.root.mono
-                font.pixelSize: 11
-                font.weight: Font.Light
-                Behavior on color { ColorAnimation { duration: 90 } }
+                anchors.centerIn: parent
+                spacing: 1
+
+                Text {
+                    id: clockDowV
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: bar.root.dow
+                    color: clockMouse.containsMouse ? bar.root.seal : bar.root.inkDeep
+                    font.family: bar.root.mono
+                    font.pixelSize: 8
+                    font.weight: Font.Medium
+                    Behavior on color { ColorAnimation { duration: 90 } }
+                }
+
+                Text {
+                    id: clockDateV
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: bar.root.dd
+                    color: clockMouse.containsMouse ? bar.root.seal : bar.root.inkDeep
+                    font.family: bar.root.mono
+                    font.pixelSize: 9
+                    font.letterSpacing: 1
+                    font.weight: Font.Normal
+                    Behavior on color { ColorAnimation { duration: 90 } }
+                }
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 8
+                    height: 1
+                    color: clockMouse.containsMouse ? bar.root.seal : bar.root.sep
+                    opacity: 0.7
+                    Behavior on color { ColorAnimation { duration: 90 } }
+                }
+
+                Text {
+                    id: clockHHV
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: bar.root.hh
+                    color: clockMouse.containsMouse ? bar.root.seal : bar.root.ink
+                    font.family: bar.root.mono
+                    font.pixelSize: 11
+                    font.weight: Font.Medium
+                    Behavior on color { ColorAnimation { duration: 90 } }
+                }
+
+                Text {
+                    id: clockMMV
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: bar.root.mm
+                    color: clockMouse.containsMouse ? bar.root.seal : bar.root.ink
+                    font.family: bar.root.mono
+                    font.pixelSize: 11
+                    font.weight: Font.Light
+                    Behavior on color { ColorAnimation { duration: 90 } }
+                }
             }
 
             Timer {
@@ -213,7 +246,8 @@ PanelWindow {
                 interval: 180
                 onTriggered: {
                     const p = clockItem.mapToItem(null, clockItem.width / 2, clockItem.height / 2);
-                    bar.root.showTooltip("Calendar", p.x, p.y);
+                    const tip = bar.root.dow + " " + bar.root.dd + " " + bar.root.mon + " · " + bar.root.hh + ":" + bar.root.mm + " · Calendar";
+                    bar.root.showTooltip(tip, p.x, p.y);
                 }
             }
 
@@ -240,20 +274,22 @@ PanelWindow {
 
         GridLayout {
             anchors.fill: parent
-            anchors.leftMargin:   bar.root.isHorizontal ? (bar.cloudMode ? bar.cloudAir + bar.cloudPad : bar.notchCut + 10) : 0
+            anchors.leftMargin:   bar.root.isHorizontal
+                                  ? (bar.cloudMode ? bar.cloudAir + bar.cloudPad : bar.notchCut + 10)
+                                  : (bar.cloudMode ? (bar.root.barEdge === "left" ? bar.cloudOuter + bar.cloudPad : bar.cloudInnerAir + bar.cloudPad) : 0)
             anchors.rightMargin:  bar.root.isHorizontal
                                   ? (bar.cloudMode ? bar.cloudAir + bar.cloudPad : bar.notchCut + 10)
-                                  : 0
+                                  : (bar.cloudMode ? (bar.root.barEdge === "left" ? bar.cloudInnerAir + bar.cloudPad : bar.cloudOuter + bar.cloudPad) : 0)
             anchors.topMargin:    bar.root.isHorizontal
                                   ? (bar.cloudMode
                                      ? (bar.root.barEdge === "top" ? bar.cloudOuter + bar.cloudPad : bar.cloudInnerAir + bar.cloudPad)
                                      : 0)
-                                  : 10
+                                  : (bar.cloudMode ? bar.cloudAir + bar.cloudPad : 10)
             anchors.bottomMargin: bar.root.isHorizontal
                                   ? (bar.cloudMode
                                      ? (bar.root.barEdge === "top" ? bar.cloudInnerAir + bar.cloudPad : bar.cloudOuter + bar.cloudPad)
                                      : 0)
-                                  : 10
+                                  : (bar.cloudMode ? bar.cloudAir + bar.cloudPad : 10)
             flow: bar.root.isHorizontal ? GridLayout.LeftToRight : GridLayout.TopToBottom
             rowSpacing: 4
             columnSpacing: 4
@@ -280,24 +316,44 @@ PanelWindow {
 
             Item {
                 id: musicItem
-                readonly property bool present: bar.root.isHorizontal && bar.root.musicTitle.length > 0
+                readonly property bool present: bar.root.musicTitle.length > 0
                 readonly property real contentW: musicRow.width + 12
-                property real openW: present ? contentW + 8 : 0
+                property real openW: (present && bar.root.isHorizontal) ? contentW + 8 : 0
                 Behavior on openW { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
                 Component.onCompleted: bar.root.musicAnchorItem = musicItem
 
                 visible: present || openW > 0.5
-                Layout.preferredWidth: openW
-                Layout.preferredHeight: 16
-                Layout.alignment: Qt.AlignVCenter
+                Layout.preferredWidth: bar.root.isHorizontal ? openW : (visible ? bar.root.barHeight : 0)
+                Layout.preferredHeight: bar.root.isHorizontal ? 16 : (visible ? 24 : 0)
+                Layout.alignment: bar.root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
 
                 readonly property string tipText: bar.root.musicArtist.length > 0
                                                   ? bar.root.musicTitle + " - " + bar.root.musicArtist
                                                   : bar.root.musicTitle
 
                 Rectangle {
+                    id: musicBtnV
+                    visible: !bar.root.isHorizontal
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    radius: bar.root.cornerRadius
+                    color: musicMouse.containsMouse ? Qt.rgba(bar.root.ink.r, bar.root.ink.g, bar.root.ink.b, 0.08) : "transparent"
+                    Behavior on color { ColorAnimation { duration: 90 } }
+
+                    Text {
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: -1
+                        text: bar.root.icoMusic
+                        color: bar.root.accent
+                        font.family: bar.root.mono
+                        font.pixelSize: 13
+                    }
+                }
+
+                Rectangle {
                     id: musicPill
+                    visible: bar.root.isHorizontal
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.max(0, parent.width - 8)
@@ -361,6 +417,8 @@ PanelWindow {
                     }
                 }
 
+                Bloom { id: musicBloom; root: bar.root }
+
                 Timer {
                     id: musicTipDelay
                     interval: 180
@@ -376,7 +434,10 @@ PanelWindow {
                     hoverEnabled: true
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton | Qt.XButton1 | Qt.XButton2
                     cursorShape: Qt.PointingHandCursor
-                    onEntered: musicTipDelay.restart()
+                    onEntered: {
+                        musicBloom.fire(mouseX, mouseY);
+                        musicTipDelay.restart();
+                    }
                     onExited:  { musicTipDelay.stop(); bar.root.hideTooltip(musicItem.tipText); }
                     onClicked: (e) => {
                         musicTipDelay.stop();
@@ -450,6 +511,7 @@ PanelWindow {
                     iconSize: 13
                     fontFamily: bar.root.mono
                     glyphYOffset: -1
+                    glyphXOffset: bar.root.isHorizontal ? 0 : -2
                     color: aiMod.ai && aiMod.ai.agentState === "working" ? bar.root.accent : bar.root.ink
                     badgeColor: aiMod.ai && aiMod.ai.agentState === "action_needed" ? bar.root.warn : bar.root.seal
                     successColor: bar.root.accent
@@ -535,7 +597,7 @@ PanelWindow {
             Module {
                 root: bar.root
                 glyph: bar.root.btIcon
-                fontSize: 13
+                fontSize: 14
                 tooltip: {
                     if (!bar.root.btPowered) return "Bluetooth off";
                     const conn = bar.root.btDevices.filter(d => d.connected);
@@ -579,7 +641,7 @@ PanelWindow {
                     property real t: 0
                     property real op: 0
                     readonly property real cx: width / 2
-                    readonly property real cy: 17
+                    readonly property real cy: Math.round(height / 2 + 4)
                     readonly property real r:  6
 
                     Rectangle {
@@ -744,7 +806,7 @@ PanelWindow {
                 tooltip: "RECORDING"
                 fontSize: 12
                 glyphYOffset: -1
-                onActivated: bar.root.run("qs -c desktop ipc call screenrecord toggle")
+                onActivated: bar.root.toggleScreenRecord()
             }
 
         }

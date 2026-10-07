@@ -157,23 +157,34 @@ def calculate_auto_preamp(bands: list) -> float:
     return round(-max(0.0, max_gain), 2)
 
 def generate_pipewire_conf(preamp_db: float, bands: list, enabled: bool = True) -> str:
-    """Generates a PipeWire filter-chain configuration for N bands (1 <= N <= 31)."""
+    """Generates a PipeWire filter-chain configuration for 32 fixed bands."""
+    default_iso_freqs = [
+        31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0, 160.0, 200.0, 250.0,
+        315.0, 400.0, 500.0, 630.0, 800.0, 1000.0, 1250.0, 1600.0, 2000.0, 2500.0,
+        3150.0, 4000.0, 5000.0, 6300.0, 8000.0, 10000.0, 12500.0, 14000.0, 16000.0, 18000.0,
+        19000.0, 20000.0
+    ]
+
     clean_bands = []
-    for b in bands[:31]:
-        f = max(20.0, float(b.get("freq", 1000.0)))
-        g = float(b.get("gain", 0.0)) if enabled else 0.0
-        q = max(0.1, float(b.get("q", 1.0)))
-        t = b.get("type", "peaking").lower()
-        if "low" in t or ("shelf" in t and f < 200):
+    for i in range(32):
+        if i < len(bands):
+            b = bands[i]
+            f = max(20.0, float(b.get("freq", default_iso_freqs[i])))
+            g = float(b.get("gain", 0.0)) if enabled else 0.0
+            q = max(0.1, float(b.get("q", 1.0)))
+        else:
+            f = default_iso_freqs[i]
+            g = 0.0
+            q = 1.0
+
+        if i == 0:
             label = "bq_lowshelf"
-        elif "high" in t or ("shelf" in t and f > 5000):
+        elif i == 31:
             label = "bq_highshelf"
         else:
             label = "bq_peaking"
-        clean_bands.append({"freq": f, "gain": g, "q": q, "label": label})
 
-    if not clean_bands:
-        clean_bands = [{"freq": 1000.0, "gain": 0.0, "q": 1.0, "label": "bq_peaking"}]
+        clean_bands.append({"freq": f, "gain": g, "q": q, "label": label})
 
     effective_preamp = preamp_db if enabled else 0.0
     mult_val = 10.0 ** (effective_preamp / 20.0)
@@ -198,7 +209,7 @@ def generate_pipewire_conf(preamp_db: float, bands: list, enabled: bool = True) 
 
     links_lines = []
     links_lines.append('                    { output = "eq_preamp:Out" input = "eq_band_1:In" }')
-    for i in range(1, len(clean_bands)):
+    for i in range(1, 32):
         links_lines.append(f'                    {{ output = "eq_band_{i}:Out" input = "eq_band_{i+1}:In" }}')
 
     links_str = ",\n".join(links_lines)
@@ -256,7 +267,7 @@ def get_live_eq_node_info():
     return None, set()
 
 def apply_live_controls(state: dict) -> bool:
-    """Applies gains, frequencies, and preamp to the live running filter chain in 0ms via pw-cli."""
+    """Applies gains, frequencies, and preamp to the live running filter chain in 0ms via batched pw-cli."""
     node_id, controls = get_live_eq_node_info()
     if not node_id:
         return False
@@ -265,35 +276,39 @@ def apply_live_controls(state: dict) -> bool:
     bands = state.get("bands", DEFAULT_10_BANDS)
     preamp_db = state.get("preamp", 0.0)
 
-    # Check if the active filter graph has all needed controls
-    for i in range(1, len(bands) + 1):
-        if f"eq_band_{i}:Gain" not in controls:
-            return False  # Graph shape changed or missing; needs full restart
+    # Need all 32 bands in controls to apply live
+    if "eq_band_32:Gain" not in controls:
+        return False
 
     # 1. Ensure EQ sink volume is at 1.00 unity gain pass-through
     subprocess.run(["wpctl", "set-volume", str(node_id), "1.00"], timeout=1)
     subprocess.run(["wpctl", "set-mute", str(node_id), "0"], timeout=1)
 
-    # 2. Update Preamp linear multiplier
+    # 2. Build single batched payload for all controls
     effective_preamp = preamp_db if enabled else 0.0
     mult_val = 10.0 ** (effective_preamp / 20.0)
-    payload_preamp = json.dumps({"params": ["eq_preamp:Mult", float(f"{mult_val:.6f}")]})
-    subprocess.run(["pw-cli", "set-param", node_id, "Props", payload_preamp], capture_output=True, timeout=1)
 
-    # 3. Update Band Gains
-    for i, b in enumerate(bands, 1):
-        gain = float(b.get("gain", 0.0)) if enabled else 0.0
-        payload_gain = json.dumps({"params": [f"eq_band_{i}:Gain", float(f"{gain:.2f}")]})
-        subprocess.run(["pw-cli", "set-param", node_id, "Props", payload_gain], capture_output=True, timeout=1)
-        if enabled:
+    params = ["eq_preamp:Mult", float(f"{mult_val:.6f}")]
+
+    max_running_bands = max([i for i in range(1, 33) if f"eq_band_{i}:Gain" in controls], default=len(bands))
+    for i in range(1, max_running_bands + 1):
+        if enabled and i <= len(bands):
+            b = bands[i - 1]
+            gain = float(b.get("gain", 0.0))
             freq = float(b.get("freq", 1000.0))
             q = float(b.get("q", 1.0))
-            payload_freq = json.dumps({"params": [f"eq_band_{i}:Freq", float(f"{freq:.1f}")]})
-            payload_q = json.dumps({"params": [f"eq_band_{i}:Q", float(f"{q:.2f}")]})
-            subprocess.run(["pw-cli", "set-param", node_id, "Props", payload_freq], capture_output=True, timeout=1)
-            subprocess.run(["pw-cli", "set-param", node_id, "Props", payload_q], capture_output=True, timeout=1)
+            params.extend([
+                f"eq_band_{i}:Gain", float(f"{gain:.2f}"),
+                f"eq_band_{i}:Freq", float(f"{freq:.1f}"),
+                f"eq_band_{i}:Q", float(f"{q:.2f}")
+            ])
+        else:
+            # Unused band or bypassed -> zero out gain (transparent pass-through)
+            params.extend([f"eq_band_{i}:Gain", 0.0])
 
-    return True
+    payload = json.dumps({"params": params})
+    res = subprocess.run(["pw-cli", "set-param", str(node_id), "Props", payload], capture_output=True, timeout=2)
+    return res.returncode == 0
 
 def restart_pipewire():
     try:
@@ -338,12 +353,13 @@ def cmd_apply(args, force_restart=False):
         except Exception:
             presets = load_presets()
             clean_name = sanitize_preset_name(arg_str)
-            if clean_name in presets:
+            matching_key = next((k for k in presets if k.lower() == clean_name.lower()), None)
+            if matching_key:
                 state = load_state()
-                p = presets[clean_name]
+                p = presets[matching_key]
                 state["preamp"] = p.get("preamp", 0.0)
                 state["bands"] = p.get("bands", DEFAULT_10_BANDS)
-                state["activePreset"] = clean_name
+                state["activePreset"] = matching_key
                 save_state(state)
             else:
                 state = load_state()
@@ -359,7 +375,7 @@ def cmd_apply(args, force_restart=False):
         print(json.dumps({"status": "applied_live", "preset": state.get("activePreset", "Custom"), "enabled": state.get("enabled", True)}))
         return
 
-    # Fallback to config file generation and PipeWire reload if graph needs recreation
+    # Fallback only when node doesn't exist at all (initial setup)
     conf = generate_pipewire_conf(state.get("preamp", 0.0), state.get("bands", DEFAULT_10_BANDS), state.get("enabled", True))
     ensure_dirs()
     with open(PW_EQ_CONF, "w") as f:
@@ -384,16 +400,11 @@ def cmd_auto_preamp(args):
     print(json.dumps({"status": "auto_preamp_applied", "preamp": auto_val}))
 
 def cmd_disable(args):
-    """Disables the PipeWire equalizer sink."""
+    """Bypasses the PipeWire equalizer transparently without stopping PipeWire."""
     state = load_state()
     state["enabled"] = False
     save_state(state)
-    if PW_EQ_CONF.exists():
-        PW_EQ_CONF.unlink()
-    try:
-        subprocess.run(["systemctl", "--user", "restart", "pipewire"], check=True, timeout=5)
-    except Exception:
-        pass
+    cmd_apply([])
     print(json.dumps({"status": "disabled"}))
 
 def cmd_get_state(args):
@@ -481,7 +492,7 @@ def parse_autoeq_text(text: str):
                 "q": q_val,
                 "type": ftype
             })
-            if len(bands) >= 31:
+            if len(bands) >= 32:
                 break
     return preamp, bands
 
@@ -520,8 +531,8 @@ def cmd_import(args):
     presets[preset_name] = {"preamp": preamp, "bands": bands}
     save_presets(presets)
 
-    # Recreate graph if band count changed
-    cmd_apply([], force_restart=True)
+    # Apply live with 0ms latency and zero PipeWire restarts
+    cmd_apply([], force_restart=False)
     print(json.dumps({"status": "imported", "name": preset_name, "bands_count": len(bands), "preamp": preamp}))
 
 def cmd_export(args):

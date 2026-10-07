@@ -32,7 +32,7 @@ Quickshell registers 22 native `GlobalShortcut`s under `appid: "quickshell"` via
 | `quickshell:wireproton-toggle` | Toggle WireProton VPN popup | `SUPER + K` |
 | `quickshell:warp-toggle` | Toggle Cloudflare Warp popup | `SUPER + ALT + K` |
 | `quickshell:hyprland-toggle` | Toggle Hyprland cheatsheet popup | `SUPER + G` |
-| `quickshell:screenrecord-toggle` | Toggle screen recording controls | `SUPER + SHIFT + K` |
+| `quickshell:screenrecord-toggle` | Stop recording if active, else toggle controls | `SUPER + SHIFT + K` |
 | `quickshell:locusfavs-toggle` | Toggle directory bookmarks | `SUPER + ALT + Space` |
 | `quickshell:audio-vol-up` | Step volume up (+5%) + instant OSD | `XF86AudioRaiseVolume` / `SUPER + CTRL + Up` |
 | `quickshell:audio-vol-down` | Step volume down (-5%) + instant OSD | `XF86AudioLowerVolume` / `SUPER + CTRL + Down` |
@@ -61,7 +61,7 @@ qs -c desktop ipc call calendar toggle         # calendar
 qs -c desktop ipc call system toggle           # system popup (cpu, mem, btop)
 qs -c desktop ipc call nightlight toggle       # warmth/brightness night mode
 qs -c desktop ipc call bar toggle              # hide/show bar
-qs -c desktop ipc call screenrecord toggle     # screen recording controls
+qs -c desktop ipc call screenrecord toggle     # stop recording if active, else open controls
 qs -c desktop ipc call wireproton toggle       # VPN wireguard connect/disconnect
 qs -c desktop ipc call locusfavs toggle        # folder bookmarks
 qs -c desktop ipc call hyprland toggle         # hyprland keybind viewer
@@ -95,7 +95,7 @@ right  | music | sep | weather | cpu | bt | wifi | audio | update | battery | re
 - Click cpu for the system popup (cpu, mem, btop).
 - Click audio for `pavucontrol`. Right-click toggles mute. Scroll for volume.
 - Click battery for the power menu.
-- Click recording for the screen record popup.
+- Click recording to stop active recording.
 - Click the edge arrow to cycle the bar between top, right, bottom, left.
 - Toggle bar visibility with `qs -c desktop ipc call bar toggle`.
 

@@ -204,7 +204,8 @@ stop_screenrecording() {
 }
 
 toggle_screenrecording_indicator() {
-  pkill -RTMIN+8 waybar
+  pkill -RTMIN+8 waybar 2>/dev/null || true
+  qs -c desktop ipc call screenrecord sync 2>/dev/null || true
 }
 
 screenrecording_active() {

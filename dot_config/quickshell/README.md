@@ -93,7 +93,7 @@ This configuration runs a complete, unified desktop shell environment inside a *
 | `wireproton-toggle` | `SUPER + K` | Toggle WireProton VPN popup | `qs -c desktop ipc call wireproton toggle` |
 | `warp-toggle` | `SUPER + ALT + K` | Toggle Cloudflare Warp popup | `qs -c desktop ipc call warp toggle` |
 | `hyprland-toggle` | `SUPER + G` | Toggle Hyprland cheatsheet popup | `qs -c desktop ipc call hyprland toggle` |
-| `screenrecord-toggle` | `SUPER + SHIFT + K` | Toggle screen recording controls | `qs -c desktop ipc call screenrecord toggle` |
+| `screenrecord-toggle` | `SUPER + SHIFT + K` | Stop recording if active, else toggle controls | `qs -c desktop ipc call screenrecord toggle` |
 | `locusfavs-toggle` | `SUPER + ALT + Space` | Toggle directory bookmarks | `qs -c desktop ipc call locusfavs toggle` |
 | `audio-vol-up` | `XF86AudioRaiseVolume` / `SUPER + CTRL + Up` | Volume +5% + instant OSD | In-shell hardware controller |
 | `audio-vol-down` | `XF86AudioLowerVolume` / `SUPER + CTRL + Down` | Volume -5% + instant OSD | In-shell hardware controller |

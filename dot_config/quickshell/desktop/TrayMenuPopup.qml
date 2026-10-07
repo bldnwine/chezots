@@ -35,6 +35,8 @@ PanelWindow {
         border.width: 1
 
         x: {
+            if (root.barEdge === "left") return root.barOffset + 6;
+            if (root.barEdge === "right") return parent.width - root.barOffset - width - 6;
             const rawX = root.popupAnchorX - width / 2;
             return Math.max(8, Math.min(parent.width - width - 8, rawX));
         }

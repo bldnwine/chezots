@@ -221,7 +221,7 @@ hl.animation({ leaf = "windows", enabled = true, speed = 4.79, bezier = "easeOut
 hl.animation({
 	leaf = "windowsIn",
 	enabled = true,
-	speed = 4.1,
+	speed = 2.5,
 	bezier = "easeOutQuint",
 	style = "popin 87%",
 })
@@ -342,7 +342,7 @@ hl.bind(mainMod .. " + CONTROL + G", function()
 end)
 --hl.bind("ALT + F", hl.dsp.exec_cmd(launch("helium-browser")))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(launch("zen -P default")))
-hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(launch("brave-origin-beta")))
+hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(launch('brave-origin-beta --profile-directory="Default"')))
 hl.bind(mainMod .. " + ALT + SHIFT + B", hl.dsp.exec_cmd(launch("brave-origin-beta --incognito")))
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(launch("zen --private-window")))
 hl.bind(mainMod .. " + ALT", hl.dsp.exec_cmd("sh -c 'killall -SIGUSR1 waybar'"))

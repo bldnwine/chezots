@@ -5,7 +5,7 @@ action="$1"
 def=$(pactl get-default-sink 2>/dev/null)
 target="$def"
 if [ "$def" = "effect_input.eq" ]; then
-  phys=$(pactl list sinks short 2>/dev/null | awk '$2 !~ /effect_/ {print $2; exit}')
+  phys=$(pw-link -l 2>/dev/null | awk -F: '/^effect_output\.eq:output_FL/{f=1} f && /^[[:space:]]+\|-> /{sub(/^[[:space:]]+\|-> /,""); print $1; exit}')
   [ -n "$phys" ] && target="$phys"
   # Keep effect_input.eq at 100% unity gain
   wpctl set-volume effect_input.eq 1.00 >/dev/null 2>&1 || true

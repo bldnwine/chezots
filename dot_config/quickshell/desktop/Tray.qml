@@ -22,7 +22,7 @@ Item {
     Layout.preferredHeight: isHorizontal ? root.barHeight : implicitHeight
 
     implicitWidth: isHorizontal ? (mainLayout.implicitWidth) : root.barHeight
-    implicitHeight: isHorizontal ? root.barHeight : (mainLayout.implicitHeight)
+    implicitHeight: isHorizontal ? root.barHeight : (mainLayoutV.implicitHeight)
 
     Row {
         id: mainLayout
@@ -267,8 +267,8 @@ Item {
             return modelData.tooltipTitle || modelData.title || modelData.id || "Tray item";
         }
 
-        implicitWidth: 20
-        implicitHeight: root.barHeight
+        implicitWidth: root.isHorizontal ? 20 : root.barHeight
+        implicitHeight: root.isHorizontal ? root.barHeight : 24
 
         Rectangle {
             anchors.centerIn: parent

@@ -72,7 +72,7 @@ Item {
     readonly property string icoSpeaker: String.fromCodePoint(0xf04c3)
 
     property int barHeight: 26
-    readonly property int barExtraThickness: barType === "floating" && isHorizontal ? 11 : 0
+    readonly property int barExtraThickness: barType === "floating" ? 11 : 0
     // Effective strip the bar occupies along its edge; 0 when hidden so
     // popups/osd/notifications hug the edge instead of a phantom gap.
     readonly property int barOffset: barHidden ? 0 : (barHeight + barExtraThickness)
@@ -81,17 +81,49 @@ Item {
 
     // ---------- Edge ----------
     // Drives bar anchors, internal Row/Column flow, and where the toggle
-    // arrow points.
+    // arrow points. Persisted to its own one-line state file so the choice
+    // survives a relogin.
+    readonly property var barEdges: ["top", "right", "bottom", "left"]
+    readonly property string barEdgeStatePath:
+        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-edge"
     property string barEdge: "top"
     readonly property bool isHorizontal: barEdge === "top" || barEdge === "bottom"
 
-    function cycleBarEdge() {
-        const edges = ["top", "right", "bottom", "left"];
-        root.barEdge = edges[(edges.indexOf(root.barEdge) + 1) % 4];
+    function setBarEdge(edge) {
+        const want = root.barEdges.indexOf(edge) !== -1 ? edge : "top";
+        root.barEdge = want;
+        barEdgeWriter.command = ["bash", "-c",
+            "mkdir -p " + JSON.stringify(root.barEdgeStatePath.replace(/\/[^/]+$/, ""))
+            + " && printf '%s' " + JSON.stringify(want)
+            + " > " + JSON.stringify(root.barEdgeStatePath)];
+        barEdgeWriter.running = false;
+        barEdgeWriter.running = true;
+    }
+
+    function cycleBarEdge(dir) {
+        const order = root.barEdges;
+        let idx = order.indexOf(root.barEdge);
+        if (idx === -1) idx = 0;
+        const step = (dir === undefined || dir >= 0) ? 1 : -1;
+        root.setBarEdge(order[(idx + step + order.length) % order.length]);
     }
 
     function edgeArrow() {
         return ({top: "↑", right: "→", bottom: "↓", left: "←"})[root.barEdge] || "?";
+    }
+
+    Process { id: barEdgeWriter; running: false }
+    Process {
+        id: barEdgeReader
+        running: true
+        command: ["cat", root.barEdgeStatePath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const v = this.text.trim();
+                if (root.barEdges.indexOf(v) !== -1) root.barEdge = v;
+            }
+        }
+        onExited: function(code) { if (code !== 0) root.barEdge = "top"; }
     }
 
     // ---------- Bar variant ----------
@@ -358,13 +390,13 @@ Item {
 
     function barZenDefaults() {
         return { variant: "zen", type: "floating", transparent: false,
-                 opacity: 1.0, height: 26, air: 5, rounding: 6 };
+                 opacity: 1.0, height: 26, air: 5, rounding: 6, edge: "top" };
     }
     function barLiveSettings() {
         return { variant: root.barVariant, type: root.barType,
                  transparent: root.barTransparent, opacity: root.barOpacity,
                  height: root.barHeight, air: root.barAir,
-                 rounding: root.barRounding };
+                 rounding: root.barRounding, edge: root.barEdge };
     }
     function barSettingsMatch(a, b) {
         return a && b
@@ -374,7 +406,8 @@ Item {
             && Math.abs(a.opacity - b.opacity) < 0.001
             && a.height === b.height
             && a.air === b.air
-            && a.rounding === b.rounding;
+            && a.rounding === b.rounding
+            && (a.edge === undefined || b.edge === undefined || a.edge === b.edge);
     }
     readonly property bool barTemplateDirty: {
         const cur = root.barLiveSettings();
@@ -406,6 +439,7 @@ Item {
         root.setBarHeight(typeof ref.height === "number" ? ref.height : 26);
         root.setBarAir(typeof ref.air === "number" ? ref.air : 5);
         root.setBarRounding(typeof ref.rounding === "number" ? ref.rounding : 6);
+        if (ref.edge && root.barEdges.indexOf(ref.edge) !== -1) root.setBarEdge(ref.edge);
         root.setBarTemplateSelected(name);
     }
     function setBarTemplateSelected(name) {
@@ -520,10 +554,30 @@ Item {
     property Item trayAnchorItem: null
 
     function anchorPopupTo(item) {
+        if (!item) return;
         const p = item.mapToItem(null, item.width / 2, item.height / 2);
         root.popupAnchorX = p.x;
         root.popupAnchorY = p.y;
     }
+
+    Timer {
+        id: reanchorTimer
+        interval: 35
+        repeat: false
+        onTriggered: {
+            if (root.barStyleVisible && root.systemAnchorItem) root.anchorPopupTo(root.systemAnchorItem);
+            else if (root.calendarVisible && root.calendarAnchorItem) root.anchorPopupTo(root.calendarAnchorItem);
+            else if (root.audioVisible && root.audioAnchorItem) root.anchorPopupTo(root.audioAnchorItem);
+            else if (root.networkVisible && root.networkAnchorItem) root.anchorPopupTo(root.networkAnchorItem);
+            else if (root.btVisible && root.btAnchorItem) root.anchorPopupTo(root.btAnchorItem);
+            else if (root.notificationCenterVisible && root.notificationAnchorItem) root.anchorPopupTo(root.notificationAnchorItem);
+            else if (root.warpVisible && root.warpAnchorItem) root.anchorPopupTo(root.warpAnchorItem);
+            else if (root.aiVisible && root.aiAnchorItem) root.anchorPopupTo(root.aiAnchorItem);
+            else if (root.displayVisible && root.displayAnchorItem) root.anchorPopupTo(root.displayAnchorItem);
+            else if (root.systemVisible && root.systemAnchorItem) root.anchorPopupTo(root.systemAnchorItem);
+        }
+    }
+    onBarEdgeChanged: reanchorTimer.restart()
 
     // ---------- State ----------
     property int activeWs: 1
@@ -904,7 +958,7 @@ Item {
         root._lastVolChangeTime = Date.now();
         root.run("target=$(pactl get-default-sink 2>/dev/null); "
             + "if [ \"$target\" = \"effect_input.eq\" ]; then "
-            + "  phys=$(pactl list sinks short 2>/dev/null | awk '$2 !~ /effect_/ {print $2; exit}'); "
+            + "  phys=$(pw-link -l 2>/dev/null | awk -F: '/^effect_output\\.eq:output_FL/{f=1} f && /^[[:space:]]+\\|-> /{sub(/^[[:space:]]+\\|-> /,\"\"); print $1; exit}'); "
             + "  [ -n \"$phys\" ] && target=\"$phys\"; "
             + "fi; "
             + "pactl set-sink-volume \"$target\" " + v + "%; "
@@ -929,8 +983,15 @@ Item {
                 isActive: s.id === name && (!port || s.port === port)
             }));
         }
-        audioSwitchProc.command = ["bash", "-c", "pactl set-default-sink \"" + name + "\""
-            + (port ? "; pactl set-sink-port \"" + name + "\" \"" + port + "\"" : "")];
+        audioSwitchProc.command = ["bash", "-c",
+            "if [ \"" + name + "\" = \"effect_input.eq\" ]; then "
+            + "  pactl set-default-sink effect_input.eq; "
+            + "else "
+            + "  pactl set-default-sink \"" + name + "\"; "
+            + (port ? "  pactl set-sink-port \"" + name + "\" \"" + port + "\"; " : "")
+            + "  eq_id=$(pactl list sink-inputs 2>/dev/null | awk '/^[[:space:]]*Sink Input #/{id=$3} /node\\.name = \"effect_output\\.eq\"/{sub(/^#/,\"\",id); print id; exit}'); "
+            + "  [ -n \"$eq_id\" ] && pactl move-sink-input \"$eq_id\" \"" + name + "\"; "
+            + "fi"];
         audioSwitchProc.running = true;
     }
 
@@ -958,7 +1019,7 @@ Item {
         else osdSurface.show("", "", String(root.audioVol), "100", "", "1200");
         root.run("target=$(pactl get-default-sink 2>/dev/null); "
             + "if [ \"$target\" = \"effect_input.eq\" ]; then "
-            + "  phys=$(pactl list sinks short 2>/dev/null | awk '$2 !~ /effect_/ {print $2; exit}'); "
+            + "  phys=$(pw-link -l 2>/dev/null | awk -F: '/^effect_output\\.eq:output_FL/{f=1} f && /^[[:space:]]+\\|-> /{sub(/^[[:space:]]+\\|-> /,\"\"); print $1; exit}'); "
             + "  [ -n \"$phys\" ] && target=\"$phys\"; "
             + "fi; "
             + "pactl set-sink-mute \"$target\" toggle; "
@@ -1121,10 +1182,15 @@ Item {
         screenRecordProbe.running = true;
         root.screenRecordVisible = true;
     }
+    function stopScreenRecord() {
+        root.run("~/.local/bin/capture-screenrecording --stop-recording");
+        root.recordingActive = false;
+        root.screenRecordVisible = false;
+    }
     Timer {
-        interval: 2000
+        interval: 1000
         repeat: true
-        running: !root.barHidden
+        running: true
         triggeredOnStart: true
         onTriggered: {
             screenRecordProbe.running = false;
@@ -2654,7 +2720,7 @@ Item {
             "d=$(pactl get-default-sink 2>/dev/null); "
             + "target=\"$d\"; "
             + "if [ \"$d\" = \"effect_input.eq\" ]; then "
-            + "  phys=$(pactl list sinks short 2>/dev/null | awk '$2 !~ /effect_/ {print $2; exit}'); "
+            + "  phys=$(pw-link -l 2>/dev/null | awk -F: '/^effect_output\\.eq:output_FL/{f=1} f && /^[[:space:]]+\\|-> /{sub(/^[[:space:]]+\\|-> /,\"\"); print $1; exit}'); "
             + "  [ -n \"$phys\" ] && target=\"$phys\"; "
             + "fi; "
             + "v=$(pamixer ${target:+--sink \"$target\"} --get-volume 2>/dev/null || echo 0); "
@@ -2869,7 +2935,7 @@ Item {
                              && raw.slice(raw.indexOf("__HPJACK__") + "__HPJACK__".length).trim() === "off";
                 const rows = [];
                 for (const s of arr) {
-                    if (!s || !s.name) continue;
+                    if (!s || !s.name || s.name.endsWith(".monitor")) continue;
                     const isDef = s.name === def;
                     const ports = Array.isArray(s.ports) ? s.ports : [];
                     if (ports.length === 0) {
@@ -2917,7 +2983,7 @@ Item {
                              && raw.slice(raw.indexOf("__HPJACK__") + "__HPJACK__".length).trim() === "off";
                 const rows = [];
                 for (const s of arr) {
-                    if (!s || !s.name || s.name.endsWith(".monitor")) continue;
+                    if (!s || !s.name || s.name.endsWith(".monitor") || s.name.startsWith("effect_")) continue;
                     const isDef = s.name === def;
                     const ports = Array.isArray(s.ports) ? s.ports : [];
                     if (ports.length === 0) {
@@ -3402,7 +3468,15 @@ Item {
     function toggleWireproton() { if (root.wireprotonVisible) root.wireprotonVisible = false; else root.openWireproton(); }
     function toggleWarp() { if (root.warpVisible) root.warpVisible = false; else root.openWarp(); }
     function toggleHyprland() { if (root.hyprlandVisible) root.hyprlandVisible = false; else root.openHyprland(); }
-    function toggleScreenRecord() { if (root.screenRecordVisible) root.screenRecordVisible = false; else root.openScreenRecord(); }
+    function toggleScreenRecord() {
+        if (root.recordingActive) {
+            root.stopScreenRecord();
+        } else if (root.screenRecordVisible) {
+            root.screenRecordVisible = false;
+        } else {
+            root.openScreenRecord();
+        }
+    }
     function toggleLocusfavs() { if (root.locusfavsVisible) root.locusfavsVisible = false; else root.openLocusfavs(); }
     function toggleAudio() { if (root.audioVisible) root.audioVisible = false; else root.openAudio(); }
     function toggleBar() { root.barHidden = !root.barHidden; }
@@ -3497,6 +3571,9 @@ Item {
         }
         function open()  { root.openMedia(); }
         function close() { root.mediaVisible = false; }
+        function status(): string {
+            return "title=" + root.musicTitle + " | artist=" + root.musicArtist + " | player=" + (root.musicPlayer ? (root.musicPlayer.identity || root.musicPlayer.desktopEntry || root.musicPlayer.dbusName) : "null");
+        }
     }
 
     IpcHandler {
@@ -3751,6 +3828,38 @@ Item {
         function cloud()       { root.setBarType("floating"); }
         function slab()        { root.setBarType("slab"); }
         function notch()       { root.setBarType("notch"); }
+        function cycleEdge()   { root.cycleBarEdge(1); }
+        function toggleEdge()  { root.cycleBarEdge(1); }
+        function edge(pos: string) { root.setBarEdge(pos); }
+        function top()         { root.setBarEdge("top"); }
+        function bottom()      { root.setBarEdge("bottom"); }
+        function left()        { root.setBarEdge("left"); }
+        function right()       { root.setBarEdge("right"); }
+        function status(): string {
+            return "bg=" + root.bg + " paper=" + root.paper + " type=" + root.barType + " edge=" + root.barEdge + " opacity=" + root.barOpacity + " trans=" + root.barTransparent + " air=" + root.barAir;
+        }
+    }
+
+    IpcHandler {
+        target: "barEdge"
+        function set(edge: string) { root.setBarEdge(edge); }
+        function cycle()           { root.cycleBarEdge(1); }
+        function toggle()          { root.cycleBarEdge(1); }
+        function top()             { root.setBarEdge("top"); }
+        function bottom()          { root.setBarEdge("bottom"); }
+        function left()            { root.setBarEdge("left"); }
+        function right()           { root.setBarEdge("right"); }
+    }
+
+    IpcHandler {
+        target: "baredge"
+        function set(edge: string) { root.setBarEdge(edge); }
+        function cycle()           { root.cycleBarEdge(1); }
+        function toggle()          { root.cycleBarEdge(1); }
+        function top()             { root.setBarEdge("top"); }
+        function bottom()          { root.setBarEdge("bottom"); }
+        function left()            { root.setBarEdge("left"); }
+        function right()           { root.setBarEdge("right"); }
     }
 
     IpcHandler {
@@ -3796,12 +3905,14 @@ Item {
 
     IpcHandler {
         target: "screenrecord"
-        function toggle() {
-            if (root.screenRecordVisible) root.screenRecordVisible = false;
-            else root.openScreenRecord();
+        function toggle() { root.toggleScreenRecord(); }
+        function open()   { root.openScreenRecord(); }
+        function close()  { root.screenRecordVisible = false; }
+        function stop()   { root.stopScreenRecord(); }
+        function sync()   {
+            screenRecordProbe.running = false;
+            screenRecordProbe.running = true;
         }
-        function open()  { root.openScreenRecord(); }
-        function close() { root.screenRecordVisible = false; }
     }
 
     IpcHandler {
@@ -4014,8 +4125,10 @@ Item {
                 required property MprisPlayer modelData
                 Connections {
                     target: modelData
-                    function onPostTrackChanged()     { root.refreshMusic(); }
                     function onPlaybackStateChanged() { root.refreshMusic(); }
+                    function onIsPlayingChanged()     { root.refreshMusic(); }
+                    function onTrackTitleChanged()    { root.refreshMusic(); }
+                    function onTrackArtistChanged()   { root.refreshMusic(); }
                 }
                 Component.onCompleted:   root.refreshMusic()
                 Component.onDestruction: root.refreshMusic()

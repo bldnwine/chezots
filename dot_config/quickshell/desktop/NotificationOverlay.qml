@@ -159,7 +159,10 @@ Item {
         visible: _opacity > 0.001
         color: "transparent"
         anchors { top: true; right: true }
-        margins { top: root.root.barOffset + 7; right: 8 }
+        margins {
+            top: root.root.barEdge === "top" ? root.root.barOffset + 7 : 7
+            right: root.root.barEdge === "right" ? root.root.barOffset + 8 : 8
+        }
         implicitWidth: card.implicitWidth
         implicitHeight: card.implicitHeight
         exclusionMode: ExclusionMode.Ignore

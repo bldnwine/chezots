@@ -10,6 +10,7 @@ Item {
     property string state: "idle" // "working" | "finished" | "action_needed" | "idle"
     property string fontFamily: "IoskeleyMono Nerd Font"
     property int glyphYOffset: -1
+    property int glyphXOffset: -2
 
     width: iconSize
     height: iconSize
@@ -20,6 +21,7 @@ Item {
     Text {
         id: robotGlyph
         anchors.centerIn: parent
+        anchors.horizontalCenterOffset: root.glyphXOffset
         anchors.verticalCenterOffset: root.glyphYOffset
         text: "󰚩"
         color: root.color
@@ -39,7 +41,7 @@ Item {
         radius: width / 2
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.rightMargin: -1
+        anchors.rightMargin: -1 + root.glyphXOffset
         anchors.bottomMargin: -1 + root.glyphYOffset
         color: root.successColor
 
@@ -61,7 +63,7 @@ Item {
         color: root.successColor
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.rightMargin: -2
+        anchors.rightMargin: -2 + root.glyphXOffset
         anchors.bottomMargin: -2 + root.glyphYOffset
         border.color: "#181616"
         border.width: 1
@@ -86,7 +88,7 @@ Item {
         color: root.badgeColor
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.rightMargin: -2
+        anchors.rightMargin: -2 + root.glyphXOffset
         anchors.bottomMargin: -2 + root.glyphYOffset
         border.color: "#181616"
         border.width: 1

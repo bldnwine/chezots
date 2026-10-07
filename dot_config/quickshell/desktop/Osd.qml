@@ -84,9 +84,9 @@ Item {
         Rectangle {
             id: card
             anchors.top: parent.top
-            anchors.topMargin: root.root.barOffset + 7
+            anchors.topMargin: root.root.barEdge === "top" ? root.root.barOffset + 7 : 7
             anchors.right: parent.right
-            anchors.rightMargin: 8
+            anchors.rightMargin: root.root.barEdge === "right" ? root.root.barOffset + 8 : 8
             implicitWidth: row.implicitWidth + 120
             implicitHeight: row.implicitHeight + 60
             color: root.root.bg

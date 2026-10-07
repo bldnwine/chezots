@@ -22,7 +22,7 @@ Item {
     implicitWidth: 360
     implicitHeight: mainCol.implicitHeight
 
-    readonly property int maxBands: 31
+    readonly property int maxBands: 32
     readonly property string scriptPath: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/pipewire-eq"
 
     function loadFromState(txt) {
@@ -160,9 +160,7 @@ Item {
         });
         list.sort((a, b) => (Number(a.freq) || 0) - (Number(b.freq) || 0));
         eqPanel.bands = list;
-        eqPanel.isApplied = false;
-        // Adding band changes graph topology -> full apply
-        eqPanel.applyEq();
+        eqPanel.applyLive();
         if (list.length > 10) {
             scrollRevealTimer.restart();
         }
@@ -173,8 +171,7 @@ Item {
         const list = Array.from(eqPanel.bands);
         list.pop();
         eqPanel.bands = list;
-        eqPanel.isApplied = false;
-        eqPanel.applyEq();
+        eqPanel.applyLive();
     }
 
     function flattenBands() {

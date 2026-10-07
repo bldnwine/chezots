@@ -12,8 +12,8 @@ CardWindow {
     layerNamespace: "omarchy-screenrecord"
     title: "SCREEN RECORD"
 
-    readonly property bool isRecording: recordingProbe.ready
-        ? recordingProbe.stdout.trim() === "active" : false
+    readonly property bool isRecording: (popup.root && popup.root.recordingActive) || (recordingProbe.ready
+        ? recordingProbe.stdout.trim() === "active" : false)
 
     subtitle: popup.isRecording ? "RECORDING" : ""
 
@@ -59,8 +59,12 @@ CardWindow {
     }
 
     function stopRecording() {
-        popup.root.run("~/.local/bin/capture-screenrecording --stop-recording");
-        popup.root.screenRecordVisible = false;
+        if (popup.root && popup.root.stopScreenRecord) {
+            popup.root.stopScreenRecord();
+        } else {
+            popup.root.run("~/.local/bin/capture-screenrecording --stop-recording");
+            popup.root.screenRecordVisible = false;
+        }
     }
 
     Column {

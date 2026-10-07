@@ -1,15 +1,18 @@
 import QtQuick
 import QtQuick.Layouts
 
-Rectangle {
+Item {
+    id: sepItem
     required property var root
 
     Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
-    Layout.preferredWidth:  root.isHorizontal ? 1  : 12
-    Layout.preferredHeight: root.isHorizontal ? 12 : 1
-    Layout.leftMargin:   root.isHorizontal ? 4 : 0
-    Layout.rightMargin:  root.isHorizontal ? 4 : 0
-    Layout.topMargin:    root.isHorizontal ? 0 : 4
-    Layout.bottomMargin: root.isHorizontal ? 0 : 4
-    color: root.sep
+    Layout.preferredWidth:  root.isHorizontal ? 9 : root.barHeight
+    Layout.preferredHeight: root.isHorizontal ? root.barHeight : 9
+
+    Rectangle {
+        anchors.centerIn: parent
+        width:  sepItem.root.isHorizontal ? 1  : 12
+        height: sepItem.root.isHorizontal ? 12 : 1
+        color: sepItem.root.sep
+    }
 }
