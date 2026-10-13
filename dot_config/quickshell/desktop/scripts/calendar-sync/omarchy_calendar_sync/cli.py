@@ -1,10 +1,8 @@
 """Entry point. Orchestrates config, gws, normalization, and the write."""
 
 import argparse
-import json
 import os
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -12,28 +10,11 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from . import config as config_module
 from . import contract, normalize
 from .gws import Gws, GwsError
+from .storage import cache_lock, write_atomic
 
 EXIT_OK = 0
 EXIT_SYNC_FAILED = 1
 EXIT_BAD_CONFIG = 2
-
-
-def write_atomic(path, doc):
-    """Write JSON so a reader never observes a partial file."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    handle, temp_name = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
-    try:
-        with os.fdopen(handle, "w") as stream:
-            json.dump(doc, stream, ensure_ascii=False, indent=2)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temp_name, path)
-    except BaseException:
-        Path(temp_name).unlink(missing_ok=True)
-        raise
 
 
 def resolve_local_timezone(env=None, localtime_path="/etc/localtime"):
@@ -130,6 +111,15 @@ def _drop_duplicates(gevents, seen):
 def run(client, cfg, now, out_path, local_tz):
     """Fetch, normalize, write. Returns a process exit code."""
     try:
+        with cache_lock(out_path):
+            return _run_locked(client, cfg, now, out_path, local_tz)
+    except (TimeoutError, OSError) as error:
+        print(f"sync failed: {error}", file=sys.stderr)
+        return EXIT_SYNC_FAILED
+
+
+def _run_locked(client, cfg, now, out_path, local_tz):
+    try:
         client.check()
         calendars = config_module.select_calendars(client.calendars(), cfg)
         time_min, time_max = config_module.window_bounds(cfg, now)
@@ -147,7 +137,7 @@ def run(client, cfg, now, out_path, local_tz):
         print(
             "if this is an auth error, run: "
             "GOOGLE_WORKSPACE_CLI_CONFIG_DIR=" + str(cfg["profile"]) + " "
-            "gws auth login --scopes https://www.googleapis.com/auth/calendar.readonly",
+            + str(cfg["gwsPath"]) + " auth login --scopes https://www.googleapis.com/auth/calendar",
             file=sys.stderr,
         )
         return EXIT_SYNC_FAILED

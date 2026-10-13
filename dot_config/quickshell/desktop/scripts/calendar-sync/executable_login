@@ -3,7 +3,15 @@
 
 set -euo pipefail
 
-export GOOGLE_WORKSPACE_CLI_CONFIG_DIR="$HOME/.config/gws-omarchy-calendar"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+calendar_settings_output=$(PYTHONPATH="$SCRIPT_DIR" python3 -c '
+from omarchy_calendar_sync.config import load
+cfg = load()
+print(cfg["profile"])
+print(cfg["gwsPath"])
+')
+mapfile -t calendar_settings <<< "$calendar_settings_output"
+export GOOGLE_WORKSPACE_CLI_CONFIG_DIR="${calendar_settings[0]}"
 
 echo "==> Requesting full Google Calendar read & write permissions via gws..."
-gws auth login --scopes "https://www.googleapis.com/auth/calendar,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/calendar.readonly"
+"${calendar_settings[1]}" auth login --scopes "https://www.googleapis.com/auth/calendar"

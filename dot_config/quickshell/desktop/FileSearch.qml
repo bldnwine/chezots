@@ -32,11 +32,14 @@ Item {
     }
 
     function clear() {
+        fdDebounce.stop();
+        fdProc.running = false;
+        textPreviewProc.running = false;
+        metaPreviewProc.running = false;
         fileSearch.items = [];
         fileSearch.previewPath = "";
         fileSearch.previewText = "";
         fileSearch.previewMeta = "";
-        fdDebounce.stop();
     }
 
     function updatePreview() {
@@ -103,6 +106,10 @@ Item {
     }
 
     onQueryChanged: { if (fileSearch.active) fdDebounce.restart(); }
+    onActiveChanged: {
+        if (fileSearch.active) fdDebounce.restart();
+        else fileSearch.clear();
+    }
     onSelectedItemChanged: { if (fileSearch.active) fileSearch.updatePreview(); }
 
     Process {
@@ -111,6 +118,7 @@ Item {
         command: ["fd"]
         stdout: StdioCollector {
             onStreamFinished: {
+                if (!fileSearch.active) return;
                 const lines = this.text.split("\n").filter(s => s.length > 0);
                 const out = [];
                 const seen = {};
@@ -165,7 +173,7 @@ Item {
         running: false
         command: ["true"]
         stdout: StdioCollector {
-            onStreamFinished: { fileSearch.previewText = this.text; }
+            onStreamFinished: { if (fileSearch.active) fileSearch.previewText = this.text; }
         }
     }
     Process {
@@ -173,7 +181,7 @@ Item {
         running: false
         command: ["true"]
         stdout: StdioCollector {
-            onStreamFinished: { fileSearch.previewMeta = this.text; }
+            onStreamFinished: { if (fileSearch.active) fileSearch.previewMeta = this.text; }
         }
     }
 }

@@ -5,6 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+TimeoutStartSec=120
+KillMode=control-group
 # A user service starts with a minimal PATH, so a gws installed by bun,
 # cargo or pipx would be invisible. sync/setup writes an absolute path
 # into calendar-sync.json; this list is the fallback for everyone else.

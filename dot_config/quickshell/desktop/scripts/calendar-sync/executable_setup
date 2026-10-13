@@ -2,7 +2,7 @@
 # Interactive onboarding for the Google Calendar sync.
 #
 # Automates: GCP project creation, Calendar API enablement, gws profile
-# layout, the scoped login, and the systemd timer.
+# layout, the scoped login, and the on-demand systemd service.
 # Cannot automate: the OAuth consent screen, declaring the calendar scope,
 # publishing to production, and creating the Desktop OAuth client. Google
 # exposes no API for any of those.
@@ -18,7 +18,7 @@ PROFILE="${PROFILE:-$HOME/.config/gws-omarchy-calendar}"
 GCLOUD_CONFIG="${GCLOUD_CONFIG:-omarchy-calendar}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SYNC_BIN="$SCRIPT_DIR/omarchy-calendar-sync"
-SCOPE="https://www.googleapis.com/auth/calendar,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/calendar.readonly"
+SCOPE="https://www.googleapis.com/auth/calendar"
 
 step() { printf '\n==> %s\n' "$1"; }
 
@@ -180,21 +180,13 @@ EOF
 rm -f "$PROFILE/token_cache.json" "$PROFILE/cache/"* 2>/dev/null || true
 GOOGLE_WORKSPACE_CLI_CONFIG_DIR="$PROFILE" gws auth login --scopes "$SCOPE"
 
-step "Checking the calendar scope was actually granted"
-if ! GOOGLE_WORKSPACE_CLI_CONFIG_DIR="$PROFILE" gws auth status 2>/dev/null | grep -q "https://www.googleapis.com/auth/calendar"; then
-  cat <<EOF
-
-The calendar scope was NOT granted. gws is holding a token that can only read
-your email address.
-
-This almost always means the calendar checkbox on the consent screen was left
-unticked. Run this script again and tick it.
-
-  granted scopes: $(GOOGLE_WORKSPACE_CLI_CONFIG_DIR="$PROFILE" gws auth status 2>/dev/null | grep -A8 '"scopes"' | grep googleapis || echo "identity only")
-EOF
-  exit 1
-fi
-echo "  calendar read & write scope granted"
+step "Checking gws authentication"
+# Current gws auth status reports credential state, but no granted scopes.
+# Do not claim the write scope was granted on the strength of a read-only API
+# call below; Google will report insufficient scopes on the first write if
+# the calendar checkbox was skipped during consent.
+GOOGLE_WORKSPACE_CLI_CONFIG_DIR="$PROFILE" gws auth status >/dev/null
+echo "  login completed; full Calendar scope was requested"
 
 step "Verifying calendar access"
 # Surface a real error rather than reading `items` out of an error body and
@@ -216,7 +208,7 @@ if count == 0:
 '
 
 step "Recording where gws and your credentials live"
-# The timer runs without your shell PATH, so the bare name is not enough.
+# The user service runs without your shell PATH, so the bare name is not enough.
 gws_path=$(command -v gws)
 config="$HOME/.config/omarchy/calendar-sync.json"
 mkdir -p "$(dirname "$config")"
@@ -258,5 +250,5 @@ Done. Events land in ~/.local/state/omarchy/calendar-events.json.
 The calendar syncs automatically when the popup is open or on manual sync.
 
   Logs:    journalctl --user -u omarchy-calendar-sync -f
-  Choose which calendars to show: click the clock, then the gear icon.
+  Choose calendars: edit ~/.config/omarchy/calendar-sync.json (calendars.include/exclude).
 EOF

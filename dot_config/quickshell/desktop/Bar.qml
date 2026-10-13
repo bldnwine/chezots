@@ -192,7 +192,7 @@ PanelWindow {
                     text: bar.root.dow
                     color: clockMouse.containsMouse ? bar.root.seal : bar.root.inkDeep
                     font.family: bar.root.mono
-                    font.pixelSize: 8
+                    font.pixelSize: 11
                     font.weight: Font.Medium
                     Behavior on color { ColorAnimation { duration: 90 } }
                 }
@@ -203,7 +203,7 @@ PanelWindow {
                     text: bar.root.dd
                     color: clockMouse.containsMouse ? bar.root.seal : bar.root.inkDeep
                     font.family: bar.root.mono
-                    font.pixelSize: 9
+                    font.pixelSize: 12
                     font.letterSpacing: 1
                     font.weight: Font.Normal
                     Behavior on color { ColorAnimation { duration: 90 } }
@@ -224,7 +224,7 @@ PanelWindow {
                     text: bar.root.hh
                     color: clockMouse.containsMouse ? bar.root.seal : bar.root.ink
                     font.family: bar.root.mono
-                    font.pixelSize: 11
+                    font.pixelSize: 13
                     font.weight: Font.Medium
                     Behavior on color { ColorAnimation { duration: 90 } }
                 }
@@ -235,7 +235,7 @@ PanelWindow {
                     text: bar.root.mm
                     color: clockMouse.containsMouse ? bar.root.seal : bar.root.ink
                     font.family: bar.root.mono
-                    font.pixelSize: 11
+                    font.pixelSize: 13
                     font.weight: Font.Light
                     Behavior on color { ColorAnimation { duration: 90 } }
                 }
@@ -325,30 +325,28 @@ PanelWindow {
 
                 visible: present || openW > 0.5
                 Layout.preferredWidth: bar.root.isHorizontal ? openW : (visible ? bar.root.barHeight : 0)
-                Layout.preferredHeight: bar.root.isHorizontal ? 16 : (visible ? 24 : 0)
+                Layout.preferredHeight: bar.root.isHorizontal ? 16 : (visible ? Math.min(140, musicTitleV.implicitWidth) + 12 : 0)
+                Layout.minimumHeight: bar.root.isHorizontal ? 16 : (visible ? 24 : 0)
                 Layout.alignment: bar.root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
 
                 readonly property string tipText: bar.root.musicArtist.length > 0
                                                   ? bar.root.musicTitle + " - " + bar.root.musicArtist
                                                   : bar.root.musicTitle
 
-                Rectangle {
-                    id: musicBtnV
+                Text {
+                    id: musicTitleV
                     visible: !bar.root.isHorizontal
-                    anchors.fill: parent
-                    anchors.margins: 3
-                    radius: bar.root.cornerRadius
-                    color: musicMouse.containsMouse ? Qt.rgba(bar.root.ink.r, bar.root.ink.g, bar.root.ink.b, 0.08) : "transparent"
-                    Behavior on color { ColorAnimation { duration: 90 } }
-
-                    Text {
-                        anchors.centerIn: parent
-                        anchors.verticalCenterOffset: -1
-                        text: bar.root.icoMusic
-                        color: bar.root.accent
-                        font.family: bar.root.mono
-                        font.pixelSize: 13
-                    }
+                    anchors.centerIn: parent
+                    width: Math.max(0, Math.min(140, musicItem.height - 12))
+                    rotation: bar.root.barEdge === "left" ? -90 : 90
+                    text: bar.root.musicTitle
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignHCenter
+                    color: bar.root.accent
+                    font.family: bar.root.mono
+                    font.pixelSize: 14
+                    font.weight: Font.Medium
                 }
 
                 Rectangle {

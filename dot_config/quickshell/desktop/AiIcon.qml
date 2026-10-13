@@ -46,7 +46,7 @@ Item {
         color: root.successColor
 
         SequentialAnimation on opacity {
-            running: root.state === "working"
+            running: root.visible && root.state === "working"
             loops: Animation.Infinite
             NumberAnimation { from: 0.3; to: 1.0; duration: 600; easing.type: Easing.InOutQuad }
             NumberAnimation { from: 1.0; to: 0.3; duration: 600; easing.type: Easing.InOutQuad }

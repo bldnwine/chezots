@@ -165,7 +165,8 @@ function parseStatus(raw, exitCode, stderr) {
   }
 
   var data = parseJson(raw)
-  if (!data || typeof data !== "object") {
+  if (!data || typeof data !== "object" || Array.isArray(data)
+      || ((!data.code && !data.error) && (exitCode !== 0 || typeof data.status !== "string"))) {
     return {
       ok: false,
       available: false,
@@ -180,11 +181,11 @@ function parseStatus(raw, exitCode, stderr) {
     }
   }
 
-  if (data.code || (data.error && !data.status)) {
+  if (data.code || data.error) {
     var code = trimmed(data.code)
     var missing = /registration/i.test(code) || /registration/i.test(trimmed(data.error))
     return {
-      ok: true,
+      ok: missing,
       available: false,
       daemonDown: false,
       needsRegistration: missing,
@@ -192,7 +193,8 @@ function parseStatus(raw, exitCode, stderr) {
       connected: false,
       status: code || "Error",
       statusText: missing ? "Device is not registered" : elide(trimmed(data.error) || humanize(code)),
-      reasonText: ""
+      reasonText: "",
+      error: errorMessage(raw)
     }
   }
 
@@ -208,7 +210,7 @@ function parseStatus(raw, exitCode, stderr) {
     needsRegistration: registrationMissing,
     needsTos: false,
     connected: /^connected$/i.test(status),
-    connecting: /^connecting$/i.test(status),
+    connecting: /^connecting$/i.test(status) && !isConnectivityCheck,
     status: status,
     statusText: registrationMissing ? "Device is not registered"
       : (isConnectivityCheck && /^connecting$/i.test(status) ? "Verifying connectivity" : humanize(status)),
@@ -219,8 +221,8 @@ function parseStatus(raw, exitCode, stderr) {
 // `warp-cli --json settings` -> {"settings": {...}}
 function parseSettings(raw) {
   var data = parseJson(raw)
-  var settings = data && typeof data === "object" ? (data.settings || data) : null
-  if (!settings || typeof settings !== "object") {
+  var settings = data && typeof data === "object" && !data.code && !data.error ? (data.settings || data) : null
+  if (!settings || typeof settings !== "object" || Array.isArray(settings) || !normalizeMode(settings.operation_mode || settings.mode)) {
     return {
       ok: false,
       mode: "",
@@ -266,8 +268,10 @@ function firstString(source, keys) {
 // `warp-cli --json registration show`.
 function parseRegistration(raw) {
   var data = parseJson(raw)
+  var missing = data && /registrationmissing/i.test(trimmed(data.code));
   if (!data || typeof data !== "object" || data.code || data.error) {
     return {
+      ok: Boolean(missing),
       registered: false,
       accountType: "",
       accountLabel: "",
@@ -281,12 +285,17 @@ function parseRegistration(raw) {
 
   var registration = data.registration || data
   var account = registration.account || data.account || {}
+  if (Array.isArray(registration) || (!firstString(registration, ["device_id", "deviceId", "id", "public_key", "publicKey"])
+      && !firstString(account, ["account_type", "accountType", "type", "plan"]))) {
+    return { ok: false, error: "Invalid WARP registration response" };
+  }
   var accountType = firstString(account, ["account_type", "accountType", "type", "plan"]) ||
     firstString(registration, ["account_type", "accountType", "type"])
   var organization = firstString(account, ["organization", "org", "team", "name"]) ||
     firstString(registration, ["organization", "org", "team"])
 
   return {
+    ok: true,
     registered: true,
     accountType: accountType,
     accountLabel: accountLabel(accountType, organization),

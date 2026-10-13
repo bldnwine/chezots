@@ -1,8 +1,76 @@
 #!/bin/bash
 
-# No icon prompt anymore. Just Name and URL.
+ICON_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
+
+safe_icon_name() {
+  printf '%s\n' "$1" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed 's/[^[:alnum:]]\+/-/g; s/^-//; s/-$//'
+}
+
+download_icon() {
+  local url="$1" dest="$2" tmp mime fmt
+  tmp="${dest}.tmp"
+  if curl -fsSL --max-time 10 -o "$tmp" "$url" 2>/dev/null &&
+     [[ -s "$tmp" && $(file -b --mime-type "$tmp") == image/* ]]; then
+    if command -v magick >/dev/null 2>&1; then
+      mime=$(file -b --mime-type "$tmp")
+      case "$mime" in
+        image/x-icon|image/vnd.microsoft.icon|image/ico) fmt="ico:" ;;
+        image/webp) fmt="webp:" ;;
+        image/svg+xml) fmt="svg:" ;;
+        image/jpeg) fmt="jpg:" ;;
+        image/png) fmt="png:" ;;
+        image/gif) fmt="gif:" ;;
+        *) fmt="" ;;
+      esac
+      magick "${fmt}${tmp}" -background none -flatten -resize 256x256\> "$dest" 2>/dev/null || mv "$tmp" "$dest"
+      rm -f "$tmp"
+    else
+      mv "$tmp" "$dest"
+    fi
+    return 0
+  fi
+  rm -f "$tmp" "$dest"
+  return 1
+}
+
+fetch_site_icon() {
+  local site_url="$1" dest="$2"
+  local origin host page icon_url
+
+  if [[ ! $site_url =~ ^[a-zA-Z][a-zA-Z0-9+.-]*: ]]; then
+    site_url="https://$site_url"
+  fi
+
+  origin=$(sed -E 's|^(https?://[^/]+).*|\1|' <<<"$site_url")
+  host=$(sed -E 's|^https?://([^/:]+).*|\1|' <<<"$site_url")
+  page=$(curl -fsSL --max-time 5 "$site_url" 2>/dev/null | head -c 100000 | tr '\n' ' ')
+
+  # 1. Try apple-touch-icon
+  icon_url=$(grep -oiE "<link[^>]*rel=[\"'][^\"']*apple-touch-icon[^\"']*[\"'][^>]*>" <<<"$page" |
+    grep -oiE "href=[\"'][^\"']+" | head -1 | sed -E "s/^href=[\"']//")
+
+  # 2. Try standard rel="icon" or "shortcut icon"
+  if [[ -z "$icon_url" ]]; then
+    icon_url=$(grep -oiE "<link[^>]*rel=[\"'][^\"']*(icon|shortcut icon)[^\"']*[\"'][^>]*>" <<<"$page" |
+      grep -oiE "href=[\"'][^\"']+" | head -1 | sed -E "s/^href=[\"']//")
+  fi
+
+  case $icon_url in
+  http://* | https://*) ;;
+  //*) icon_url="https:$icon_url" ;;
+  /*) icon_url="$origin$icon_url" ;;
+  ?*) icon_url="$origin/$icon_url" ;;
+  esac
+
+  { [[ -n $icon_url ]] && download_icon "$icon_url" "$dest"; } ||
+    download_icon "$origin/apple-touch-icon.png" "$dest" ||
+    download_icon "https://www.google.com/s2/favicons?domain=${host}&sz=256" "$dest"
+}
+
 if [ "$#" -lt 2 ]; then
-  echo -e "\e[32mCreating new web app (using system icon).\n\e[0m"
+  echo -e "\e[32mCreating new web app...\e[0m\n"
   APP_NAME=$(gum input --prompt "Name> " --placeholder "WhatsApp")
   APP_URL=$(gum input --prompt "URL> " --placeholder "https://web.whatsapp.com")
 else
@@ -16,10 +84,35 @@ if [[ -z "$APP_NAME" || -z "$APP_URL" ]]; then
   exit 1
 fi
 
+# Normalize URL if missing scheme
+if [[ ! $APP_URL =~ ^[a-zA-Z][a-zA-Z0-9+.-]*: ]]; then
+  APP_URL="https://$APP_URL"
+fi
+
+# Favicon retrieval
+mkdir -p "$ICON_DIR"
+ICON_NAME=$(safe_icon_name "$APP_NAME")
+
+update_user_icon_cache() {
+  local hicolor_dir="$HOME/.local/share/icons/hicolor"
+  if [[ ! -f "$hicolor_dir/index.theme" && -f "/usr/share/icons/hicolor/index.theme" ]]; then
+    cp "/usr/share/icons/hicolor/index.theme" "$hicolor_dir/index.theme"
+  fi
+  gtk-update-icon-cache -q "$hicolor_dir" 2>/dev/null || gtk-update-icon-cache -t -q "$hicolor_dir" 2>/dev/null || true
+}
+
+echo "Fetching icon for $APP_URL..."
+if fetch_site_icon "$APP_URL" "$ICON_DIR/$ICON_NAME.png"; then
+  update_user_icon_cache
+  APP_ICON="$ICON_NAME"
+else
+  echo "Could not fetch favicon automatically. Using system browser icon."
+  APP_ICON="web-browser"
+fi
+
 # Create .desktop file
 DESKTOP_FILE="$HOME/.local/share/applications/$APP_NAME.desktop"
 
-# We use 'Icon=web-browser' which pulls your system theme's browser icon automatically.
 cat >"$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Version=1.0
@@ -28,11 +121,12 @@ Comment=Web App for $APP_NAME
 Exec=$HOME/.local/bin/omarchy-launch-webapp $APP_URL
 Terminal=false
 Type=Application
-Icon=web-browser
+Icon=$APP_ICON
 Categories=Network;WebBrowser;
 StartupNotify=true
 EOF
 
 chmod +x "$DESKTOP_FILE"
+update-desktop-database "$HOME/.local/share/applications" &>/dev/null || true
 
 echo -e "\n\e[32mSuccess! $APP_NAME created.\e[0m"

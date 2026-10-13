@@ -16,12 +16,17 @@ CardWindow {
 
     subtitle: {
         if (!warp || !warp.probed) return "CHECKING…";
+        if (!warp.installed) return "NOT INSTALLED";
+        if (warp.daemonTransition) return warp.displayStatusText.toUpperCase();
+        if (!warp.statusKnown) return "CHECKING…";
         if (warp.daemonDown) return "DAEMON INACTIVE";
+        if (warp._desired !== -1) return warp.displayStatusText.toUpperCase();
         if (warp.active) {
             var modeStr = warp.mode ? warp.modeLabel(warp.mode) : "WARP";
             return "CONNECTED · " + modeStr.toUpperCase() + (warp.accountLabel !== "" ? " · " + warp.accountLabel.toUpperCase() : "");
         }
-        if (warp.connecting) return "CONNECTING…";
+        if (warp.status === "Connecting") return warp.displayStatusText.toUpperCase();
+        if (warp.status !== "Disconnected") return warp.displayStatusText.toUpperCase();
         return "DISCONNECTED" + (warp.accountLabel !== "" ? " · " + warp.accountLabel.toUpperCase() : "");
     }
 
@@ -40,9 +45,7 @@ CardWindow {
     readonly property var splitRows: splitExpanded && warp ? warp.splitTunnelEntries : []
 
     function copyText(val, msg) {
-        if (!val) return;
-        warppopup.root.run("printf %s " + JSON.stringify(String(val)) + " | wl-copy");
-        if (warp) warp.flash(msg || "Copied to clipboard");
+        if (warp) warp.copyText(val, msg);
     }
 
     function toggleSplit() {
@@ -185,10 +188,11 @@ CardWindow {
                 RowLayout {
                     width: parent.width
                     Text {
-                        text: warp && warp.daemonDown ? "󰑓  WARP daemon is inactive"
+                        text: warp && warp.daemonTransition ? ("󰑓  " + warp.displayStatusText)
+                              : warp && warp.lastError !== "" ? ("󰅚  " + warp.lastError)
+                              : warp && warp.daemonDown ? "󰑓  WARP daemon is inactive"
                               : warp && warp.needsTos ? "󰗠  Terms of Service acceptance needed"
                               : warp && warp.needsRegistration ? "󰌆  Device registration needed"
-                              : warp && warp.lastError !== "" ? ("󰅚  " + warp.lastError)
                               : ("󰑓  " + warp.actionStatus)
                         color: warp && warp.lastError !== "" ? root.warn : root.ink
                         font.family: root.mono
@@ -200,7 +204,7 @@ CardWindow {
 
                     QuickButton {
                         root: warppopup.root
-                        visible: warp && (warp.daemonDown || warp.needsRegistration || warp.needsTos)
+                        visible: warp && !warp.daemonTransition && (warp.daemonDown || warp.needsRegistration || warp.needsTos)
                         label: warp && warp.daemonDown ? "START DAEMON"
                                : warp && warp.needsRegistration ? "REGISTER"
                                : "ACCEPT"
@@ -255,10 +259,11 @@ CardWindow {
                     }
 
                     Text {
-                        text: warp && warp.active ? ("Tunneling traffic via " + (warp.modeLabel(warp.mode) || "WARP"))
-                              : warp && warp.connecting ? "Establishing connection…"
+                        text: warp && warp.daemonTransition ? warp.displayStatusText
+                              : warp && warp._desired !== -1 ? warp.displayStatusText
+                              : warp && warp.active ? ("Tunneling traffic via " + (warp.modeLabel(warp.mode) || "WARP"))
                               : warp && warp.daemonDown ? "Daemon is not running"
-                              : warp.statusText
+                              : warp ? warp.displayStatusText : "Checking…"
                         color: warp && warp.active ? root.seal : root.inkDeep
                         font.family: root.mono
                         font.pixelSize: 9
@@ -269,9 +274,10 @@ CardWindow {
 
                 QuickButton {
                     root: warppopup.root
-                    label: warp && warp.daemonDown ? "START" : (warp && warp.active ? "DISCONNECT" : "CONNECT")
+                    label: warp && warp.daemonTransition ? (warp._daemonAction === "start" ? "STARTING…" : "STOPPING…")
+                           : warp && warp.daemonDown ? "START" : (warp && warp.active ? "DISCONNECT" : "CONNECT")
                     selected: warppopup.focusSection === "header" && warp && warp.canToggle
-                    opacity: !warp || warp.canToggle || warp.daemonDown ? 1.0 : 0.45
+                    opacity: !warp || warp.canToggle || (warp.daemonDown && !warp.daemonTransition) ? 1.0 : 0.45
                     onClicked: {
                         if (warp) {
                             if (warp.daemonDown) warp.startDaemon();
@@ -297,7 +303,7 @@ CardWindow {
 
         // Live Telemetry Grid
         Column {
-            visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.needsTos
+            visible: warp && warp.detailsReady
             width: col.width
             spacing: 4
 
@@ -354,10 +360,10 @@ CardWindow {
         }
 
         // Operating Mode Selector
-        Rectangle { width: col.width; height: 1; color: root.sep; visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.needsTos }
+        Rectangle { width: col.width; height: 1; color: root.sep; visible: warp && warp.detailsReady }
 
         Column {
-            visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.needsTos
+            visible: warp && warp.detailsReady
             width: col.width
             spacing: 6
 
@@ -461,11 +467,11 @@ CardWindow {
             width: col.width
             height: 1
             color: root.sep
-            visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.needsTos && warp.splitTunnelEntries.length > 0
+            visible: warp && warp.detailsReady && warp.splitTunnelEntries.length > 0
         }
 
         Column {
-            visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.needsTos && warp.splitTunnelEntries.length > 0
+            visible: warp && warp.detailsReady && warp.splitTunnelEntries.length > 0
             width: col.width
             spacing: 4
 
@@ -585,7 +591,7 @@ CardWindow {
 
         // Daemon Stop Action (when daemon is running and disconnected)
         RowLayout {
-            visible: warp && warp.probed && warp.installed && !warp.daemonDown && !warp.active
+            visible: warp && warp.detailsReady && !warp.active
             width: col.width
 
             Item { Layout.fillWidth: true }

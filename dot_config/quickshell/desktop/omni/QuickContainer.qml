@@ -289,7 +289,7 @@ Item {
             Loader {
                 id: bodyLoader
                 width: bodyScroll.width
-                active: detailPanel.visible
+                active: qc.omni.visible_ && detailPanel.visible
                 // Exposed so detailPanel.height can clamp to
                 // panel-budget while still picking the shorter of
                 // "content" / "available".
@@ -313,10 +313,13 @@ Item {
                     return null;
                 }
                 onLoaded: {
-                    if (item && item.close)
-                        item.close.connect(function() { qc.omni.close(); });
                     bodyScroll.contentY = 0;
                 }
+            }
+            Connections {
+                target: bodyLoader.item
+                ignoreUnknownSignals: true
+                function onClose() { qc.omni.close(); }
             }
 
             // Slim scroll indicator on the right edge - only visible

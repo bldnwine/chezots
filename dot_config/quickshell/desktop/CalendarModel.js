@@ -51,12 +51,6 @@ function normalizedWeekStart(value, fallback) {
   return fallbackStart === null ? 1 : fallbackStart;
 }
 
-function weekdayOrder(weekStart) {
-  var start = normalizedWeekStart(weekStart, 1);
-  var out = [];
-  for (var i = 0; i < 7; i++) out.push((start + i) % 7);
-  return out;
-}
 
 // ISO-8601 week number: the week owning the Thursday of that date's Monday-based week.
 function isoWeek(year, month, day) {
@@ -107,10 +101,6 @@ function monthGrid(year, month, weekStart, todayKey, eventIndex) {
   return weeks;
 }
 
-function stepMonth(year, month, delta) {
-  var target = new Date(year, Number(month) + Number(delta), 1);
-  return { year: target.getFullYear(), month: target.getMonth() };
-}
 
 function indexEventsByDate(events) {
   var index = {};
@@ -147,40 +137,7 @@ function eventColors(index, dateKey, maxDots) {
   return out;
 }
 
-function calendarsInDocument(doc) {
-  var events = (doc && doc.events) || [];
-  var seen = {};
-  var out = [];
-  for (var i = 0; i < events.length; i++) {
-    var event = events[i];
-    var id = event && event.calendarId;
-    if (!id || seen[id]) continue;
-    seen[id] = true;
-    out.push({
-      id: id,
-      name: event.calendarName || id,
-      color: event.color || "#9e9e9e"
-    });
-  }
-  return out.sort(function(a, b) {
-    return a.name.localeCompare(b.name);
-  });
-}
 
-function filterEvents(events, hiddenCalendars, showWorkingLocation, showDeclined) {
-  if (!events || !events.length) return [];
-  var hidden = hiddenCalendars || {};
-  var out = [];
-  for (var i = 0; i < events.length; i++) {
-    var event = events[i];
-    if (!event) continue;
-    if (event.calendarId && hidden[event.calendarId]) continue;
-    if (!showWorkingLocation && event.eventType === "workingLocation") continue;
-    if (!showDeclined && event.responseStatus === "declined") continue;
-    out.push(event);
-  }
-  return out;
-}
 
 function nextEvent(events, nowMs) {
   if (!events || !events.length) return null;
@@ -255,16 +212,6 @@ function isMeetingJoinable(event, nowMs) {
   return now >= (startMs - leadMs) && now <= (endMs + leadMs);
 }
 
-function syncState(doc, nowMs, syncIntervalSeconds) {
-  if (!doc) return "empty";
-  if (!doc.syncedAt) return "stale";
-  var synced = Date.parse(doc.syncedAt);
-  if (isNaN(synced)) return "stale";
-  var now = typeof nowMs === "number" ? nowMs : Date.now();
-  var intervalMs = (syncIntervalSeconds || 300) * 1000;
-  if (now - synced > intervalMs * 4) return "stale";
-  return "fresh";
-}
 
 if (typeof module !== "undefined") {
   module.exports = {
@@ -272,18 +219,14 @@ if (typeof module !== "undefined") {
     keyForDate: keyForDate,
     dateFromKey: dateFromKey,
     monthGrid: monthGrid,
-    stepMonth: stepMonth,
     indexEventsByDate: indexEventsByDate,
     eventsForDateKey: eventsForDateKey,
     eventColors: eventColors,
-    calendarsInDocument: calendarsInDocument,
-    filterEvents: filterEvents,
     nextEvent: nextEvent,
     millisUntil: millisUntil,
     formatCountdown: formatCountdown,
     formatTimeRange: formatTimeRange,
     safeUrl: safeUrl,
-    isMeetingJoinable: isMeetingJoinable,
-    syncState: syncState
+    isMeetingJoinable: isMeetingJoinable
   };
 }

@@ -24,6 +24,7 @@ Item {
     readonly property bool running: probeProc.running
 
     function clear() {
+        probeProc.running = false;
         themes.items = [];
         themes.loaded = false;
     }
@@ -170,14 +171,14 @@ Item {
 
     // Refresh on entering the mode so themes and blueprints are loaded
     // and the active marker stays honest after the user swaps themes.
-    onActiveChanged: { if (themes.active) themes.refresh(); }
+    onActiveChanged: { if (themes.active) themes.refresh(); else themes.clear(); }
 
     Process {
         id: probeProc
         running: false
         command: ["true"]
         stdout: StdioCollector {
-            onStreamFinished: { themes.ingest(this.text || ""); }
+            onStreamFinished: { if (themes.active) themes.ingest(this.text || ""); }
         }
     }
 }

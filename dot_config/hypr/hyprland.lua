@@ -108,9 +108,10 @@ end)
 hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "wayland")
 -- hl.env("OZONE_PLATFORM", "wayland")
+hl.env("HYPRCURSOR_THEME", "hypr_Bibata-Modern-Classic")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("LIBVA_DRIVER_NAME", "iHD")
-hl.env("MOZ_DRM_DEVICE", "/dev/dri/by-path/pci-0000:00:02.0-render")
+-- hl.env("MOZ_DRM_DEVICE", "/dev/dri/by-path/pci-0000:00:02.0-render")
 
 -----------------------
 ---- LOOK AND FEEL ----
@@ -159,8 +160,8 @@ hl.config({
 	decoration = {
 		rounding = look.rounding,
 		rounding_power = 12,
-		active_opacity = 0.95,
-		inactive_opacity = 0.85,
+		active_opacity = 0.85,
+		inactive_opacity = 0.70,
 		fullscreen_opacity = 1.0,
 
 		shadow = {
@@ -171,11 +172,15 @@ hl.config({
 		},
 
 		blur = {
-			enabled = false,
-			size = 3,
-			passes = 1,
-			vibrancy = 0.1696,
+			enabled = true,
+			size = 5,
+			passes = 2,	
+			new_optimizations = true,
+			-- vibrancy = 0.1696,
 		},
+	},
+	animations = {
+		enabled = false,
 	},
 
 	scrolling = {
@@ -385,6 +390,7 @@ hl.bind("SUPER + SHIFT + left", hl.dsp.window.move({ direction = "left" }))
 hl.bind("SUPER + SHIFT + right", hl.dsp.window.move({ direction = "right" }))
 hl.bind("SUPER + SHIFT + up", hl.dsp.window.move({ direction = "up" }))
 hl.bind("SUPER + SHIFT + down", hl.dsp.window.move({ direction = "down" }))
+
 
 for i = 1, 10 do
 	local key = i == 10 and "0" or tostring(i)

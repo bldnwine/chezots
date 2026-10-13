@@ -25,8 +25,10 @@ Item {
 
     // Paused while the bar is hidden to stop background CLI scans. Bound
     // from Navbar as `!barHidden || aiVisible`. Direct refresh() calls
-    // (popup open, manual) still run; the in-flight active poll is kept.
+    // (popup open, manual) still run; an in-flight scan may finish.
     property bool pollingEnabled: true
+    property double _lastQuotaRefreshMs: 0
+    onAgentRunningChanged: _lastQuotaRefreshMs = 0
 
     readonly property string scannerScript:
         Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/antigravity_usage_scanner.py"
@@ -61,6 +63,11 @@ Item {
         if (scanProcess.running) return;
         root.refreshing = true;
         scanProcess.command = ["python3", root.scannerScript];
+        if (force || Date.now() - root._lastQuotaRefreshMs >= 60000) {
+            root._lastQuotaRefreshMs = Date.now();
+        } else {
+            scanProcess.command = ["python3", root.scannerScript, "--skip-quota"];
+        }
         scanProcess.running = true;
     }
 
@@ -83,7 +90,7 @@ Item {
                 root.activeWorkspace = data.activeWorkspace || "";
                 root.activeWorkspaceName = data.activeWorkspaceName || "";
                 root.activeTitle = data.activeTitle || "";
-                root.quotaGroups = data.quotaGroups || [];
+                if (data.quotaGroups !== undefined) root.quotaGroups = data.quotaGroups;
             } else {
                 root.activeStatusText = "Inactive";
                 root.conversationId = "";
@@ -91,6 +98,7 @@ Item {
                 root.activeWorkspaceName = "";
                 root.activeTitle = "";
                 root.activeSessions = [];
+                root.quotaGroups = [];
             }
         } catch (e) {
             console.warn("AiService: parse error", e);
@@ -113,7 +121,8 @@ Item {
         id: activePollTimer
         interval: 1500
         repeat: true
-        running: root.agentRunning
+        running: root.agentRunning && root.pollingEnabled
+        triggeredOnStart: true
         onTriggered: root.refresh(false)
     }
 

@@ -43,12 +43,21 @@ class struct_statx(ctypes.Structure):
         ("stx_btime", struct_statx_timestamp),
         ("stx_ctime", struct_statx_timestamp),
         ("stx_mtime", struct_statx_timestamp),
+        # Linux copies the complete 256-byte ABI, even fields we don't use.
+        # Omitting this tail causes a write beyond the Python allocation.
+        ("__reserved_tail", ctypes.c_uint64 * 16),
     ]
 
 AT_FDCWD = -100
 STATX_BASIC_STATS = 0x000007ff
 STATX_BTIME = 0x00000800
 FLAGS = STATX_BASIC_STATS | STATX_BTIME
+
+if libc is not None and hasattr(libc, "statx"):
+    assert ctypes.sizeof(struct_statx) == 256
+    libc.statx.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int,
+                          ctypes.c_uint, ctypes.POINTER(struct_statx)]
+    libc.statx.restype = ctypes.c_int
 
 def scan():
     files = []
@@ -73,7 +82,7 @@ def scan():
                         try:
                             bpath = real.encode("utf-8")
                             if libc.statx(AT_FDCWD, bpath, 0, FLAGS, ctypes.byref(sx)) == 0:
-                                btime = sx.stx_btime.tv_sec if sx.stx_btime.tv_sec > 0 else sx.stx_ctime.tv_sec
+                                btime = sx.stx_btime.tv_sec if sx.stx_mask & STATX_BTIME else sx.stx_ctime.tv_sec
                                 files.append({
                                     "name": fname,
                                     "path": real,

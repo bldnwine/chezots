@@ -41,6 +41,15 @@ test("parseStatus handles daemon down gracefully", () => {
   assert.strictEqual(parsed.statusText, "WARP daemon is not running")
 })
 
+test("connectivity checks do not claim a tunnel connection attempt", () => {
+  const checking = Model.parseStatus('{"status":"Connecting","reason":{"ConnectivityCheck":null}}', 0, "")
+  assert.strictEqual(checking.connecting, false)
+  assert.strictEqual(checking.statusText, "Verifying connectivity")
+  const connecting = Model.parseStatus('{"status":"Connecting"}', 0, "")
+  assert.strictEqual(connecting.connecting, true)
+  assert.strictEqual(connecting.statusText, "Connecting")
+})
+
 test("mode helpers cover tunnel_only and Quad9 annotations", () => {
   const rows = Model.modeRows("tunnel_only")
   assert.strictEqual(rows.length, 7)
@@ -57,6 +66,26 @@ test("formatBytes and formatLatency stay compact", () => {
   assert.strictEqual(Model.formatBytes(10485760), "10 MB")
   assert.strictEqual(Model.formatLatency(3.42), "3.4 ms")
   assert.strictEqual(Model.formatLatency(42.1), "42 ms")
+})
+
+
+test("nonzero status exits and error objects never indicate connected", () => {
+  assert.strictEqual(Model.parseStatus('{"status":"Connected"}', 1, "failure").connected, false)
+  assert.strictEqual(Model.parseStatus('{"code":"Error","error":"failure"}', 0, "").ok, false)
+  assert.strictEqual(Model.parseStatus('{}', 0, "").ok, false)
+})
+test("registration and settings reject empty and error objects", () => {
+  for (const raw of ['{}', '[]', '{"code":"Error","error":"failure"}']) {
+    assert.strictEqual(Model.parseSettings(raw).ok, false)
+    assert.strictEqual(Model.parseRegistration(raw).ok, false)
+  }
+  const registration = Model.parseRegistration('{"registration":{"device_id":"device","account":{"account_type":"Free"}}}')
+  assert.strictEqual(registration.ok, true)
+  assert.strictEqual(registration.registered, true)
+  assert.strictEqual(registration.deviceId, "device")
+  const missing = Model.parseRegistration('{"code":"RegistrationMissing","error":"not registered"}')
+  assert.strictEqual(missing.ok, true)
+  assert.strictEqual(missing.registered, false)
 })
 
 console.log("\nall desktop WarpModel tests passed\n")

@@ -237,7 +237,7 @@ Or any of: `City, Country` | `LHR` (IATA) | `94103` (zip) | `60.42,11.24` (lat,l
 
 Apps are scanned once at startup via a single Python `configparser` pass (NoDisplay/Hidden filtered, `%U`/`%f` field codes stripped, deduped by name) across `~/.local/share/applications`, `/usr/share/applications`, Flatpak, and Snap. Trigger a rescan with `qs -c desktop ipc call palette refresh`.
 
-App icons resolve via `Quickshell.iconPath()` for theme names and `file://` for absolute paths, then render through `MultiEffect colorization` so they paint as flat-tinted silhouettes in the live palette (ink at rest, seal on the selected row).
+App icons resolve via `Quickshell.iconPath()` for theme names and `file://` for absolute paths, rendering as full-color original icons in the palette, while entries without dedicated image icons fall back to tinted nerd-font glyphs (ink at rest, seal on the selected row).
 
 ## Adding palette entries
 

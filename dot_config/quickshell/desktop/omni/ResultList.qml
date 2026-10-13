@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 
 // Vertical result list. Row delegate handles icon resolution (image
 // fallback to glyph), title with drill-in chevron, favourite star, and
@@ -51,7 +50,7 @@ Item {
                 visible: row.isSelected
             }
 
-            // Icon slot: tinted .desktop image when one resolves,
+            // Icon slot: full-color .desktop image when one resolves,
             // nerd-font glyph fallback otherwise. hasImageIcon flips
             // on Image.Ready so the swap happens in one frame, no
             // broken-icon flash.
@@ -76,33 +75,19 @@ Item {
                     font.pixelSize: 16 * rl.omni.fontScale
                 }
 
-                // Hidden because MultiEffect draws the recoloured copy;
-                // layer.enabled hands it a texture to sample without
-                // committing a full FBO until an icon actually resolves.
                 Image {
                     id: appImg
                     anchors.centerIn: parent
                     width: 18
                     height: 18
-                    visible: false
+                    visible: iconText.hasImageIcon
                     source: iconText.iconUrl
                     sourceSize.width: 36
                     sourceSize.height: 36
                     fillMode: Image.PreserveAspectFit
                     smooth: true
-                    asynchronous: true
+                    asynchronous: false
                     cache: true
-                    layer.enabled: iconText.hasImageIcon
-                }
-                // colorization: 1.0 paints solid colour through the
-                // source's alpha - a flat tinted silhouette in the
-                // ink/seal palette.
-                MultiEffect {
-                    anchors.fill: appImg
-                    visible: iconText.hasImageIcon
-                    source: appImg
-                    colorization: 1.0
-                    colorizationColor: iconText.tint
                 }
             }
             Text {

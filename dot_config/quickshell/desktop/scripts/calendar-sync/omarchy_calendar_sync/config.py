@@ -43,14 +43,22 @@ def load(path=None):
 
     merged = _merge(copy.deepcopy(DEFAULTS), raw)
 
+    for key in ("profile", "gwsPath"):
+        if not isinstance(merged[key], str) or not merged[key].strip():
+            raise ConfigError(f"{key} must be a non-empty path")
+
     _validate_calendars(merged.get("calendars"))
 
     window = merged.get("window")
+    if not isinstance(window, dict):
+        raise ConfigError("window must be an object")
     if isinstance(window, dict):
         window["pastDays"] = _coerce_days(window.get("pastDays"), "window.pastDays")
         window["futureDays"] = _coerce_days(
             window.get("futureDays"), "window.futureDays"
         )
+        if window["pastDays"] < 0 or window["futureDays"] <= 0:
+            raise ConfigError("window.pastDays must be non-negative and futureDays must be positive")
 
     return merged
 
@@ -73,11 +81,13 @@ def _merge(defaults, override):
 def _validate_calendars(calendars):
     """Reject a non-list include or exclude instead of silently misreading it."""
     if not isinstance(calendars, dict):
-        return
+        raise ConfigError("calendars must be an object")
     for key in ("include", "exclude"):
         value = calendars.get(key)
         if value is not None and not isinstance(value, list):
             raise ConfigError(f"calendars.{key} must be a list")
+        if isinstance(value, list) and not all(isinstance(item, str) for item in value):
+            raise ConfigError(f"calendars.{key} must contain calendar names or IDs")
 
 
 def _coerce_days(value, key):

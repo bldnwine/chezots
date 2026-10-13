@@ -186,27 +186,46 @@ def infer_agent_state(last_steps: list[dict[str, Any]]) -> tuple[str, str, str]:
     return "idle", latest_model, "Idle"
 
 
-def get_conversation_metadata(conv_id: str, base_dir: Path) -> tuple[str, str, str]:
+def read_history_tail(base_dir: Path) -> list[str]:
+    """Read the last 40 lines once, with a 256 KiB upper bound per scan."""
+    try:
+        with open(base_dir / "history.jsonl", "rb") as f:
+            f.seek(0, os.SEEK_END)
+            pos = f.tell()
+            chunks = []
+            total = 0
+            newlines = 0
+            while pos > 0 and total < 256 * 1024 and newlines <= 40:
+                size = min(pos, 8192, 256 * 1024 - total)
+                pos -= size
+                f.seek(pos)
+                chunk = f.read(size)
+                chunks.append(chunk)
+                total += len(chunk)
+                newlines += chunk.count(b"\n")
+            tail = b"".join(reversed(chunks))
+            if pos > 0:
+                tail = tail.partition(b"\n")[2]
+            return tail.decode("utf-8", errors="replace").splitlines()[-40:]
+    except OSError:
+        return []
+
+
+def get_conversation_metadata(conv_id: str, history_lines: list[str]) -> tuple[str, str, str]:
     ws_path = ""
     ws_name = ""
     title = ""
     
-    hist_file = base_dir / "history.jsonl"
-    if hist_file.exists():
+    for line in reversed(history_lines):
         try:
-            with open(hist_file, "r", encoding="utf-8", errors="replace") as f:
-                for line in reversed(f.readlines()[-40:]):
-                    try:
-                        data = json.loads(line)
-                        if data.get("conversationId") == conv_id:
-                            ws_path = data.get("workspace") or ""
-                            title = data.get("display") or ""
-                            if ws_path:
-                                break
-                    except Exception:
-                        continue
-        except Exception:
-            pass
+            data = json.loads(line)
+            if data.get("conversationId") == conv_id:
+                ws_path = data.get("workspace") or ""
+                title = data.get("display") or ""
+                if ws_path:
+                    break
+        except (ValueError, AttributeError):
+            continue
 
     if ws_path:
         clean_path = ws_path.replace("file://", "")
@@ -214,7 +233,7 @@ def get_conversation_metadata(conv_id: str, base_dir: Path) -> tuple[str, str, s
     return ws_path, ws_name, title
 
 
-def scan(base_dir: Path) -> dict[str, Any]:
+def scan(base_dir: Path, include_quota: bool = True) -> dict[str, Any]:
     live_procs = get_live_agy_processes()
     running = len(live_procs) > 0
     brain_dir = base_dir / "brain"
@@ -222,6 +241,7 @@ def scan(base_dir: Path) -> dict[str, Any]:
     sessions: list[dict[str, Any]] = []
 
     if running:
+        history_lines = read_history_tail(base_dir)
         seen_convs = set()
         for pid, conv_id in live_procs.items():
             if not conv_id or conv_id in seen_convs:
@@ -231,7 +251,7 @@ def scan(base_dir: Path) -> dict[str, Any]:
             transcript_path = brain_dir / conv_id / ".system_generated" / "logs" / "transcript.jsonl"
             last_steps = fast_read_last_steps(transcript_path) if transcript_path.exists() else []
             state, model, status_text = infer_agent_state(last_steps)
-            ws_path, ws_name, title = get_conversation_metadata(conv_id, base_dir)
+            ws_path, ws_name, title = get_conversation_metadata(conv_id, history_lines)
 
             sessions.append({
                 "pid": pid,
@@ -272,9 +292,9 @@ def scan(base_dir: Path) -> dict[str, Any]:
             overall_state = primary_session["state"]
 
     # Official quota groups from running agy language server
-    quota_groups = get_live_quota(list(live_procs.keys())) if running else []
+    quota_groups = get_live_quota(list(live_procs.keys())) if running and include_quota else []
 
-    return {
+    result = {
         "schemaVersion": 4,
         "ready": True,
         "agentRunning": running,
@@ -288,9 +308,11 @@ def scan(base_dir: Path) -> dict[str, Any]:
         "activeWorkspace": primary_session.get("workspace", ""),
         "activeWorkspaceName": primary_session.get("workspaceName", ""),
         "activeTitle": primary_session.get("title", ""),
-        "quotaGroups": quota_groups,
         "timestamp": dt.datetime.now(dt.timezone.utc).isoformat()
     }
+    if include_quota:
+        result["quotaGroups"] = quota_groups
+    return result
 
 
 def main() -> None:
@@ -298,10 +320,11 @@ def main() -> None:
     parser.add_argument("path", nargs="?", default=None, help="Base path for antigravity-cli")
     parser.add_argument("--fast", action="store_true", help="Ignored, unified scan")
     parser.add_argument("--json", action="store_true", default=True, help="Emit JSON output")
+    parser.add_argument("--skip-quota", action="store_true", help="Reuse cached quotas; only scan session status")
     args = parser.parse_args()
 
     base_dir = Path(os.path.expanduser(args.path)) if args.path else default_base_dir()
-    result = scan(base_dir)
+    result = scan(base_dir, include_quota=not args.skip_quota)
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 

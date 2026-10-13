@@ -52,7 +52,20 @@ Item {
     Process {
         id: proc
         running: false
-        command: ["python3", "-c", "import os, re, configparser, sys\n" +
+        command: ["python3", "-c", "import os, re, configparser, sys, shutil, subprocess\n" +
+            "hicolor = os.path.expanduser('~/.local/share/icons/hicolor')\n" +
+            "idx, sys_idx = os.path.join(hicolor, 'index.theme'), '/usr/share/icons/hicolor/index.theme'\n" +
+            "if not os.path.exists(idx) and os.path.exists(sys_idx):\n" +
+            "    try:\n" +
+            "        os.makedirs(hicolor, exist_ok=True)\n" +
+            "        shutil.copyfile(sys_idx, idx)\n" +
+            "    except Exception:\n" +
+            "        pass\n" +
+            "if os.path.exists(idx) and not os.path.exists(os.path.join(hicolor, 'icon-theme.cache')):\n" +
+            "    try:\n" +
+            "        subprocess.run(['gtk-update-icon-cache', '-q', hicolor], check=False)\n" +
+            "    except Exception:\n" +
+            "        pass\n" +
             "dirs = [\n" +
             "    os.path.expanduser('~/.local/share/applications'),\n" +
             "    '/usr/share/applications',\n" +

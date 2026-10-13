@@ -146,13 +146,14 @@ Item {
             anchors.fill: parent
             anchors.margins: 4
             visible: pp.omni.previewKind === "image"
-            source: pp.omni.previewKind === "image"
+            source: pp.omni.visible_ && pp.omni.previewKind === "image"
                     ? "file://" + pp.omni.previewPath
                     : ""
             sourceSize.width: 1024
             sourceSize.height: 1024
             fillMode: Image.PreserveAspectFit
             asynchronous: true
+            cache: false
             smooth: true
         }
 
@@ -349,8 +350,8 @@ Item {
 
         Text {
             anchors.fill: parent
-            visible: pp.omni.ghMode && pp.omni.previewRepoUrl !== ""
-            text: pp.omni.previewReadme
+            visible: Boolean(pp.omni.ghMode) && pp.omni.previewRepoUrl !== ""
+            text: pp.omni.previewReadme || ""
             color: pp.omni.ink
             font.family: pp.omni.mono
             font.pixelSize: 10 * pp.omni.fontScale
@@ -387,7 +388,7 @@ Item {
             visible: pp.omni.themeMode && status === Image.Ready
             height: visible ? Math.min(implicitHeight, previewBody.height * 0.6) : 0
             source: {
-                if (!pp.omni.themeMode) return "";
+                if (!pp.omni.visible_ || !pp.omni.themeMode) return "";
                 const it = pp.omni.filteredItems[pp.omni.selectedIndex];
                 return (it && it.previewImage) ? "file://" + it.previewImage : "";
             }
@@ -396,7 +397,7 @@ Item {
             sourceSize.height: 1024
             asynchronous: true
             smooth: true
-            cache: true
+            cache: false
         }
 
         // Theme swatch grid. Each swatch is a 30x30 tile coloured

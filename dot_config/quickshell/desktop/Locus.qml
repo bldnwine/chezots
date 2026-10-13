@@ -26,6 +26,12 @@ Item {
     // Named `navbar` to avoid colliding with the existing `nav: []`
     // category-row array further down.
     property var navbar: null
+    Binding {
+        target: root.navbar
+        property: "quickAudioVisible"
+        value: root.visible_ && root.quickMode && root.expandedTile !== null && root.expandedTile.key === "audio"
+        when: root.navbar !== null
+    }
 
     readonly property color paper:   theme.paper
     readonly property color ink:     theme.ink
@@ -223,7 +229,7 @@ Item {
         id: fileSearch
         query: root.query
         queryTokens: root.queryTokens
-        active: root.fileMode && !root.tldrMode && !root.llmMode
+        active: root.visible_ && root.fileMode && !root.tldrMode && !root.llmMode
         selectedItem: root.filteredItems[root.selectedIndex] || null
     }
     readonly property alias fileItems:    fileSearch.items
@@ -235,7 +241,7 @@ Item {
 
     Processes {
         id: processes
-        active: root.procMode && !root.tldrMode && !root.llmMode
+        active: root.visible_ && root.procMode && !root.tldrMode && !root.llmMode
         selectedItem: root.filteredItems[root.selectedIndex] || null
     }
     readonly property alias procItems:    processes.items
@@ -245,7 +251,7 @@ Item {
 
     Themes {
         id: themes
-        active: root.themeMode && !root.tldrMode && !root.llmMode
+        active: root.visible_ && root.themeMode && !root.tldrMode && !root.llmMode
     }
     readonly property alias themeItems:   themes.items
     readonly property alias themeLoaded:  themes.loaded
@@ -254,7 +260,7 @@ Item {
     TldrSearch {
         id: tldrSearch
         query: root.query
-        active: root.tldrMode
+        active: root.visible_ && root.tldrMode
     }
     readonly property alias tldrItems:    tldrSearch.items
     readonly property alias tldrRunning:  tldrSearch.running
@@ -268,7 +274,7 @@ Item {
     OllamaChat {
         id: ollamaChat
         query: root.query
-        active: root.llmMode
+        active: root.visible_ && root.llmMode
         mode: root.cmdMode ? "command" : "chat"
     }
     readonly property alias chatItems:     ollamaChat.items
@@ -315,6 +321,12 @@ Item {
     }
     function close() {
         root.visible_ = false;
+        root.expandedTile = null;
+        fileSearch.clear();
+        tldrSearch.clear();
+        themes.clear();
+        root.query = "";
+        root.categoryFilter = "";
         root.resetMouseGuard();
         // Cancel any in-flight stream and zero chat state so the next
         // session starts fresh. The ollama daemon itself is left
@@ -368,10 +380,11 @@ Item {
 
     function resolveIconUrl(raw) {
         if (!raw) return "";
+        if (raw.indexOf("file://") === 0 || raw.indexOf("image://") === 0) return raw;
         if (raw.charAt(0) === "/") return "file://" + raw;
         if (root._iconCache.hasOwnProperty(raw)) return root._iconCache[raw];
         const res = Quickshell.iconPath(raw, "") || "";
-        root._iconCache[raw] = res;
+        if (res) root._iconCache[raw] = res;
         return res;
     }
 

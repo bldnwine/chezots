@@ -20,6 +20,8 @@ Item {
     readonly property bool running: psProc.running || previewProc.running
 
     function clear() {
+        psProc.running = false;
+        previewProc.running = false;
         processes.items = [];
         processes.previewPid = "";
         processes.previewText = "";
@@ -108,7 +110,10 @@ Item {
         running: false
         command: ["true"]
         stdout: StdioCollector {
-            onStreamFinished: { processes.ingest(this.text || ""); processes.updatePreview(); }
+            onStreamFinished: {
+                if (!processes.active) return;
+                processes.ingest(this.text || ""); processes.updatePreview();
+            }
         }
     }
 
@@ -117,7 +122,7 @@ Item {
         running: false
         command: ["true"]
         stdout: StdioCollector {
-            onStreamFinished: { processes.previewText = this.text || ""; }
+            onStreamFinished: { if (processes.active) processes.previewText = this.text || ""; }
         }
     }
 

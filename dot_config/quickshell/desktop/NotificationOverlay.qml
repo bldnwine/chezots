@@ -1,8 +1,10 @@
 import QtQuick
+import QtQml.Models
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
+import "NotificationModel.js" as NotificationModel
 
 Item {
     id: root
@@ -16,18 +18,85 @@ Item {
     Behavior on _opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
     property var _recentNotifHashes: ({})
+    property string archiveDirectory: Quickshell.env("HOME") + "/.local/state/quickshell-desktop/notifications"
+    ListModel { id: retainedNotifications; dynamicRoles: true }
+    readonly property int retainedCount: retainedNotifications.count
+
+    function removeRetainedAt(index, expire) {
+        const entry = retainedNotifications.get(index);
+        const notification = entry.notification;
+        if (root.root && root.root.activeNotifications) {
+            delete root.root.activeNotifications[entry.key];
+            const idKey = "id:" + entry.notificationId;
+            if (root.root.activeNotifications[idKey] === notification)
+                delete root.root.activeNotifications[idKey];
+        }
+        if (root.currentNotif === notification) root.close();
+        // Disconnect the closed handler before expiring an evicted object.
+        retainedNotifications.remove(index);
+        if (expire && notification) notification.expire();
+    }
+
+    function releaseNotification(key) {
+        for (let i = retainedNotifications.count - 1; i >= 0; i--) {
+            if (retainedNotifications.get(i).key === key) {
+                root.removeRetainedAt(i, false);
+                return;
+            }
+        }
+    }
+
+    function pruneRetained() {
+        const service = root.root ? root.root.notificationCenterService : null;
+        const maxItems = service ? service.maxItems : 1000;
+        const keepDays = service ? service.keepDays : 30;
+        const now = Date.now();
+        for (let i = retainedNotifications.count - 1; i >= 0; i--) {
+            const entry = retainedNotifications.get(i);
+            if (i >= maxItems || NotificationModel.outsideRetention(entry.timestamp, now, keepDays))
+                root.removeRetainedAt(i, true);
+        }
+    }
+
+    Instantiator {
+        model: retainedNotifications
+        delegate: Connections {
+            required property string key
+            required property var notification
+            target: notification
+            function onClosed() { root.releaseNotification(key); }
+        }
+    }
+    Timer {
+        id: dedupExpiry
+        interval: 3000
+        onTriggered: root._recentNotifHashes = ({})
+    }
+    Timer {
+        interval: 60000
+        running: retainedNotifications.count > 0
+        repeat: true
+        onTriggered: root.pruneRetained()
+    }
 
     function recordNotification(notification) {
-        if (!notification) return;
+        if (!notification) return false;
         var app = String(notification.appName || "");
         var summary = String(notification.summary || "");
         var body = String(notification.body || "");
         var hash = app + "|" + summary + "|" + body;
         var now = Date.now();
+        root._recentNotifHashes = NotificationModel.recentHashes(root._recentNotifHashes, now);
         if (root._recentNotifHashes[hash] && (now - root._recentNotifHashes[hash] < 3000)) {
-            return;
+            // Replacements reuse the live object; don't expire that object's
+            // existing archive actions merely because its content is unchanged.
+            for (let i = 0; i < retainedNotifications.count; i++) {
+                if (retainedNotifications.get(i).notification === notification) return true;
+            }
+            return false;
         }
         root._recentNotifHashes[hash] = now;
+        dedupExpiry.restart();
 
         var stamp = now;
         var id = notification.id || Math.floor(Math.random() * 100000);
@@ -68,26 +137,29 @@ Item {
             execArgv: execArgv
         };
 
-        var dir = Quickshell.env("HOME") + "/.local/state/quickshell-desktop/notifications";
+        var dir = root.archiveDirectory;
         var file = dir + "/" + data.key + ".json";
         var jsonStr = JSON.stringify(data);
 
-        Quickshell.execDetached(["bash", "-c", "mkdir -p " + JSON.stringify(dir) + " && printf '%s' " + JSON.stringify(jsonStr) + " > " + JSON.stringify(file)]);
+        Quickshell.execDetached(["sh", "-c", "mkdir -p -- \"$1\" && printf '%s' \"$2\" > \"$3\"",
+            "sh", dir, jsonStr, file]);
 
         if (root.root && root.root.activeNotifications) {
+            for (let i = retainedNotifications.count - 1; i >= 0; i--) {
+                const previous = retainedNotifications.get(i);
+                if (previous.notificationId === id)
+                    root.removeRetainedAt(i, previous.notification !== notification);
+            }
             root.root.activeNotifications[data.key] = notification;
             if (notification.id) {
                 root.root.activeNotifications["id:" + notification.id] = notification;
             }
-            var cleanupKey = data.key;
-            var cleanupId = notification.id ? ("id:" + notification.id) : "";
-            notification.closed.connect(function() {
-                if (root.root && root.root.activeNotifications) {
-                    delete root.root.activeNotifications[cleanupKey];
-                    if (cleanupId) delete root.root.activeNotifications[cleanupId];
-                }
+            retainedNotifications.insert(0, {
+                key: data.key, notificationId: id, timestamp: stamp, notification: notification
             });
+            root.pruneRetained();
         }
+        return true;
     }
 
     function showNotif(notification) {
@@ -111,14 +183,17 @@ Item {
 
     function invoke() {
         if (!root.currentNotif) return;
+        const notification = root.currentNotif;
+        // Non-resident actions may destroy the notification synchronously.
+        // Close the card first and avoid a second dismiss after invoking.
+        root.close();
         try {
-            for (var i = 0; i < root.currentNotif.actions.length; i++) {
-                var a = root.currentNotif.actions[i];
-                if (a && a.identifier === "default") { a.invoke(); break; }
+            for (var i = 0; i < notification.actions.length; i++) {
+                var a = notification.actions[i];
+                if (a && a.identifier === "default") { a.invoke(); return; }
             }
         } catch (e) {}
-        try { root.currentNotif.dismiss(); } catch (e) {}
-        root.close();
+        try { notification.dismiss(); } catch (e) {}
     }
 
     Timer {
@@ -133,7 +208,7 @@ Item {
         persistenceSupported: true
         onNotification: function(notification) {
             notification.tracked = true;
-            root.recordNotification(notification);
+            if (!root.recordNotification(notification)) { notification.expire(); return; }
             if (root.doNotDisturb) {
                 return;
             }

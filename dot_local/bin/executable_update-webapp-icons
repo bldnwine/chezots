@@ -1,0 +1,142 @@
+#!/bin/bash
+
+set -e
+
+ICON_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
+DESKTOP_DIR="$HOME/.local/share/applications"
+
+safe_icon_name() {
+  printf '%s\n' "$1" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed 's/[^[:alnum:]]\+/-/g; s/^-//; s/-$//'
+}
+
+download_icon() {
+  local url="$1" dest="$2" tmp mime fmt
+  tmp="${dest}.tmp"
+  if curl -fsSL --max-time 10 -o "$tmp" "$url" 2>/dev/null &&
+     [[ -s "$tmp" && $(file -b --mime-type "$tmp") == image/* ]]; then
+    if command -v magick >/dev/null 2>&1; then
+      mime=$(file -b --mime-type "$tmp")
+      case "$mime" in
+        image/x-icon|image/vnd.microsoft.icon|image/ico) fmt="ico:" ;;
+        image/webp) fmt="webp:" ;;
+        image/svg+xml) fmt="svg:" ;;
+        image/jpeg) fmt="jpg:" ;;
+        image/png) fmt="png:" ;;
+        image/gif) fmt="gif:" ;;
+        *) fmt="" ;;
+      esac
+      magick "${fmt}${tmp}" -background none -flatten -resize 256x256\> "$dest" 2>/dev/null || mv "$tmp" "$dest"
+      rm -f "$tmp"
+    else
+      mv "$tmp" "$dest"
+    fi
+    return 0
+  fi
+  rm -f "$tmp" "$dest"
+  return 1
+}
+
+fetch_site_icon() {
+  local site_url="$1" dest="$2"
+  local origin host page icon_url
+
+  if [[ ! $site_url =~ ^[a-zA-Z][a-zA-Z0-9+.-]*: ]]; then
+    site_url="https://$site_url"
+  fi
+
+  origin=$(sed -E 's|^(https?://[^/]+).*|\1|' <<<"$site_url")
+  host=$(sed -E 's|^https?://([^/:]+).*|\1|' <<<"$site_url")
+  page=$(curl -fsSL --max-time 5 "$site_url" 2>/dev/null | head -c 100000 | tr '\n' ' ')
+
+  # 1. Try apple-touch-icon
+  icon_url=$(grep -oiE "<link[^>]*rel=[\"'][^\"']*apple-touch-icon[^\"']*[\"'][^>]*>" <<<"$page" |
+    grep -oiE "href=[\"'][^\"']+" | head -1 | sed -E "s/^href=[\"']//")
+
+  # 2. Try standard rel="icon" or "shortcut icon"
+  if [[ -z "$icon_url" ]]; then
+    icon_url=$(grep -oiE "<link[^>]*rel=[\"'][^\"']*(icon|shortcut icon)[^\"']*[\"'][^>]*>" <<<"$page" |
+      grep -oiE "href=[\"'][^\"']+" | head -1 | sed -E "s/^href=[\"']//")
+  fi
+
+  case $icon_url in
+  http://* | https://*) ;;
+  //*) icon_url="https:$icon_url" ;;
+  /*) icon_url="$origin$icon_url" ;;
+  ?*) icon_url="$origin/$icon_url" ;;
+  esac
+
+  { [[ -n $icon_url ]] && download_icon "$icon_url" "$dest"; } ||
+    download_icon "$origin/apple-touch-icon.png" "$dest" ||
+    download_icon "https://www.google.com/s2/favicons?domain=${host}&sz=256" "$dest"
+}
+
+# Parse options
+UPDATE_ALL=false
+DRY_RUN=false
+TARGET_APP=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all|-a) UPDATE_ALL=true; shift ;;
+    --dry-run|-n) DRY_RUN=true; shift ;;
+    *) TARGET_APP="$1"; shift ;;
+  esac
+done
+
+mkdir -p "$ICON_DIR"
+
+updated_count=0
+skipped_count=0
+failed_count=0
+
+while IFS= read -r file; do
+  [[ -z "$file" ]] && continue
+  
+  app_name=$(sed -n 's/^Name=//p' "$file" | head -1)
+  current_icon=$(sed -n 's/^Icon=//p' "$file" | head -1)
+  app_url=$(sed -n 's|^Exec=.*omarchy-launch-webapp *||p' "$file" | head -1)
+  file_base=$(basename "${file%.desktop}")
+
+  [[ -z "$app_name" || -z "$app_url" ]] && continue
+
+  if [[ -n "$TARGET_APP" && "${app_name,,}" != "${TARGET_APP,,}" && "${file_base,,}" != "${TARGET_APP,,}" ]]; then
+    continue
+  fi
+
+  if [[ "$UPDATE_ALL" == false && "$current_icon" != "web-browser" ]]; then
+    echo "Skipping $app_name (already has custom icon: $current_icon)"
+    ((skipped_count += 1)) || true
+    continue
+  fi
+
+  echo "Updating $app_name ($app_url)..."
+  icon_name=$(safe_icon_name "$app_name")
+  dest_file="$ICON_DIR/$icon_name.png"
+
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "  [DRY-RUN] Would fetch icon for $app_url -> $dest_file and set Icon=$icon_name"
+    ((updated_count += 1)) || true
+    continue
+  fi
+
+  if fetch_site_icon "$app_url" "$dest_file"; then
+    sed -i "s|^Icon=.*|Icon=$icon_name|" "$file"
+    echo "  ✓ Updated icon to $icon_name"
+    ((updated_count += 1)) || true
+  else
+    echo "  ✗ Failed to fetch icon; retaining current icon ($current_icon)"
+    ((failed_count += 1)) || true
+  fi
+done < <(find "$DESKTOP_DIR" -maxdepth 1 -name "*.desktop" -exec grep -l "omarchy-launch-webapp" {} +)
+
+if [[ "$DRY_RUN" == false && $updated_count -gt 0 ]]; then
+  if [[ ! -f "$ICON_DIR/../../index.theme" && -f "/usr/share/icons/hicolor/index.theme" ]]; then
+    cp "/usr/share/icons/hicolor/index.theme" "$ICON_DIR/../../index.theme"
+  fi
+  gtk-update-icon-cache -q "$HOME/.local/share/icons/hicolor" 2>/dev/null || gtk-update-icon-cache -t -q "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+  update-desktop-database "$DESKTOP_DIR" &>/dev/null || true
+fi
+
+echo -e "\nSummary: $updated_count updated, $skipped_count skipped, $failed_count failed."

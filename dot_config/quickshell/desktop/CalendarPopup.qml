@@ -7,12 +7,10 @@ CardWindow {
     id: calendarPopup
     required property var root
 
-    readonly property string eventsPath: Quickshell.env("HOME") + "/.local/state/omarchy/calendar-events.json"
-    readonly property string actionScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/calendar-sync/action.py"
-
-    property var eventDoc: null
-    property var eventIndex: ({})
-    property var allEvents: []
+    readonly property var service: root.calendarService
+    readonly property var eventDoc: service.eventDoc
+    readonly property var allEvents: service.allEvents
+    readonly property var eventIndex: CalendarModel.indexEventsByDate(allEvents)
 
     property date today: new Date()
     readonly property string todayKey: CalendarModel.keyForDate(today)
@@ -42,127 +40,30 @@ CardWindow {
     function submitNewEvent() {
         var t = newTitleInput.text.trim();
         if (!t) return;
-        calendarPopup.createEvent(
+        if (!calendarPopup.createEvent(
             t,
             calendarPopup.selectedDateKey,
             startTimeInput.text.trim(),
             endTimeInput.text.trim(),
             allDayToggle.checked,
             ""
-        );
+        )) return;
         newTitleInput.text = "";
     }
 
     function createEvent(title, dateKey, start, end, allDay, location) {
-        var tempId = "local-" + Date.now();
-        var ev = {
-            id: tempId,
-            calendarId: "primary",
-            calendarName: "Personal",
-            color: calendarPopup.root.indigo,
-            dateKey: dateKey,
-            start: allDay ? dateKey : dateKey + "T" + start + ":00",
-            end: allDay ? dateKey : dateKey + "T" + end + ":00",
-            allDay: allDay,
-            title: title,
-            location: location || "",
-            meetingUrl: "",
-            eventUrl: ""
-        };
-        var evList = calendarPopup.allEvents.slice();
-        evList.push(ev);
-        calendarPopup.allEvents = evList;
-        calendarPopup.eventIndex = CalendarModel.indexEventsByDate(evList);
+        if (!service.createEvent(title, dateKey, start, end, allDay, location)) return false;
         calendarPopup.creatingEvent = false;
-
-        var cmd = ["python3", calendarPopup.actionScript, "create", "--calendar", "primary", "--title", title, "--date", dateKey];
-        if (allDay) {
-            cmd.push("--all-day");
-        } else {
-            cmd.push("--start", start, "--end", end);
-        }
-        if (location) cmd.push("--location", location);
-        actionProcess.command = cmd;
-        actionProcess.running = false;
-        actionProcess.running = true;
+        return true;
     }
-
-    function deleteEvent(calId, eventId) {
-        var evList = calendarPopup.allEvents.filter(function(e) { return e.id !== eventId; });
-        calendarPopup.allEvents = evList;
-        calendarPopup.eventIndex = CalendarModel.indexEventsByDate(evList);
-
-        actionProcess.command = ["python3", calendarPopup.actionScript, "delete", "--calendar", calId || "primary", "--id", eventId];
-        actionProcess.running = false;
-        actionProcess.running = true;
-    }
-
+    function deleteEvent(calId, eventId) { return service.deleteEvent(calId || "primary", eventId); }
     function editEvent(calId, eventId, title, dateKey, start, end, allDay) {
-        var evList = calendarPopup.allEvents.map(function(e) {
-            if (e.id === eventId) {
-                var copy = Object.assign({}, e);
-                copy.title = title;
-                if (allDay) {
-                    copy.allDay = true;
-                    copy.start = dateKey;
-                    copy.end = dateKey;
-                } else if (start && end) {
-                    copy.allDay = false;
-                    copy.start = dateKey + "T" + start + ":00";
-                    copy.end = dateKey + "T" + end + ":00";
-                }
-                return copy;
-            }
-            return e;
-        });
-        calendarPopup.allEvents = evList;
-        calendarPopup.eventIndex = CalendarModel.indexEventsByDate(evList);
+        if (!service.editEvent(calId || "primary", eventId, title, dateKey, start, end, allDay)) return false;
         calendarPopup.editingEventId = "";
-
-        var cmd = ["python3", calendarPopup.actionScript, "edit", "--calendar", calId || "primary", "--id", eventId, "--title", title];
-        if (allDay) cmd.push("--all-day");
-        else if (start && end) cmd.push("--start", start, "--end", end);
-        actionProcess.command = cmd;
-        actionProcess.running = false;
-        actionProcess.running = true;
+        return true;
     }
-
-    property bool syncing: syncProcess.running || actionProcess.running
-
-    function syncNow() {
-        if (syncProcess.running) return;
-        syncProcess.running = false;
-        syncProcess.running = true;
-    }
-
-    function checkAndSyncOnOpen() {
-        if (syncProcess.running) return;
-        var lastSync = 0;
-        if (calendarPopup.eventDoc && calendarPopup.eventDoc.syncedAt) {
-            lastSync = new Date(calendarPopup.eventDoc.syncedAt).getTime();
-        }
-        // If missing/invalid syncedAt, or older than 2 minutes (120000ms), sync now
-        if (isNaN(lastSync) || lastSync === 0 || (Date.now() - lastSync) > 120000) {
-            calendarPopup.syncNow();
-        }
-    }
-
-    Process {
-        id: syncProcess
-        command: ["systemctl", "--user", "start", "omarchy-calendar-sync.service"]
-        running: false
-        onExited: function(code) {
-            eventsFile.reload();
-        }
-    }
-
-    Process {
-        id: actionProcess
-        running: false
-        onExited: function(code) {
-            eventsFile.reload();
-        }
-    }
+    readonly property bool syncing: service.syncing
+    function syncNow() { service.syncNow(); }
 
     function openUrl(url) {
         var safe = CalendarModel.safeUrl(url);
@@ -177,37 +78,6 @@ CardWindow {
         running: false
     }
 
-    FileView {
-        id: eventsFile
-        path: calendarPopup.eventsPath
-        watchChanges: true
-        printErrors: false
-        onLoaded: {
-            try {
-                var doc = JSON.parse(text());
-                calendarPopup.eventDoc = doc;
-                calendarPopup.allEvents = (doc && doc.events) ? doc.events : [];
-                calendarPopup.eventIndex = CalendarModel.indexEventsByDate(calendarPopup.allEvents);
-            } catch (e) {
-                calendarPopup.eventDoc = null;
-                calendarPopup.allEvents = [];
-                calendarPopup.eventIndex = ({});
-            }
-            if (calendarPopup.revealed) {
-                calendarPopup.checkAndSyncOnOpen();
-            }
-        }
-        onLoadFailed: {
-            calendarPopup.eventDoc = null;
-            calendarPopup.allEvents = [];
-            calendarPopup.eventIndex = ({});
-            if (calendarPopup.revealed) {
-                calendarPopup.syncNow();
-            }
-        }
-        onFileChanged: reload()
-    }
-
     Timer {
         interval: 60000
         running: calendarPopup.revealed
@@ -218,20 +88,10 @@ CardWindow {
         }
     }
 
-    Timer {
-        id: openSyncTimer
-        interval: 300000
-        running: calendarPopup.revealed
-        repeat: true
-        onTriggered: calendarPopup.syncNow()
-    }
-
     onRevealedChanged: if (calendarPopup.revealed) {
         calendarPopup.today = new Date();
         calendarPopup.nowMs = Date.now();
-        if (calendarPopup.eventDoc) {
-            calendarPopup.checkAndSyncOnOpen();
-        }
+        service.ensureFresh();
     }
 
     theme: root
@@ -384,6 +244,16 @@ CardWindow {
     Column {
         width: parent.width
         spacing: 12
+        Text {
+            width: parent.width
+            visible: calendarPopup.service.lastError !== ""
+            text: calendarPopup.service.lastError
+            color: calendarPopup.root.warn
+            font.family: calendarPopup.root.mono
+            font.pixelSize: 10
+            wrapMode: Text.Wrap
+        }
+
 
         // Weekday header row
         Row {
@@ -822,11 +692,12 @@ CardWindow {
 
                 Rectangle {
                     id: eventRow
+                    readonly property string eventKey: modelData.calendarId + ":" + modelData.id
                     required property var modelData
                     width: parent.width
-                    height: calendarPopup.editingEventId === eventRow.modelData.id ? editFormCol.implicitHeight + 16 : 44
+                    height: calendarPopup.editingEventId === eventRow.eventKey ? editFormCol.implicitHeight + 16 : 44
                     radius: calendarPopup.root.cornerRadius
-                    color: eventRow.isHovered || calendarPopup.editingEventId === eventRow.modelData.id
+                    color: eventRow.isHovered || calendarPopup.editingEventId === eventRow.eventKey
                         ? Qt.rgba(calendarPopup.root.ink.r, calendarPopup.root.ink.g, calendarPopup.root.ink.b, 0.05)
                         : "transparent"
 
@@ -860,7 +731,7 @@ CardWindow {
 
                     // Standard Display View
                     Item {
-                        visible: calendarPopup.editingEventId !== eventRow.modelData.id
+                        visible: calendarPopup.editingEventId !== eventRow.eventKey
                         anchors.fill: parent
 
                         // Text column with fixed right margin so geometry is rock-solid
@@ -931,7 +802,7 @@ CardWindow {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        calendarPopup.editingEventId = eventRow.modelData.id;
+                                        calendarPopup.editingEventId = eventRow.eventKey;
                                         editTitleInput.text = eventRow.modelData.title || "";
                                     }
                                 }
@@ -1006,7 +877,7 @@ CardWindow {
                     // Inline Edit Mode View
                     Column {
                         id: editFormCol
-                        visible: calendarPopup.editingEventId === eventRow.modelData.id
+                        visible: calendarPopup.editingEventId === eventRow.eventKey
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
@@ -1086,10 +957,10 @@ CardWindow {
                                             eventRow.modelData.calendarId || "primary",
                                             eventRow.modelData.id,
                                             editTitleInput.text.trim(),
-                                            eventRow.modelData.dateKey,
                                             "",
                                             "",
-                                            eventRow.modelData.allDay
+                                            "",
+                                            false
                                         );
                                     }
                                 }

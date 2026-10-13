@@ -80,7 +80,7 @@ Item {
         anchors.margins: -2
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onEntered: { console.log("[WS-DIAG hover] ws=" + wsCell.wsId); bloom.fire(mouseX, mouseY); }
+        onEntered: bloom.fire(mouseX, mouseY)
         onClicked: { console.log("[WS-DIAG click] ws=" + wsCell.wsId); wsCell.activated(); }
     }
 }

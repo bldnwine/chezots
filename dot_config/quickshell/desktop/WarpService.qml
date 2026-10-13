@@ -5,8 +5,12 @@ import "WarpModel.js" as Model
 
 Item {
   id: root
-
-  property var settings: ({})
+  property string cliPath: "warp-cli"
+  // Match the existing NOPASSWD sudoers entries for this exact systemctl argv.
+  property var daemonCommandPrefix: ["sudo", "-n", "/usr/bin/systemctl"]
+  property int actionTimeoutMs: 30000
+  property int daemonTimeoutMs: 120000
+  property int startReadinessTimeoutMs: 12000
 
   // -1 until the first `which warp-cli` answers, then 0/1. Polling stays
   // parked until the CLI exists.
@@ -19,17 +23,21 @@ Item {
   property bool needsTos: false
   property bool connected: false
   property bool connecting: false
+  property bool statusKnown: false
+  readonly property bool detailsReady: installed && statusKnown && !daemonDown && !needsTos
 
-  // Optimistic state so the icon flips the instant you click instead of waiting
-  // for the next poll. _desired is -1 while we follow reality, 0/1 while a
-  // connect/disconnect is still catching up.
+  // Track a pending request separately from the actual connection state.
+  // The icon must not claim the tunnel is connected before the daemon does.
   property int _desired: -1
-  readonly property bool active: _desired === -1 ? connected : (_desired === 1)
+  readonly property bool active: connected
 
   property bool refreshing: false
   property string status: "Unknown"
   property string statusText: "Checking…"
   property string reasonText: ""
+  readonly property string displayStatusText: daemonTransition && _daemonAction === "start" ? "Starting daemon…"
+    : daemonTransition && _daemonAction === "stop" ? "Stopping daemon…"
+    : _desired === 0 ? "Disconnecting…" : _desired === 1 ? "Connecting…" : statusText
 
   property string mode: ""
   property bool alwaysOn: false
@@ -53,22 +61,32 @@ Item {
   property string lastError: ""
 
   readonly property int refreshIntervalSec: 60
-  readonly property bool busy: whichProcess.running || statusProcess.running || settingsProcess.running ||
+  readonly property bool busy: daemonTransition || _actionPending || _daemonPending || whichProcess.running || statusProcess.running || settingsProcess.running ||
     registrationProcess.running || statsProcess.running || actionProcess.running || daemonProcess.running
   readonly property var modeRows: Model.modeRows(mode)
-  readonly property bool canToggle: installed && !daemonDown && !needsTos && !busy
+  readonly property bool canToggle: installed && !daemonDown && !needsTos && !busy && _desired === -1
   readonly property bool tunnelMode: Model.isTunnelMode(mode)
 
   property string _statusOutput: ""
   property string _statusError: ""
   property double _lastRegistrationMs: 0
 
-  // Tracks a `sudo -n systemctl` start/stop while the Unit is settling.
+  property bool _actionTimedOut: false
+  property bool _daemonTimedOut: false
+  property bool _actionPending: false
+  property bool _daemonPending: false
+
+  // Tracks a privileged systemctl start/stop while the unit is settling.
   // Status polls that land mid-transition must not clobber the optimistic
   // daemonDown state (previously: the next `warp-cli status` poll flipped the
   // popup straight back before systemctl finished).
   property bool daemonTransition: false
   property string _daemonAction: ""
+  property int _daemonEpoch: 0
+  property bool _daemonStartPending: false
+  property int _startGoodPolls: 0
+  property double _startGraceUntil: 0
+  property int _downConfirm: 0
 
   // Paused while the bar is hidden to stop background forks. Bound from
   // Navbar as `!barHidden || warpVisible` so the popup stays live.
@@ -83,18 +101,13 @@ Item {
     return Model.modeDescription(value)
   }
 
-  function copyToClipboard(value) {
-    var text = String(value || "")
-    if (text === "") return
-    Quickshell.execDetached(["bash", "-c", "printf %s " + JSON.stringify(text) + " | wl-copy"])
-    flash("Copied to clipboard")
-  }
+  function copyToClipboard(value) { copyText(value, "Copied to clipboard") }
 
   function copyText(value, message) {
     var text = String(value || "")
     if (text === "") return
-    Quickshell.execDetached(["bash", "-c", "printf %s " + JSON.stringify(text) + " | wl-copy"])
-    flash(message && message !== "" ? message : "Copied")
+    Quickshell.execDetached(["sh", "-c", "printf '%s' \"$1\" | wl-copy", "sh", text])
+    flash(message || "Copied")
   }
 
   function copyDeviceId() {
@@ -111,7 +124,7 @@ Item {
     if (!installed) {
       if (whichProcess.running) return
       refreshing = true
-      whichProcess.command = ["which", "warp-cli"]
+      whichProcess.command = ["which", root.cliPath]
       whichProcess.running = true
       return
     }
@@ -119,10 +132,12 @@ Item {
   }
 
   function refreshStatus() {
+    if (daemonTransition && !_daemonStartPending) return
     if (statusProcess.running) return
     _statusOutput = ""
     _statusError = ""
     refreshing = true
+    statusProcess.pollEpoch = root._daemonEpoch
     statusProcess.command = warpCommand(["status"])
     statusProcess.running = true
   }
@@ -135,7 +150,7 @@ Item {
       settingsProcess.running = true
     }
     var now = Date.now()
-    if (!registrationProcess.running && (!registered || now - _lastRegistrationMs > 300000)) {
+    if (!registrationProcess.running && (_lastRegistrationMs === 0 || now - _lastRegistrationMs > 300000)) {
       _lastRegistrationMs = now
       registrationProcess.command = warpCommand(["registration", "show"])
       registrationProcess.running = true
@@ -150,7 +165,7 @@ Item {
 
   // --accept-tos keeps calls machine readable and non-blocking
   function warpCommand(args) {
-    var command = ["warp-cli", "--accept-tos", "--json", "--no-paginate", "--no-ansi"]
+    var command = [root.cliPath, "--accept-tos", "--json", "--no-paginate", "--no-ansi"]
     for (var i = 0; i < args.length; i++) command.push(args[i])
     return command
   }
@@ -159,6 +174,7 @@ Item {
     available = false
     connected = false
     connecting = false
+    statusKnown = false
     _desired = -1
     status = "Unavailable"
     statusText = message
@@ -166,11 +182,43 @@ Item {
     tunnelStats = ({})
   }
 
-  function applyStatus(raw, exitCode, stderr) {
-    // A start/stop is in flight (systemctl settling):
-    // keep the optimistic state; daemonProcess.onExited re-polls afterwards.
-    if (daemonTransition) return
+  function applyStatus(raw, exitCode, stderr, epoch) {
+    // A status request issued before the daemon command must not settle it.
+    if (epoch !== undefined && epoch !== root._daemonEpoch) return
+    if (daemonTransition && !_daemonStartPending) return
     var parsed = Model.parseStatus(raw, exitCode, stderr)
+    if (root._daemonStartPending) {
+      if (!parsed.ok || parsed.daemonDown) {
+        root._startGoodPolls = 0
+        return
+      }
+      root._startGoodPolls += 1
+      if (root._startGoodPolls < 2) return
+      root._daemonStartPending = false
+      root.daemonTransition = false
+      root._daemonAction = ""
+      root._startGraceUntil = Date.now() + 5000
+      root._downConfirm = 0
+      root.actionStatus = ""
+      actionStatusTimer.stop()
+    }
+
+    // A malformed or failed poll should not overwrite the last known state.
+    if (!parsed.ok) {
+      root._downConfirm = 0
+      lastError = parsed.error || "Could not read warp-cli status"
+      return
+    }
+    if (parsed.daemonDown && Date.now() < root._startGraceUntil) {
+      root._downConfirm += 1
+      if (root._downConfirm < 2) {
+        graceConfirmTimer.restart()
+        return
+      }
+    }
+    root._downConfirm = 0
+    graceConfirmTimer.stop()
+    if (parsed.daemonDown) root._startGraceUntil = 0
     daemonDown = parsed.daemonDown === true
     needsTos = parsed.needsTos === true
     needsRegistration = parsed.needsRegistration === true
@@ -178,33 +226,18 @@ Item {
     status = parsed.status
     statusText = parsed.statusText
     reasonText = parsed.reasonText || ""
-
-    if (!parsed.ok) {
-      lastError = parsed.error || "Could not read warp-cli status"
-      connected = false
-      connecting = false
-      _desired = -1
-      return
-    }
+    statusKnown = true
 
     connected = parsed.connected === true
     connecting = parsed.connecting === true
-    if (_desired !== -1 && connected === (_desired === 1)) _desired = -1
+    if (_desired !== -1 && (connected === (_desired === 1) || needsRegistration
+        || !/^(connected|connecting|disconnected)$/i.test(status))) _desired = -1
+    if (_desired === 1) connecting = true
+    lastError = ""
+    if (/^(unable|error|unknown)$/i.test(status)) lastError = reasonText || statusText
     if (daemonDown || needsTos) {
-      _desired = -1
-      connected = false
-      connecting = false
-      registered = false
-      mode = ""
-      accountLabel = ""
-      tunnelStats = ({})
-      splitTunnel = ({})
+      clearDaemonDetails()
       return
-    }
-
-    if (connecting && /connectivity/i.test(reasonText)) {
-      Quickshell.execDetached(warpCommand(["debug", "connectivity-check", "disable"]))
-      delayedRefresh.restart()
     }
 
     refreshDetails()
@@ -228,6 +261,10 @@ Item {
 
   function applyRegistration(raw) {
     var parsed = Model.parseRegistration(raw)
+    if (!parsed.ok) {
+      lastError = parsed.error || "Could not read WARP registration"
+      return
+    }
     registered = parsed.registered === true
     accountType = parsed.accountType
     accountLabel = parsed.accountLabel
@@ -247,28 +284,37 @@ Item {
   function connect() {
     if (!canToggle) return
     if (!registered) {
+      if (!needsRegistration) {
+        _lastRegistrationMs = 0
+        refresh()
+        flash("Checking device registration…")
+        return
+      }
       register()
       return
     }
     _desired = 1
+    connecting = true
+    statusText = "Connecting…"
     runAction(["connect"], "Connecting…")
   }
 
   function disconnect() {
     if (!canToggle) return
     _desired = 0
+    statusText = "Disconnecting…"
     runAction(["disconnect"], "Disconnecting…")
   }
 
   function register() {
-    if (!installed || daemonDown || actionProcess.running) return
+    if (!installed || daemonDown || _actionPending || actionProcess.running) return
     _desired = -1
     runAction(["registration", "new"], "Registering device…")
   }
 
   function setMode(value) {
     var next = String(value || "")
-    if (!installed || daemonDown || next === "" || actionProcess.running) return
+    if (!installed || daemonDown || next === "" || _actionPending || actionProcess.running) return
     if (switchLocked) {
       lastError = "Mode is locked by policy"
       flash(lastError)
@@ -281,36 +327,14 @@ Item {
 
   function setFamiliesMode(value) {
     var next = String(value || "")
-    if (!installed || daemonDown || next === "" || actionProcess.running) return
+    if (!installed || daemonDown || next === "" || _actionPending || actionProcess.running) return
     runAction(["dns", "families", next], "DNS filtering: " + next)
   }
 
-  function startDaemon() {
-    if (daemonProcess.running) return
-    lastError = ""
-    _daemonAction = "start"
-    daemonTransition = true
-    actionStatus = "Starting WARP daemon…"
-    // Passwordless via sudoers NOPASSWD for `systemctl start/stop/restart/is-active
-    // warp-svc`. `-n` fails fast instead of hanging on a hidden password prompt.
-    // Argv must stay exact to match the sudoers rule.
-    daemonProcess.command = ["sudo", "-n", "/usr/bin/systemctl", "start", "warp-svc"]
-    daemonProcess.running = true
-  }
-
-  function stopDaemon() {
-    if (daemonProcess.running) return
-    lastError = ""
-    _daemonAction = "stop"
-    daemonTransition = true
-    actionStatus = "Stopping WARP daemon…"
-    daemonDown = true
+  function clearDaemonDetails() {
     connected = false
     connecting = false
     _desired = -1
-    status = "DaemonDown"
-    statusText = "WARP daemon is not running"
-    reasonText = ""
     registered = false
     mode = ""
     accountLabel = ""
@@ -318,15 +342,48 @@ Item {
     organization = ""
     deviceId = ""
     deviceName = ""
+    alwaysOn = false
+    switchLocked = false
     splitTunnel = ({})
     splitTunnelText = ""
     tunnelStats = ({})
-    daemonProcess.command = ["sudo", "-n", "/usr/bin/systemctl", "stop", "warp-svc"]
+  }
+
+  function startDaemon() { manageDaemon("start") }
+  function stopDaemon() { manageDaemon("stop") }
+  function manageDaemon(action) {
+    if (daemonTransition || _daemonPending || daemonProcess.running || _actionPending || actionProcess.running) return
+    lastError = ""
+    _daemonEpoch += 1
+    if (statusProcess.running) statusProcess.running = false
+    _daemonTimedOut = false
+    _daemonPending = true
+    _daemonStartPending = false
+    _startGoodPolls = 0
+    _startGraceUntil = 0
+    _downConfirm = 0
+    graceConfirmTimer.stop()
+    _daemonAction = action
+    daemonTransition = true
+    actionStatus = action === "start" ? "Starting WARP daemon…" : "Stopping WARP daemon…"
+    if (action === "start") {
+      daemonDown = true
+      statusKnown = true
+    } else {
+      daemonDown = true
+      clearDaemonDetails()
+      status = "DaemonDown"
+      statusText = "WARP daemon is not running"
+      reasonText = ""
+    }
+    daemonProcess.command = root.daemonCommandPrefix.concat([action, "warp-svc"])
     daemonProcess.running = true
   }
 
   function runAction(args, label) {
-    if (actionProcess.running) return
+    if (_actionPending || actionProcess.running) return
+    _actionTimedOut = false
+    _actionPending = true
     actionStatus = label || ""
     actionProcess.command = warpCommand(args)
     actionProcess.running = true
@@ -369,6 +426,55 @@ Item {
   }
 
   Timer {
+    interval: 500
+    repeat: true
+    running: root._daemonStartPending
+    onTriggered: root.refreshStatus()
+  }
+  Timer {
+    interval: root.startReadinessTimeoutMs
+    running: root._daemonStartPending
+    onTriggered: {
+      root._daemonStartPending = false
+      root.daemonTransition = false
+      root._daemonAction = ""
+      root.lastError = "WARP daemon started but did not become ready"
+      root.flash(root.lastError)
+      delayedRefresh.restart()
+    }
+  }
+  Timer {
+    id: graceConfirmTimer
+    interval: 500
+    onTriggered: root.refreshStatus()
+  }
+
+  Timer {
+    interval: 15000
+    running: root._desired !== -1
+    onTriggered: {
+      const wanted = root._desired
+      root._desired = -1
+      root.connecting = false
+      if (/^(connecting|disconnecting)/i.test(root.statusText)) root.statusText = "Checking status…"
+      root.lastError = wanted === 1 ? "WARP did not finish connecting; refresh to confirm its state"
+        : "WARP did not finish disconnecting; refresh to confirm its state"
+      root.flash(root.lastError)
+      root.refresh()
+    }
+  }
+  Timer {
+    interval: root.actionTimeoutMs
+    running: actionProcess.running
+    onTriggered: { root._actionTimedOut = true; actionProcess.running = false }
+  }
+  Timer {
+    interval: root.daemonTimeoutMs
+    running: daemonProcess.running
+    onTriggered: { root._daemonTimedOut = true; daemonProcess.running = false }
+  }
+
+  Timer {
     id: delayedRefresh
     interval: 700
     repeat: false
@@ -406,13 +512,19 @@ Item {
 
   Process {
     id: statusProcess
+    property int pollEpoch: 0
     running: false
     command: []
     stdout: StdioCollector { id: statusStdout; waitForEnd: true; onStreamFinished: root._statusOutput = text }
     stderr: StdioCollector { id: statusStderr; waitForEnd: true; onStreamFinished: root._statusError = text }
     onExited: function(exitCode) {
       root.refreshing = false
-      root.applyStatus(String(statusStdout.text || root._statusOutput || ""), exitCode, String(statusStderr.text || root._statusError || ""))
+      if (pollEpoch !== root._daemonEpoch) {
+        if (root._daemonStartPending) Qt.callLater(root.refreshStatus)
+        return
+      }
+      root.applyStatus(String(statusStdout.text || root._statusOutput || ""), exitCode,
+        String(statusStderr.text || root._statusError || ""), pollEpoch)
     }
   }
 
@@ -434,7 +546,9 @@ Item {
     stdout: StdioCollector { id: registrationStdout; waitForEnd: true }
     stderr: StdioCollector { id: registrationStderr; waitForEnd: true }
     onExited: function(exitCode) {
-      root.applyRegistration(String(registrationStdout.text || registrationStderr.text || ""))
+      var raw = String(registrationStdout.text || "")
+      if (exitCode === 0 || /registrationmissing/i.test(Model.errorCode(raw))) root.applyRegistration(raw)
+      else root.lastError = Model.errorMessage(raw || String(registrationStderr.text || "")) || "Could not read WARP registration"
     }
   }
 
@@ -456,17 +570,19 @@ Item {
     stderr: StdioCollector { id: actionStderr; waitForEnd: true }
     onExited: function(exitCode) {
       var stdout = String(actionStdout.text || "")
+      root._actionPending = false
       var stderr = String(actionStderr.text || "")
-      var failed = exitCode !== 0 || Model.errorCode(stdout) !== ""
+      var failed = root._actionTimedOut || exitCode !== 0 || Model.errorCode(stdout) !== ""
       if (failed) {
         root._desired = -1
-        root.lastError = Model.errorMessage(stdout || stderr) || "warp-cli command failed"
+        root.connecting = false
+        if (/^(connecting|disconnecting)/i.test(root.statusText)) root.statusText = "Checking status…"
+        root.lastError = root._actionTimedOut ? "WARP action timed out; refresh to confirm its outcome" : Model.errorMessage(stdout || stderr) || "warp-cli command failed"
         root.flash(root.lastError)
       } else {
         root.lastError = ""
         root.actionStatus = ""
         root._lastRegistrationMs = 0
-        Quickshell.execDetached(warpCommand(["debug", "connectivity-check", "disable"]))
       }
       root.settingMode = ""
       delayedRefresh.restart()
@@ -482,42 +598,31 @@ Item {
     stderr: StdioCollector { id: daemonStderr; waitForEnd: true }
     onExited: function(exitCode) {
       var action = root._daemonAction
-      root._daemonAction = ""
-      root.daemonTransition = false
-      if (exitCode !== 0) {
-        // Auth cancelled/dismissed or systemctl failed: drop the optimistic
-        // state and re-poll so the popup snaps back to reality (daemon up).
-        root.lastError = Model.elide(String(daemonStderr.text || daemonStdout.text || "Could not manage warp-svc"))
+      root._daemonPending = false
+      if (exitCode !== 0 || root._daemonTimedOut) {
+        root._daemonStartPending = false
+        root._daemonAction = ""
+        root.daemonTransition = false
+        // A failed command may leave the actual daemon state uncertain.
+        root.lastError = root._daemonTimedOut ? "WARP daemon command timed out; refresh to confirm its state" : Model.elide(String(daemonStderr.text || daemonStdout.text || "Could not manage warp-svc"))
         if (root.lastError === "") root.lastError = "Could not manage warp-svc"
         root.flash(root.lastError)
-      } else {
+      } else if (action === "stop") {
+        root._daemonAction = ""
+        root.daemonTransition = false
         root.lastError = ""
-        if (action === "stop") {
-          root.daemonDown = true
-          root.connected = false
-          root.connecting = false
-          root._desired = -1
-          root.status = "DaemonDown"
-          root.statusText = "WARP daemon is not running"
-          root.reasonText = ""
-          root.registered = false
-          root.mode = ""
-          root.accountLabel = ""
-          root.accountType = ""
-          root.organization = ""
-          root.deviceId = ""
-          root.deviceName = ""
-          root.splitTunnel = ({})
-          root.splitTunnelText = ""
-          root.tunnelStats = ({})
-          Quickshell.execDetached(["pkill", "-9", "-f", "warp-taskbar"])
-          Quickshell.execDetached(["pkill", "-9", "-f", "crashpad_handler"])
-          root.flash("WARP daemon stopped")
-        } else {
-          root.daemonDown = false
-          root.flash("WARP daemon started")
-          Quickshell.execDetached(root.warpCommand(["debug", "connectivity-check", "disable"]))
-        }
+        root.daemonDown = true
+        root.statusKnown = true
+        root.status = "DaemonDown"
+        root.statusText = "WARP daemon is not running"
+        root.reasonText = ""
+        root.clearDaemonDetails()
+        root.flash("WARP daemon stopped")
+      } else {
+        // systemctl can return before warp-cli can reach the daemon.
+        root._daemonStartPending = true
+        root._startGoodPolls = 0
+        Qt.callLater(root.refreshStatus)
       }
       delayedRefresh.restart()
       settleRefresh.restart()

@@ -104,6 +104,18 @@ Item {
         revealAnimation.restart();
     }
 
+    function finishTransitionIfReady() {
+        if (!root.finishingTransition) return;
+        const panels = backgroundPanels.instances;
+        if (panels.length === 0) return;
+        for (let i = 0; i < panels.length; i++) {
+            if (!panels[i].baseReady) return;
+        }
+        root.incomingBackground = "";
+        root.oldBackground = "";
+        root.finishingTransition = false;
+    }
+
     Process {
         id: readlinkProc
         command: ["sh", "-c", "readlink -f \"$HOME/.config/omarchy/current/background\" 2>/dev/null || ls -1 \"$HOME/.config/aether/theme/backgrounds\"/* 2>/dev/null | head -n 1"]
@@ -156,8 +168,9 @@ Item {
         easing.type: Easing.InOutCubic
         onFinished: {
             if (root.incomingBackground) {
-                root.displayedBackground = root.currentBackground || root.incomingBackground;
                 root.finishingTransition = true;
+                root.displayedBackground = root.currentBackground || root.incomingBackground;
+                Qt.callLater(root.finishTransitionIfReady);
             }
             root.revealProgress = 1;
         }
@@ -166,7 +179,9 @@ Item {
     Component.onCompleted: refreshBackground()
 
     Variants {
+        id: backgroundPanels
         model: Quickshell.screens
+        onInstancesChanged: Qt.callLater(root.finishTransitionIfReady)
 
         PanelWindow {
             id: panel
@@ -179,6 +194,9 @@ Item {
             updatesEnabled: true
 
             property bool maskReady: false
+            readonly property bool baseReady: base.status === Image.Ready
+                && String(base.source) === root.imageUrl(root.displayedBackground)
+            onBaseReadyChanged: Qt.callLater(root.finishTransitionIfReady)
 
             function maybeStartReveal() {
                 if (!root.incomingBackground || root.revealProgress !== 0 || maskReady) return;
@@ -204,27 +222,22 @@ Item {
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 cache: true
-                onStatusChanged: {
-                    if (status === Image.Ready && root.finishingTransition) {
-                        root.incomingBackground = "";
-                        root.oldBackground = "";
-                        root.finishingTransition = false;
-                    }
-                }
             }
 
             Image {
                 id: oldFrame
                 anchors.fill: parent
-                source: root.oldBackground ? root.imageUrl(root.oldBackground) : ""
+                // The base already draws the usual old wallpaper. Load an
+                // override only for callers providing a different fromPath.
+                source: root.revealProgress < 1 && root.oldBackground
+                    && root.oldBackground !== root.displayedBackground ? root.imageUrl(root.oldBackground) : ""
                 sourceSize.width: panel.width
                 sourceSize.height: panel.height
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
-                cache: false
+                cache: true
                 smooth: true
-                mipmap: true
-                visible: root.oldBackground !== "" && root.revealProgress < 1
+                visible: source !== "" && root.revealProgress < 1
                 onStatusChanged: panel.maybeStartReveal()
             }
 
@@ -249,9 +262,9 @@ Item {
                     sourceSize.height: panel.height
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
-                    cache: false
+                    // Share the decoded incoming image when it becomes base.
+                    cache: true
                     smooth: true
-                    mipmap: true
                     onStatusChanged: panel.maybeStartReveal()
                 }
             }
@@ -260,7 +273,7 @@ Item {
                 id: revealMask
                 anchors.fill: parent
                 visible: false
-                layer.enabled: true
+                layer.enabled: root.incomingBackground !== "" && root.revealProgress < 1
 
                 readonly property real slant: -0.18
                 readonly property real centerTop: width / 2 - slant * height / 2

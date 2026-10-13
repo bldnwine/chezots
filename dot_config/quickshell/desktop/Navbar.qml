@@ -6,6 +6,7 @@ import Quickshell.Services.Mpris
 import Quickshell.Services.SystemTray
 import Quickshell.Hyprland
 import "ClipboardHistory.js" as ClipboardHistory
+import "AudioModel.js" as AudioModel
 
 // Omarchy top bar. Owns the per-bar state, probes, and IPC; per-feature
 // surfaces (Bar, *Popup, TooltipOverlay) and widgets (Module, Workspace,
@@ -855,9 +856,11 @@ Item {
 
     property double _lastVolChangeTime: 0
     property double _lastSinkChangeTime: 0
+    property bool quickAudioVisible: false
+    property bool audioRefreshPending: false
 
     function refreshAudio() {
-        audioProbe.running = false;
+        if (audioProbe.running) { root.audioRefreshPending = true; return; }
         audioProbe.running = true;
     }
 
@@ -868,7 +871,7 @@ Item {
     // UI updates optimistically (0ms feedback) and the backend gets at most
     // one coalesced relative set per throttle window. Direct argv, no bash,
     // no qs ipc spawns. Physical sink name is cached from audioProbe (it
-    // already resolves it); fresh every 2s + on every refreshAudio().
+    // already resolves it); refreshed on audio events and explicit actions.
     property int _volAccum: 0
     property int _volPendingDelta: 0
     property bool _volDirtySinceFire: false
@@ -882,9 +885,12 @@ Item {
     }
     Timer {
         id: volRefreshDebounce
-        interval: 250
+        interval: 750
         repeat: false
-        onTriggered: root.refreshAudio()
+        onTriggered: {
+            root.refreshAudio();
+            if (root.audioVisible || root.quickAudioVisible) root.refreshAudioSinks();
+        }
     }
     // Shared with audioProbe: icon ramps with volume/mute/device type.
     function updateAudioIcon() {
@@ -1188,21 +1194,22 @@ Item {
         root.screenRecordVisible = false;
     }
     Timer {
-        interval: 1000
+        // capture-screenrecording sends `screenrecord sync` at start/stop.
+        // Reconcile external recordings and crashes without a 1 Hz /proc walk.
+        interval: 15000
         repeat: true
         running: true
         triggeredOnStart: true
         onTriggered: {
-            screenRecordProbe.running = false;
-            screenRecordProbe.running = true;
+            if (!screenRecordProbe.running) screenRecordProbe.running = true;
         }
     }
     Process {
         id: screenRecordProbe
         running: false
-        command: ["sh", "-c", "pgrep -f '^gpu-screen-recorder' >/dev/null && echo 1 || echo 0"]
+        command: ["pgrep", "-f", "^gpu-screen-recorder"]
         stdout: StdioCollector {
-            onStreamFinished: root.recordingActive = (text.trim() === "1");
+            onStreamFinished: root.recordingActive = text.trim() !== "";
         }
     }
 
@@ -1246,7 +1253,7 @@ Item {
 
     // ---------- Cloudflare WARP state ----------
     property bool warpVisible: false
-    WarpService { id: warpService; settings: ({}); pollingEnabled: !root.barHidden || root.warpVisible }
+    WarpService { id: warpService; pollingEnabled: !root.barHidden || root.warpVisible }
     readonly property var warpService: warpService
     function openWarp() {
         if (root.warpAnchorItem) root.anchorPopupTo(root.warpAnchorItem);
@@ -1515,6 +1522,8 @@ Item {
     }
 
     // ---------- Calendar popup state ----------
+    CalendarService { id: calendarService; viewVisible: root.calendarVisible }
+    readonly property var calendarService: calendarService
     property bool calendarVisible: false
     property int calendarMonthOffset: 0
     // Bumped on each open so the cells/title bindings below re-evaluate
@@ -2712,54 +2721,80 @@ Item {
         onTriggered: { btProbe.running = false; btProbe.running = true; } }
 
     // ---------- Audio status ----------
-    // Icon ramps with volume: muted → icoMute, 0 → off, <50 → low, ≥50 → high.
+    // One snapshot per burst of Pulse events. Preserve the EQ's physical
+    // sink mapping, but read each device list only once and parse it in QML.
     Process {
         id: audioProbe
         running: false
+        environment: ({ "LC_ALL": "C" })
         command: ["bash", "-c",
             "d=$(pactl get-default-sink 2>/dev/null); "
-            + "target=\"$d\"; "
+            + "s=$(pactl get-default-source 2>/dev/null); "
+            + "phys=''; "
             + "if [ \"$d\" = \"effect_input.eq\" ]; then "
             + "  phys=$(pw-link -l 2>/dev/null | awk -F: '/^effect_output\\.eq:output_FL/{f=1} f && /^[[:space:]]+\\|-> /{sub(/^[[:space:]]+\\|-> /,\"\"); print $1; exit}'); "
-            + "  [ -n \"$phys\" ] && target=\"$phys\"; "
             + "fi; "
-            + "v=$(pamixer ${target:+--sink \"$target\"} --get-volume 2>/dev/null || echo 0); "
-            + "m=$(pamixer ${target:+--sink \"$target\"} --get-mute 2>/dev/null || echo false); "
-            + "p=$(pactl list sinks 2>/dev/null | awk -v w=\"$target\" '$0==\"\\tName: \" w {f=1} f && /Active Port:/ {print $3; exit}'); "
-            + "case \"$target\" in *bluez*|*bluetooth*) case \"$p\" in *headset*|*headphone*|*hp*) t=\"hp\" ;; *) t=\"bt\" ;; esac ;; *hdmi*|*dp*|*displayport*) t=\"hdmi\" ;; *) case \"$p\" in *headphone*|*headset*|*hp*) t=\"hp\" ;; *) t=\"spk\" ;; esac ;; esac; "
-            + "desc=$(pactl list sinks 2>/dev/null | grep -A5 -F \"Name: $target\" | grep \"Description:\" | sed 's/.*Description: //'); "
-            + "iv=$(pamixer --default-source --get-volume 2>/dev/null || echo 0); "
-            + "im=$(pamixer --default-source --get-mute 2>/dev/null || echo false); "
-            + "case \"$p\" in *headphone*|*headset*|*hp*) pl=\"Headphones\" ;; *speaker*) pl=\"Speakers\" ;; *) pl=\"$p\" ;; esac; "
-            + "printf '%s|%s|%s|%s|%s|%s|%s|%s' \"$v\" \"$m\" \"$t\" \"${desc:-}\" \"$iv\" \"$im\" \"$pl\" \"$target\""]
+            + "pactl -f json list sinks 2>/dev/null; printf '\\n__SOURCES__\\n'; "
+            + "pactl -f json list sources 2>/dev/null; printf '\\n__DEFAULTS__\\n%s\\n%s\\n%s\\n' \"$d\" \"$s\" \"$phys\""]
         stdout: StdioCollector {
             onStreamFinished: {
-                const p = this.text.split("|");
-                if (p.length < 7) return;
-                const v = parseInt(p[0]);
-                const m = p[1].trim() === "true";
-                const t = p[2].trim();
-                const desc = p[3].trim();
-                const iv = parseInt(p[4]);
-                const im = p[5].trim() === "true";
-                const pl = p[6].trim();
-                const phys = (p[7] || "").trim();
-                if (phys !== "") root._volPhysSink = phys;
+                const state = AudioModel.parseSnapshot(this.text);
+                if (!state) return;
+                root._volPhysSink = state.sinkName;
                 if (Date.now() - root._lastVolChangeTime >= 700) {
-                    root.audioVol = isNaN(v) ? 0 : v;
-                    root.audioMuted = m;
-                    root.audioInputVol = isNaN(iv) ? 0 : iv;
-                    root.audioInputMuted = im;
+                    root.audioVol = state.volume;
+                    root.audioMuted = state.muted;
+                    root.audioInputVol = state.inputVolume;
+                    root.audioInputMuted = state.inputMuted;
+                } else {
+                    volRefreshDebounce.restart();
                 }
-                root.audioDevType = t;
-                root.audioSinkDesc = desc;
-                root.audioPort = pl;
+                root.audioDevType = state.type;
+                root.audioSinkDesc = state.description;
+                root.audioPort = state.port;
                 root.updateAudioIcon();
             }
         }
+        onExited: {
+            if (root.audioRefreshPending) {
+                root.audioRefreshPending = false;
+                audioEventDebounce.restart();
+            }
+        }
     }
-    Timer { interval: 2000; running: !root.barHidden; repeat: true; triggeredOnStart: true
-        onTriggered: { audioProbe.running = false; audioProbe.running = true; } }
+    Process {
+        id: audioEvents
+        command: ["pactl", "subscribe"]
+        environment: ({ "LC_ALL": "C" })
+        running: true
+        stdout: SplitParser {
+            onRead: function(line) {
+                if (/ on (sink|source|server|card) #/.test(line)) audioEventDebounce.restart();
+            }
+        }
+        onStarted: audioEventDebounce.restart()
+        onExited: audioReconnectTimer.restart()
+    }
+    Timer {
+        id: audioEventDebounce
+        interval: 120
+        onTriggered: {
+            root.refreshAudio();
+            if (Date.now() - root._lastSinkChangeTime < 700) volRefreshDebounce.restart();
+            else if (root.audioVisible || root.quickAudioVisible) root.refreshAudioSinks();
+        }
+    }
+    Timer {
+        id: audioReconnectTimer
+        interval: 3000
+        onTriggered: if (!audioEvents.running) audioEvents.running = true
+    }
+    Timer {
+        interval: 30000
+        running: !audioEvents.running
+        repeat: true
+        onTriggered: root.refreshAudio()
+    }
 
     // ---------- Bluetooth device probe ----------
     // Walks every paired/known device through `bt-device --info` to pull
@@ -3057,6 +3092,7 @@ Item {
     }
     Component.onCompleted: {
         updateClock();
+        refreshAudio();
         refreshPowerProfile();
         clipboardInitProc.running = true;
         Quickshell.execDetached([root.clipboardPruneScript]);
@@ -3311,8 +3347,6 @@ Item {
         else keepAudio.restart();
     }
     Timer { id: keepAudio; interval: 400; onTriggered: audioLoader.source = "" }
-    Timer { interval: 2000; running: root.audioVisible; repeat: true; triggeredOnStart: false
-        onTriggered: root.refreshAudioSinks() }
     Loader { id: aetherLoader }
     onAetherVisibleChanged: {
         if (root.aetherVisible) { keepAether.stop(); aetherLoader.setSource("AetherPopup.qml", { root: root }); }
@@ -4004,81 +4038,19 @@ Item {
     }
 
     // ---------- MPRIS (now playing) ----------
-    // Mpris.players is a live list of every player that has registered on
-    // the bus. We don't bind to a single "active" one — instead the hidden
-    // Repeater below subscribes to each player's signals, and on any track
-    // or playback change we recompute which player to surface in the bar.
-    // Preference: a playing player wins; otherwise the most-recently-seen
-    // paused one with non-empty metadata; otherwise nothing.
-    property MprisPlayer musicPlayer: null
-    property string musicTitle: ""
-    property string musicArtist: ""
-    property bool   musicPlaying: false
-    property int    musicSourceIndex: -1
-    readonly property var mprisPlayers: {
-        const all = Mpris.players ? Mpris.players.values : [];
-        const out = [];
-        const seen = {};
-        for (let i = 0; i < all.length; i++) {
-            const p = all[i];
-            if (!p) continue;
-            const dbus = (p.dbusName || "").toLowerCase();
-            const id = (p.identity || p.desktopEntry || dbus).toLowerCase();
-            if (dbus.indexOf("playerctld") >= 0 || id.indexOf("playerctld") >= 0) continue;
-            if (seen[id]) continue;
-            seen[id] = true;
-            out.push(p);
-        }
-        return out;
+    MusicService {
+        id: musicService
+        inputPlayers: Mpris.players ? Mpris.players.values : []
     }
+    readonly property MprisPlayer musicPlayer: musicService.selectedPlayer
+    readonly property string musicTitle: musicService.title
+    readonly property string musicArtist: musicService.artist
+    readonly property bool musicPlaying: musicService.playing
+    readonly property var mprisPlayers: musicService.players
 
-    function selectMusicPlayer(player) {
-        const players = root.mprisPlayers;
-        const idx = players.indexOf(player);
-        if (idx >= 0) {
-            root.musicSourceIndex = idx;
-            root.refreshMusic();
-        }
-    }
-
-    function refreshMusic() {
-        const players = Mpris.players ? Mpris.players.values : [];
-        let best = null;
-        if (root.musicSourceIndex >= 0 && root.musicSourceIndex < players.length) {
-            best = players[root.musicSourceIndex];
-        } else {
-            root.musicSourceIndex = -1;
-            let bestRank = -1;
-            for (let i = 0; i < players.length; i++) {
-                const p = players[i];
-                if (!p) continue;
-                const hasTitle = !!(p.trackTitle && p.trackTitle.length > 0);
-                let rank = 0;
-                if (hasTitle && p.isPlaying) rank = 2;
-                else if (hasTitle) rank = 1;
-                if (rank > bestRank) { best = p; bestRank = rank; }
-            }
-        }
-        root.musicPlayer  = best;
-        root.musicTitle   = best ? (best.trackTitle  || "") : "";
-        root.musicArtist  = best ? (best.trackArtist || "") : "";
-        root.musicPlaying = best ? !!best.isPlaying : false;
-    }
-
-    function musicNextSource() {
-        const players = Mpris.players ? Mpris.players.values : [];
-        if (players.length === 0) return;
-        const idx = root.musicSourceIndex < 0 ? 0 : root.musicSourceIndex + 1;
-        root.musicSourceIndex = idx >= players.length ? 0 : idx;
-        root.refreshMusic();
-    }
-    function musicPrevSource() {
-        const players = Mpris.players ? Mpris.players.values : [];
-        if (players.length === 0) return;
-        const idx = root.musicSourceIndex < 0 ? 0 : root.musicSourceIndex - 1;
-        root.musicSourceIndex = idx < 0 ? players.length - 1 : idx;
-        root.refreshMusic();
-    }
+    function selectMusicPlayer(player) { musicService.selectPlayer(player); }
+    function musicNextSource() { musicService.cycleSource(1); }
+    function musicPrevSource() { musicService.cycleSource(-1); }
 
     function musicToggle() {
         if (root.musicPlayer && root.musicPlayer.canTogglePlaying) root.musicPlayer.togglePlaying();
@@ -4101,11 +4073,12 @@ Item {
 
     Timer {
         id: browserAutoPlayTimer
+        property MprisPlayer player: null
         interval: 350
         onTriggered: {
-            if (root.musicPlayer && root.musicPlayer.canPlay) {
-                root.musicPlayer.play();
-            }
+            const target = player;
+            player = null;
+            if (target && target.canPlay) target.play();
         }
     }
 
@@ -4113,26 +4086,11 @@ Item {
         if (!root.musicPlayer) return;
         const raw = (root.musicPlayer.dbusName || "").toLowerCase();
         if (raw.indexOf("firefox") >= 0 || raw.indexOf("zen") >= 0) {
+            // A source can change during the delay; resume the browser
+            // whose track was skipped, rather than the newly selected source.
+            browserAutoPlayTimer.player = root.musicPlayer;
             browserAutoPlayTimer.restart();
         }
     }
 
-    Item {
-        visible: false
-        Repeater {
-            model: Mpris.players
-            delegate: Item {
-                required property MprisPlayer modelData
-                Connections {
-                    target: modelData
-                    function onPlaybackStateChanged() { root.refreshMusic(); }
-                    function onIsPlayingChanged()     { root.refreshMusic(); }
-                    function onTrackTitleChanged()    { root.refreshMusic(); }
-                    function onTrackArtistChanged()   { root.refreshMusic(); }
-                }
-                Component.onCompleted:   root.refreshMusic()
-                Component.onDestruction: root.refreshMusic()
-            }
-        }
-    }
 }

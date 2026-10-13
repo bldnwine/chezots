@@ -33,6 +33,8 @@ This configuration runs a complete, unified desktop shell environment inside a *
     ├── PolkitAgent.qml        # Native PolicyKit authentication dialog overlay (pkexec)
     ├── CardWindow.qml         # Base floating layer-shell window container for all popups
     ├── Navbar.qml             # Primary bar coordinator, popup Loader host, hardware stepping engines, 22 GlobalShortcuts
+    ├── CalendarService.qml    # Persistent Calendar cache, sync, and event action lifecycle
+    ├── WarpService.qml        # Persistent WARP status and action lifecycle
     ├── Bar.qml                # Default horizontal bar module layout (kanji workspaces, clock, telemetry)
     ├── BarHacker.qml          # Alternate hacker-style bar layout
     ├── BarWhiterose.qml       # Alternate minimal whiterose bar layout
@@ -48,7 +50,7 @@ This configuration runs a complete, unified desktop shell environment inside a *
     │   ├── Tiles.js           # Quick tile definitions and navbar telemetry bindings
     │   └── Format.js          # Markdown formatters for tldr and local AI chat
     ├── *Popup.qml             # Standalone popup panels loaded on-demand by Navbar.qml
-    │   ├── AudioPopup.qml     # Volume sliders and sink switcher (pavucontrol launcher)
+    │   ├── AudioPopup.qml     # Device controls, per-stream playback volume/mute, and equalizer
     │   ├── BluetoothPopup.qml # Bluetooth device pairing and connection manager
     │   ├── CalendarPopup.qml  # Monthly calendar, event dots, and Google Calendar meeting joiner
     │   ├── ClipboardPopup.qml # Clipboard history browser (persisted to clipboard-history.json)
@@ -110,7 +112,7 @@ This configuration runs a complete, unified desktop shell environment inside a *
 
 | Subsystem | Tool / Implementation | Notes for Agents |
 |---|---|---|
-| **Audio** | In-shell stepping via `omarchy-cmd-audio-step.sh`, `pamixer`, `pavucontrol` | Instant OSD update; queries default PipeWire sink. |
+| **Audio** | In-shell stepping via `omarchy-cmd-audio-step.sh`, `pamixer`; native PipeWire playback controls | Instant OSD update; queries default PipeWire sink. AudioPopup provides separate 0–100% volume and mute controls for each application playback stream, hiding system sounds and internal equalizer streams. `pavucontrol` remains available for advanced mixing. |
 | **Backlight** | In-shell stepping via `brightnessctl` | Steps in 5% increments with clamp; shows OSD bar. |
 | **Media** | Native QML MPRIS service integration | Tracks active media player (Spotify, browser, etc.) and routes playback commands. |
 | **Wi-Fi** | **`iwd` (`iwctl`)** | **NEVER use `nmcli`**. Omarchy and this setup rely strictly on `iwd`. |
@@ -120,6 +122,10 @@ This configuration runs a complete, unified desktop shell environment inside a *
 | **Polkit** | `PolkitAgent.qml` | Handles native PolicyKit auth popups with shake animation. Privileged operations must use `pkexec`. |
 | **Terminal** | `uwsm-app -- kitty` (`SUPER + Return`) | Direct instantaneous launch (<5ms) without subshell lookups. |
 
+AudioPopup's Output, Playback, and Input sections share a scroll area capped at 480px (or less on smaller screens), with a visible scrollbar. The expanded equalizer scrolls independently alongside it.
+
+The Zen bar shows a plain rotated song title on vertical edges (bottom-to-top on the left, top-to-bottom on the right), retaining the title pill on horizontal edges. Media selection follows the player that most recently starts or resumes playback. Scrolling or selecting a popup source overrides selection until another player starts or the selected source disappears. Distinct sources are identified by D-Bus name, and `playerctld` proxies are excluded.
+
 ---
 
 ## 5. State & Configuration Locations
@@ -128,7 +134,7 @@ This configuration runs a complete, unified desktop shell environment inside a *
   - `bar-templates.json`: Stored templates for bar heights, air, margins, and styles.
   - Setting overrides: Bar opacity, edge, and visibility state.
 - **Omarchy System State**: `~/.local/state/omarchy/`
-  - `calendar-events.json`: Cached Google Calendar and local events for `CalendarPopup.qml`.
+  - `calendar-events.json`: Cached Google Calendar events for `CalendarService.qml` and `CalendarPopup.qml`.
   - `clipboard-history.json`: Active clipboard ring entries for `ClipboardPopup.qml`.
 - **System Configs**: `~/.config/omarchy/`
   - `weather/location`: Custom location string for wttr.in (city, IATA, zip, or lat,long).
@@ -170,7 +176,7 @@ When editing or creating QML files in this repository, strictly adhere to these 
    readonly property bool isHovered: rowMouse.containsMouse || btnMouse.containsMouse
    ```
 6. **Privilege Escalation**:
-   Always use `pkexec` when running commands requiring administrative privileges. **NEVER use `sudo`**.
+   Use `pkexec` for privileged commands. WARP daemon start/stop is the narrow exception: it uses the existing passwordless sudoers allowlist for the exact `sudo -n /usr/bin/systemctl start|stop warp-svc` commands.
 
 ---
 
@@ -189,7 +195,7 @@ qs log -c desktop
 hyprctl globalshortcuts
 
 # 4. Test a global shortcut through Hyprland
-hyprctl dispatch global quickshell:locus-toggle
+hyprctl dispatch 'hl.dsp.global("quickshell:locus-toggle")'
 
 # 5. Headlessly test IPC surfaces
 qs -c desktop ipc call locus toggle
@@ -197,5 +203,30 @@ qs -c desktop ipc call audio toggle
 qs -c desktop ipc call background refresh
 
 # 6. Verify Quickshell daemon process status
-pgrep -a quickshell
+pgrep -a -x qs
+```
+
+## 8. Performance Lifecycle & Regression Checks
+
+- **Audio:** One persistent `pactl subscribe` connection drives debounced snapshots and device-list refreshes. Snapshots read each sink/source list once and preserve the equalizer's physical-sink routing. A 30s fallback runs only while the subscription is disconnected; reconnect attempts occur every 3s.
+- **Recording:** `capture-screenrecording` already sends `screenrecord sync` at start/stop. A direct `pgrep` every 15s reconciles externally launched recordings and unexpected exits.
+- **AI:** Visible active sessions update every 1.5s, but quotas refresh at most once per minute unless manually requested. Both active and inactive polling pause when the bar and AI popup are hidden. History metadata comes from one bounded tail read per scan.
+- **Notifications:** Deduplication hashes expire after 3s. Live notification actions remain available within the archive's count/age limits, with declarative cleanup on closure. `NotificationOverlay.archiveDirectory` defaults to the production inbox and can be overridden by isolated tests.
+- **Wallpaper:** The wipe mask is allocated only during the transition. The displayed image supplies the old frame unless an explicit alternate `fromPath` is provided. Final cleanup waits for every monitor to load its base image.
+- **Locus:** Closing cancels searches/previews, releases preview image sources, and unloads expanded Quick details.
+- **Bloom:** Hover uses a fixed circle with scale/opacity animation over 250ms. The effect and clipping are inactive between hovers, and hiding its host item or window cancels the animation.
+- **Calendar:** `CalendarService.qml` owns the cache and processes even when the popup closes. Opening a stale view starts the on-demand user service; failed syncs keep the last cache and retry with bounded backoff. Create, edit, and delete update the disk cache only after Google acknowledges the action, then request a full sync. The sync and actions share a file lock, write the cache atomically, and use bounded subprocess and service timeouts. Configure `gwsPath`, `profile`, calendar filters, and sync window in `~/.config/omarchy/calendar-sync.json`. Run `desktop/scripts/calendar-sync/login` to renew the full Calendar read/write scope. `gws auth status` does not report granted scopes; if a write gets a 403, rerun login and tick the Calendar consent checkbox. The old periodic systemd timer is retired.
+- **WARP:** Status reflects the daemon's reported connection state. Connection, mode, and daemon actions have timeouts; daemon start/stop uses the existing `sudo -n` allowlist without a password prompt. The popup expands after two valid startup status reads and confirms a brief daemon failure before collapsing again. Connectivity checks say "Verifying connectivity" instead of implying a tunnel connection. The widget does not change WARP connectivity-check settings or kill unrelated processes. Registration and settings responses are validated before replacing known state.
+
+Additional regression checks:
+
+```sh
+node desktop/tests/model.test.js
+node desktop/tests/performance-model.test.js
+python3 desktop/tests/performance_helpers_test.py
+python3 desktop/tests/music_service_test.py
+python3 desktop/tests/calendar_sync_test.py
+python3 desktop/tests/service_lifecycle_test.py
+# Requires a running Wayland compositor; uses a private D-Bus session and temporary archives.
+python3 desktop/tests/notification_retention_test.py
 ```

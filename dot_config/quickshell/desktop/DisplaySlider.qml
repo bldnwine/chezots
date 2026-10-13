@@ -98,6 +98,7 @@ Item {
             anchors.margins: -6
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
+            preventStealing: true
             onPressed: (e) => {
                 slider.focusRequested();
                 slider.pendingValue = slider.valueFromX(e.x);

@@ -1,289 +1,121 @@
 #!/usr/bin/env python3
-"""Action CLI for Google Calendar event mutations (create, edit, delete).
-
-Interacts with Google Calendar API via gws or directly updates the local
-calendar-events.json state file.
-"""
+"""Apply Google Calendar mutations and cache only acknowledged results."""
 
 import argparse
 import json
-import os
-import subprocess
 import sys
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-DEFAULT_PROFILE = str(Path.home() / ".config" / "gws-omarchy-calendar")
-STATE_PATH = Path.home() / ".local" / "state" / "omarchy" / "calendar-events.json"
+from omarchy_calendar_sync import config, contract, normalize
+from omarchy_calendar_sync.cli import resolve_local_timezone
+from omarchy_calendar_sync.gws import Gws, GwsError
+from omarchy_calendar_sync.storage import cache_lock, write_atomic
 
-
-def resolve_local_timezone():
-    """Resolve the local IANA timezone name."""
-    tz_val = os.environ.get("TZ")
-    if tz_val:
-        try:
-            return ZoneInfo(tz_val.lstrip(":"))
-        except Exception:
-            pass
-    if os.path.islink("/etc/localtime"):
-        try:
-            target = os.readlink("/etc/localtime")
-            parts = Path(target).parts
-            if "zoneinfo" in parts:
-                name = "/".join(parts[parts.index("zoneinfo") + 1 :])
-                return ZoneInfo(name)
-        except Exception:
-            pass
-    return datetime.now().astimezone().tzinfo
+STATE_PATH = contract.CONTRACT_PATH
 
 
-def run_gws(args, profile=DEFAULT_PROFILE):
-    """Run gws CLI with the configured profile."""
-    env = dict(os.environ)
-    env["GOOGLE_WORKSPACE_CLI_CONFIG_DIR"] = str(profile)
-    cmd = ["gws", *args]
+def event_times(args, tz):
+    if not args.date:
+        raise ValueError("A date is required when changing event times")
+    day = date.fromisoformat(args.date)
+    if args.all_day:
+        return {"start": {"date": day.isoformat()},
+                "end": {"date": (day + timedelta(days=1)).isoformat()}}
+    if not args.start or not args.end:
+        raise ValueError("Both start and end times are required")
+    start = datetime.combine(day, time.fromisoformat(args.start), tzinfo=tz)
+    end = datetime.combine(day, time.fromisoformat(args.end), tzinfo=tz)
+    if end < start:
+        raise ValueError("End time must not be earlier than start time")
+    return {"start": {"dateTime": start.isoformat()}, "end": {"dateTime": end.isoformat()}}
+
+
+def perform(args, client, out_path=STATE_PATH, local_tz=None):
+    """Serialize with sync, then update the cache after Google confirms success."""
+    tz = local_tz or resolve_local_timezone()
+    path = Path(out_path)
+    with cache_lock(path):
+        if path.exists():
+            doc = json.loads(path.read_text())
+            problems = contract.validate(doc)
+            if problems:
+                raise ValueError("Calendar cache is invalid; sync it before editing")
+        else:
+            doc = contract.build_document([], "1970-01-01T00:00:00+00:00", "local")
+
+        calendars = client.calendars()
+        requested = args.calendar or "primary"
+        calendar = next((c for c in calendars if c["id"] == requested
+                         or (requested == "primary" and c.get("primary"))), None)
+        if calendar is None:
+            raise ValueError("The selected calendar is not available")
+        if calendar.get("accessRole") not in (None, "owner", "writer", "writerWithoutPrivateAccess"):
+            raise ValueError("The selected calendar is read-only")
+        cal_id = calendar["id"]
+        event_id = getattr(args, "id", None)
+        body = None
+        if args.command != "delete":
+            body = {}
+            if args.title is not None:
+                body["summary"] = args.title.strip()
+            if args.location is not None:
+                body["location"] = args.location.strip()
+            if args.command == "create" or args.date or args.start or args.end or args.all_day:
+                body.update(event_times(args, tz))
+            if args.command == "create" and not body.get("summary"):
+                raise ValueError("An event title is required")
+            if not body:
+                raise ValueError("No event changes were supplied")
+
+        operation = {"create": "insert", "edit": "patch", "delete": "delete"}[args.command]
+        result = client.mutate(operation, cal_id, event_id, body)
+        rows = []
+        if args.command != "delete":
+            if not result.get("id") or not result.get("start") or not result.get("end"):
+                raise GwsError("Google accepted the request but returned no event; sync to confirm its outcome")
+            event_id = result["id"]
+            rows = normalize.normalize_event(result, calendar, tz)
+            if not rows:
+                raise GwsError("Google accepted the request but its event could not be normalized; sync to confirm")
+
+        doc["events"] = [e for e in doc["events"]
+                         if not (e["calendarId"] == cal_id and e["id"] == event_id)] + rows
+        doc["events"].sort(key=lambda e: (e["dateKey"], e["start"], e["title"]))
+        if contract.validate(doc):
+            raise ValueError("Refusing to write an invalid Calendar cache")
+        write_atomic(path, doc)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Google Calendar event actions")
+    parser.add_argument("--config", help="calendar-sync.json path")
+    parser.add_argument("--profile", help="override the configured gws profile")
+    parser.add_argument("--out", help="override the cache path")
+    commands = parser.add_subparsers(dest="command", required=True)
+    for name in ("create", "edit", "delete"):
+        command = commands.add_parser(name)
+        command.add_argument("--calendar", default="primary")
+        if name != "create":
+            command.add_argument("--id", required=True)
+        if name != "delete":
+            command.add_argument("--title", required=name == "create")
+            command.add_argument("--date", required=name == "create")
+            command.add_argument("--start")
+            command.add_argument("--end")
+            command.add_argument("--all-day", action="store_true")
+            command.add_argument("--location")
+    args = parser.parse_args(argv)
     try:
-        res = subprocess.run(cmd, env=env, capture_output=True, text=True)
-        return res.returncode, res.stdout, res.stderr
-    except FileNotFoundError:
-        return 127, "", "gws command not found"
-
-
-def resync():
-    """Trigger background sync script to refresh local cache."""
-    sync_bin = Path(__file__).resolve().parent / "omarchy-calendar-sync"
-    if sync_bin.exists():
-        subprocess.run([str(sync_bin)], capture_output=True)
-
-
-def cmd_create(args):
-    """Create a new event."""
-    cal_id = args.calendar or "primary"
-    title = (args.title or "New Event").strip()
-    loc = (args.location or "").strip()
-    event_date_str = args.date or date.today().isoformat()
-    all_day = bool(args.all_day)
-
-    tz = resolve_local_timezone()
-    dt_target = date.fromisoformat(event_date_str)
-
-    body = {
-        "summary": title,
-    }
-    if loc:
-        body["location"] = loc
-
-    if all_day:
-        next_dt = dt_target + timedelta(days=1)
-        body["start"] = {"date": dt_target.isoformat()}
-        body["end"] = {"date": next_dt.isoformat()}
-    else:
-        start_t_str = args.start or "09:00"
-        end_t_str = args.end or "10:00"
-        try:
-            sh, sm = [int(p) for p in start_t_str.split(":")[:2]]
-            eh, em = [int(p) for p in end_t_str.split(":")[:2]]
-        except Exception:
-            sh, sm, eh, em = 9, 0, 10, 0
-
-        start_dt = datetime.combine(dt_target, time(sh, sm), tzinfo=tz)
-        end_dt = datetime.combine(dt_target, time(eh, em), tzinfo=tz)
-        if end_dt <= start_dt:
-            end_dt = start_dt + timedelta(hours=1)
-
-        body["start"] = {"dateTime": start_dt.isoformat()}
-        body["end"] = {"dateTime": end_dt.isoformat()}
-
-    params = {"calendarId": cal_id}
-    code, stdout, stderr = run_gws(
-        ["calendar", "events", "insert", "--params", json.dumps(params), "--json", json.dumps(body)],
-        profile=args.profile,
-    )
-
-    if code == 0:
-        resync()
-        print(f"Created event: {title}")
-        return 0
-    else:
-        print(f"Google API insert error ({code}): {stderr or stdout}", file=sys.stderr)
-        # Fallback local update if gws fails
-        update_local_create(cal_id, title, event_date_str, body, all_day)
-        return code
-
-
-def cmd_delete(args):
-    """Delete an event."""
-    cal_id = args.calendar or "primary"
-    event_id = args.id
-    if not event_id:
-        print("error: --id is required", file=sys.stderr)
+        cfg = config.load(args.config)
+        client = Gws(args.profile or cfg["profile"], binary=cfg["gwsPath"])
+        perform(args, client, args.out or STATE_PATH)
+    except (GwsError, config.ConfigError, ValueError, OSError, TimeoutError) as error:
+        print(f"Calendar action failed: {error}", file=sys.stderr)
         return 1
-
-    params = {"calendarId": cal_id, "eventId": event_id}
-    code, stdout, stderr = run_gws(
-        ["calendar", "events", "delete", "--params", json.dumps(params)],
-        profile=args.profile,
-    )
-
-    # Clean local state file immediately
-    update_local_delete(event_id)
-    if code == 0:
-        resync()
-        print(f"Deleted event: {event_id}")
-        return 0
-    else:
-        print(f"Google API delete error ({code}): {stderr or stdout}", file=sys.stderr)
-        return code
-
-
-def cmd_edit(args):
-    """Edit an existing event."""
-    cal_id = args.calendar or "primary"
-    event_id = args.id
-    if not event_id:
-        print("error: --id is required", file=sys.stderr)
-        return 1
-
-    patch = {}
-    if args.title:
-        patch["summary"] = args.title.strip()
-    if args.location is not None:
-        patch["location"] = args.location.strip()
-
-    tz = resolve_local_timezone()
-    if args.date:
-        dt_target = date.fromisoformat(args.date)
-        if args.all_day:
-            next_dt = dt_target + timedelta(days=1)
-            patch["start"] = {"date": dt_target.isoformat()}
-            patch["end"] = {"date": next_dt.isoformat()}
-        elif args.start and args.end:
-            try:
-                sh, sm = [int(p) for p in args.start.split(":")[:2]]
-                eh, em = [int(p) for p in args.end.split(":")[:2]]
-                start_dt = datetime.combine(dt_target, time(sh, sm), tzinfo=tz)
-                end_dt = datetime.combine(dt_target, time(eh, em), tzinfo=tz)
-                patch["start"] = {"dateTime": start_dt.isoformat()}
-                patch["end"] = {"dateTime": end_dt.isoformat()}
-            except Exception:
-                pass
-
-    params = {"calendarId": cal_id, "eventId": event_id}
-    code, stdout, stderr = run_gws(
-        ["calendar", "events", "patch", "--params", json.dumps(params), "--json", json.dumps(patch)],
-        profile=args.profile,
-    )
-
-    update_local_edit(event_id, patch)
-    if code == 0:
-        resync()
-        print(f"Edited event: {event_id}")
-        return 0
-    else:
-        print(f"Google API edit error ({code}): {stderr or stdout}", file=sys.stderr)
-        return code
-
-
-def update_local_edit(event_id, patch):
-    """Locally update event in calendar-events.json."""
-    if not STATE_PATH.exists():
-        return
-    try:
-        doc = json.loads(STATE_PATH.read_text())
-        events = doc.get("events") or []
-        for e in events:
-            if e.get("id") == event_id:
-                if "summary" in patch:
-                    e["title"] = patch["summary"]
-                if "location" in patch:
-                    e["location"] = patch["location"]
-        doc["events"] = events
-        STATE_PATH.write_text(json.dumps(doc, indent=2) + "\n")
-    except Exception:
-        pass
-
-
-def update_local_delete(event_id):
-    """Locally remove event from calendar-events.json."""
-    if not STATE_PATH.exists():
-        return
-    try:
-        doc = json.loads(STATE_PATH.read_text())
-        events = doc.get("events") or []
-        filtered = [e for e in events if e.get("id") != event_id]
-        doc["events"] = filtered
-        STATE_PATH.write_text(json.dumps(doc, indent=2) + "\n")
-    except Exception:
-        pass
-
-
-def update_local_create(cal_id, title, date_key, body, all_day):
-    """Locally inject new event into calendar-events.json."""
-    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    doc = {"version": 1, "syncedAt": datetime.now().isoformat(), "source": "local", "events": []}
-    if STATE_PATH.exists():
-        try:
-            doc = json.loads(STATE_PATH.read_text())
-        except Exception:
-            pass
-    events = doc.get("events") or []
-    new_event = {
-        "id": f"local-{int(datetime.now().timestamp())}",
-        "calendarId": cal_id,
-        "calendarName": "Personal",
-        "color": "#658594",
-        "dateKey": date_key,
-        "start": body.get("start", {}).get("dateTime") or body.get("start", {}).get("date") or date_key,
-        "end": body.get("end", {}).get("dateTime") or body.get("end", {}).get("date") or date_key,
-        "allDay": all_day,
-        "title": title,
-        "location": body.get("location", ""),
-        "meetingUrl": "",
-        "eventUrl": "",
-    }
-    events.append(new_event)
-    doc["events"] = events
-    STATE_PATH.write_text(json.dumps(doc, indent=2) + "\n")
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Google Calendar Event Action CLI")
-    parser.add_argument("--profile", default=DEFAULT_PROFILE, help="gws profile directory")
-    sub = parser.add_subparsers(dest="command", required=True)
-
-    # create
-    p_create = sub.add_parser("create", help="Create an event")
-    p_create.add_argument("--calendar", default="primary", help="Calendar ID")
-    p_create.add_argument("--title", required=True, help="Event title / summary")
-    p_create.add_argument("--date", help="Event date (YYYY-MM-DD)")
-    p_create.add_argument("--start", help="Start time (HH:MM)")
-    p_create.add_argument("--end", help="End time (HH:MM)")
-    p_create.add_argument("--all-day", action="store_true", help="All day event")
-    p_create.add_argument("--location", help="Event location")
-    p_create.set_defaults(func=cmd_create)
-
-    # delete
-    p_delete = sub.add_parser("delete", help="Delete an event")
-    p_delete.add_argument("--calendar", default="primary", help="Calendar ID")
-    p_delete.add_argument("--id", required=True, help="Event ID")
-    p_delete.set_defaults(func=cmd_delete)
-
-    # edit
-    p_edit = sub.add_parser("edit", help="Edit an event")
-    p_edit.add_argument("--calendar", default="primary", help="Calendar ID")
-    p_edit.add_argument("--id", required=True, help="Event ID")
-    p_edit.add_argument("--title", help="Updated title")
-    p_edit.add_argument("--date", help="Updated date (YYYY-MM-DD)")
-    p_edit.add_argument("--start", help="Updated start time (HH:MM)")
-    p_edit.add_argument("--end", help="Updated end time (HH:MM)")
-    p_edit.add_argument("--all-day", action="store_true", help="All day event")
-    p_edit.add_argument("--location", help="Updated location")
-    p_edit.set_defaults(func=cmd_edit)
-
-    args = parser.parse_args()
-    return args.func(args)
+    print("Calendar event updated")
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main() or 0)
+    sys.exit(main())
