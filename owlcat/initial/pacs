@@ -71,7 +71,13 @@ pipewire-pulse
 power-profiles-daemon
 python-pip
 qbittorrent
+qt6-declarative
 qt6-imageformats
+qt6-multimedia
+qt6-multimedia-ffmpeg
+qt6-svg
+qt6-virtualkeyboard
+qt6-wayland
 quickshell
 realtime-privileges
 reflector
@@ -79,6 +85,7 @@ ripgrep
 rofi
 rsync
 scrcpy
+sddm
 slurp
 streamlink
 swww

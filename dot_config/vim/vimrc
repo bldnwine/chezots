@@ -1,0 +1,17 @@
+source $VIMRUNTIME/defaults.vim
+      
+      if has('clipboard_provider') && executable('wl-copy') && executable('wl-paste')
+        let v:clipproviders['wl_clipboard'] = {
+              \ 'copy': {
+              \   '+': {reg, type, str -> system('wl-copy', (type ==# 'V' ? join(str, "\n") . "\n" : join(str, "\n")))},
+              \   '*': {reg, type, str -> system('wl-copy -p', (type ==# 'V' ? join(str, "\n") . "\n" : join(str, "\n")))}
+              \ },
+              \ 'paste': {
+              \   '+': {reg -> ['', systemlist('wl-paste --no-newline 2>/dev/null')]},
+              \   '*': {reg -> ['', systemlist('wl-paste -p --no-newline 2>/dev/null')]}
+              \ }
+              \ }
+        set clipmethod^=wl_clipboard
+      endif
+      
+      set clipboard=unnamedplus

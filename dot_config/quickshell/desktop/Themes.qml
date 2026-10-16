@@ -10,7 +10,8 @@ import "Palette.js" as Palette
 // colors.toml is byte-identical to ~/.config/omarchy/current/theme as
 // active.
 //
-// The probe runs once per mode entry (cheap on a 24-theme machine).
+// Keep discovery results across closes. A metadata-only freshness check
+// avoids re-reading every blueprint on entry when nothing has changed.
 // Selection drives the swatch preview through `swatches` on the
 // selected item; Enter calls `omarchy-theme-set` via the parent's
 // activate() special-case.
@@ -21,15 +22,26 @@ Item {
 
     property var items: []
     property bool loaded: false
-    readonly property bool running: probeProc.running
+    readonly property bool running: fingerprintProc.running || probeProc.running
+    property string _fingerprint: ""
+    property string _pendingFingerprint: ""
+    property bool _probePending: false
 
     function clear() {
+        themes._probePending = false;
+        fingerprintProc.running = false;
         probeProc.running = false;
-        themes.items = [];
-        themes.loaded = false;
+        // Only cancel work: the last complete list is the warm cache.
+    }
+
+    function checkFreshness() {
+        if (!themes.active || themes.running) return;
+        fingerprintProc.running = true;
     }
 
     function refresh() {
+        if (!themes.active || probeProc.running) return;
+        themes._probePending = true;
         // Emit one record per theme separated by a known sentinel so
         // JS only has to do one Process call + split. Header carries
         // name + marker (" " inactive, "*" active) + preview path, then
@@ -60,7 +72,6 @@ Item {
             + "  c=$(cat \"$f\" 2>/dev/null); "
             + "  printf '===%s\\t \\t\\tBLUEPRINT\\t0\\n%s\\n' \"$name\" \"$c\"; "
             + "done"];
-        probeProc.running = false;
         probeProc.running = true;
     }
 
@@ -169,16 +180,43 @@ Item {
         themes.loaded = true;
     }
 
-    // Refresh on entering the mode so themes and blueprints are loaded
-    // and the active marker stays honest after the user swaps themes.
-    onActiveChanged: { if (themes.active) themes.refresh(); else themes.clear(); }
+    // Cached rows remain visible while changed sources refresh. No polling
+    // or discovery subprocesses run while the view is closed.
+    onActiveChanged: { if (themes.active) themes.checkFreshness(); else themes.clear(); }
+
+    Timer {
+        interval: 4000
+        running: themes.active
+        repeat: true
+        onTriggered: themes.checkFreshness()
+    }
+
+    Process {
+        id: fingerprintProc
+        command: ["python3", decodeURIComponent(Qt.resolvedUrl("scripts/theme-fingerprint.py").toString().replace(/^file:\/\//, ""))]
+        stdout: StdioCollector { waitForEnd: true }
+        onExited: function(code) {
+            if (!themes.active) return;
+            const fingerprint = code === 0 ? fingerprintProc.stdout.text.trim() : "";
+            if (fingerprint === "" && themes.loaded) return;
+            if (!themes.loaded || fingerprint !== themes._fingerprint) {
+                themes._pendingFingerprint = fingerprint;
+                themes.refresh();
+            }
+        }
+    }
 
     Process {
         id: probeProc
         running: false
         command: ["true"]
-        stdout: StdioCollector {
-            onStreamFinished: { if (themes.active) themes.ingest(this.text || ""); }
+        stdout: StdioCollector { waitForEnd: true }
+        onExited: function(code) {
+            const accept = themes.active && themes._probePending && code === 0;
+            themes._probePending = false;
+            if (!accept) return;
+            themes.ingest(probeProc.stdout.text || "");
+            themes._fingerprint = themes._pendingFingerprint;
         }
     }
 }

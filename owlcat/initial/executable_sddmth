@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASEDIR=$(dirname "$(realpath "$0")")
+
+echo "Deploying SDDM configuration and Silent theme..."
+
+# 1. Create target directories
+sudo mkdir -p /etc/sddm.conf.d /usr/share/sddm/themes/silent /usr/share/fonts
+
+# 2. Deploy configuration drop-ins
+if [[ -d "$BASEDIR/sddm/conf.d" ]]; then
+  echo "Installing /etc/sddm.conf.d/ configs..."
+  sudo cp -f "$BASEDIR/sddm/conf.d/"*.conf /etc/sddm.conf.d/
+fi
+
+# 3. Deploy minimal Silent theme
+if [[ -d "$BASEDIR/sddm/themes/silent" ]]; then
+  echo "Installing SilentSDDM theme to /usr/share/sddm/themes/silent/..."
+  sudo cp -rf "$BASEDIR/sddm/themes/silent/"* /usr/share/sddm/themes/silent/
+fi
+
+# 4. Deploy bundled fonts & refresh font cache
+if [[ -d "$BASEDIR/sddm/themes/silent/fonts" ]]; then
+  echo "Installing Red Hat fonts to /usr/share/fonts/..."
+  sudo cp -rf "$BASEDIR/sddm/themes/silent/fonts/redhat" "$BASEDIR/sddm/themes/silent/fonts/redhat-vf" /usr/share/fonts/
+  echo "Refreshing font cache..."
+  fc-cache -f
+fi
+
+# 5. Enable SDDM service
+if systemctl is-enabled sddm.service &>/dev/null; then
+  echo "sddm.service is already enabled."
+else
+  echo "Enabling sddm.service..."
+  sudo systemctl enable sddm.service
+fi
+
+echo "SDDM setup completed successfully!"

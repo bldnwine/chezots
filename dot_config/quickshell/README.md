@@ -213,7 +213,7 @@ pgrep -a -x qs
 - **AI:** Visible active sessions update every 1.5s, but quotas refresh at most once per minute unless manually requested. Both active and inactive polling pause when the bar and AI popup are hidden. History metadata comes from one bounded tail read per scan.
 - **Notifications:** Deduplication hashes expire after 3s. Live notification actions remain available within the archive's count/age limits, with declarative cleanup on closure. `NotificationOverlay.archiveDirectory` defaults to the production inbox and can be overridden by isolated tests.
 - **Wallpaper:** The wipe mask is allocated only during the transition. The displayed image supplies the old frame unless an explicit alternate `fromPath` is provided. Final cleanup waits for every monitor to load its base image.
-- **Locus:** Closing cancels searches/previews, releases preview image sources, and unloads expanded Quick details.
+- **Locus:** Closing cancels searches/previews, releases preview image sources, and unloads expanded Quick details. Result icons load asynchronously; failed lookups/loads are cached until the app index or theme changes. Theme discovery keeps the last complete list across closes and checks source metadata on entry and every 4s while the Themes view is open; unchanged inputs skip the full scan. Failed or cancelled scans preserve the cache.
 - **Bloom:** Hover uses a fixed circle with scale/opacity animation over 250ms. The effect and clipping are inactive between hovers, and hiding its host item or window cancels the animation.
 - **Calendar:** `CalendarService.qml` owns the cache and processes even when the popup closes. Opening a stale view starts the on-demand user service; failed syncs keep the last cache and retry with bounded backoff. Create, edit, and delete update the disk cache only after Google acknowledges the action, then request a full sync. The sync and actions share a file lock, write the cache atomically, and use bounded subprocess and service timeouts. Configure `gwsPath`, `profile`, calendar filters, and sync window in `~/.config/omarchy/calendar-sync.json`. Run `desktop/scripts/calendar-sync/login` to renew the full Calendar read/write scope. `gws auth status` does not report granted scopes; if a write gets a 403, rerun login and tick the Calendar consent checkbox. The old periodic systemd timer is retired.
 - **WARP:** Status reflects the daemon's reported connection state. Connection, mode, and daemon actions have timeouts; daemon start/stop uses the existing `sudo -n` allowlist without a password prompt. The popup expands after two valid startup status reads and confirms a brief daemon failure before collapsing again. Connectivity checks say "Verifying connectivity" instead of implying a tunnel connection. The widget does not change WARP connectivity-check settings or kill unrelated processes. Registration and settings responses are validated before replacing known state.
@@ -224,6 +224,8 @@ Additional regression checks:
 node desktop/tests/model.test.js
 node desktop/tests/performance-model.test.js
 python3 desktop/tests/performance_helpers_test.py
+node desktop/tests/locus-icons.test.js
+python3 desktop/tests/theme_cache_test.py
 python3 desktop/tests/music_service_test.py
 python3 desktop/tests/calendar_sync_test.py
 python3 desktop/tests/service_lifecycle_test.py

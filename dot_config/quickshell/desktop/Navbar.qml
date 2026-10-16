@@ -3312,41 +3312,41 @@ Item {
 
     Loader { id: systemLoader }
     onSystemVisibleChanged: {
-        if (root.systemVisible) { keepSystem.stop(); systemLoader.setSource("SystemPopup.qml", { root: root }); }
-        else keepSystem.restart();
+        if (root.systemVisible && !systemLoader.item) {
+            systemLoader.setSource("SystemPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepSystem; interval: 400; onTriggered: systemLoader.source = "" }
 
     Loader { id: calendarLoader }
     onCalendarVisibleChanged: {
-        if (root.calendarVisible) { keepCalendar.stop(); calendarLoader.setSource("CalendarPopup.qml", { root: root }); }
-        else keepCalendar.restart();
+        if (root.calendarVisible && !calendarLoader.item) {
+            calendarLoader.setSource("CalendarPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepCalendar; interval: 400; onTriggered: calendarLoader.source = "" }
 
     Loader { id: networkLoader }
     onNetworkVisibleChanged: {
-        if (root.networkVisible) { keepNetwork.stop(); networkLoader.setSource("NetworkPopup.qml", { root: root }); }
-        else keepNetwork.restart();
+        if (root.networkVisible && !networkLoader.item) {
+            networkLoader.setSource("NetworkPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepNetwork; interval: 400; onTriggered: networkLoader.source = "" }
+
     Loader { id: btLoader }
     onBtVisibleChanged: {
-        if (root.btVisible) { keepBt.stop(); btLoader.setSource("BluetoothPopup.qml", { root: root }); }
-        else keepBt.restart();
+        if (root.btVisible && !btLoader.item) {
+            btLoader.setSource("BluetoothPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepBt; interval: 400; onTriggered: btLoader.source = "" }
+
     Loader { id: audioLoader }
     onAudioVisibleChanged: {
         if (root.audioVisible) {
-            keepAudio.stop();
-            audioLoader.setSource("AudioPopup.qml", { root: root });
+            if (!audioLoader.item) audioLoader.setSource("AudioPopup.qml", { root: root });
             root.refreshAudioSinks();
             root.refreshAudio();
         }
-        else keepAudio.restart();
     }
-    Timer { id: keepAudio; interval: 400; onTriggered: audioLoader.source = "" }
+
     Loader { id: aetherLoader }
     onAetherVisibleChanged: {
         if (root.aetherVisible) { keepAether.stop(); aetherLoader.setSource("AetherPopup.qml", { root: root }); }
@@ -3356,24 +3356,24 @@ Item {
 
     Loader { id: displayLoader }
     onDisplayVisibleChanged: {
-        if (root.displayVisible) { keepDisplay.stop(); displayLoader.setSource("DisplayPopup.qml", { root: root }); }
-        else keepDisplay.restart();
+        if (root.displayVisible && !displayLoader.item) {
+            displayLoader.setSource("DisplayPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepDisplay; interval: 400; onTriggered: displayLoader.source = "" }
 
     Loader { id: barStyleLoader }
     onBarStyleVisibleChanged: {
-        if (root.barStyleVisible) { keepBarStyle.stop(); barStyleLoader.setSource("BarStylePopup.qml", { root: root }); }
-        else keepBarStyle.restart();
+        if (root.barStyleVisible && !barStyleLoader.item) {
+            barStyleLoader.setSource("BarStylePopup.qml", { root: root });
+        }
     }
-    Timer { id: keepBarStyle; interval: 400; onTriggered: barStyleLoader.source = "" }
 
     Loader { id: weatherLoader }
     onWeatherVisibleChanged: {
-        if (root.weatherVisible) { keepWeather.stop(); weatherLoader.setSource("WeatherPopup.qml", { root: root }); }
-        else keepWeather.restart();
+        if (root.weatherVisible && !weatherLoader.item) {
+            weatherLoader.setSource("WeatherPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepWeather; interval: 400; onTriggered: weatherLoader.source = "" }
 
     Loader { id: hyprlandLoader }
     onHyprlandVisibleChanged: {
@@ -3384,36 +3384,32 @@ Item {
 
     Loader { id: screenRecordLoader }
     onScreenRecordVisibleChanged: {
-        if (root.screenRecordVisible) { keepScreenRecord.stop(); screenRecordLoader.setSource("ScreenRecordPopup.qml", { root: root }); }
-        else keepScreenRecord.restart();
+        if (root.screenRecordVisible && !screenRecordLoader.item) {
+            screenRecordLoader.setSource("ScreenRecordPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepScreenRecord; interval: 400; onTriggered: screenRecordLoader.source = "" }
 
     Loader { id: wireprotonLoader }
     onWireprotonVisibleChanged: {
-        if (root.wireprotonVisible) { keepWireproton.stop(); wireprotonLoader.setSource("WireprotonPopup.qml", { root: root }); }
-        else keepWireproton.restart();
+        if (root.wireprotonVisible && !wireprotonLoader.item) {
+            wireprotonLoader.setSource("WireprotonPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepWireproton; interval: 400; onTriggered: wireprotonLoader.source = "" }
 
     Loader { id: warpLoader }
     onWarpVisibleChanged: {
         if (root.warpVisible) {
-            keepWarp.stop();
-            warpLoader.setSource("WarpPopup.qml", { root: root });
+            if (!warpLoader.item) warpLoader.setSource("WarpPopup.qml", { root: root });
             if (root.warpService) root.warpService.refresh();
-        } else {
-            keepWarp.restart();
         }
     }
-    Timer { id: keepWarp; interval: 400; onTriggered: warpLoader.source = "" }
 
     Loader { id: appMenuLoader }
     onAppMenuVisibleChanged: {
-        if (root.appMenuVisible) { keepAppMenu.stop(); appMenuLoader.setSource("AppMenu.qml", { navbar: root }); }
-        else keepAppMenu.restart();
+        if (root.appMenuVisible && !appMenuLoader.item) {
+            appMenuLoader.setSource("AppMenu.qml", { navbar: root });
+        }
     }
-    Timer { id: keepAppMenu; interval: 400; onTriggered: appMenuLoader.source = "" }
 
     Loader { id: locusfavsLoader }
     onLocusfavsVisibleChanged: {
@@ -3424,62 +3420,55 @@ Item {
 
     Loader { id: clipboardLoader }
     onClipboardVisibleChanged: {
-        if (root.clipboardVisible) { keepClipboard.stop(); clipboardLoader.setSource("ClipboardPopup.qml", { root: root }); }
-        else keepClipboard.restart();
+        if (root.clipboardVisible && !clipboardLoader.item) {
+            clipboardLoader.setSource("ClipboardPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepClipboard; interval: 400; onTriggered: clipboardLoader.source = "" }
 
     Loader { id: reminderLoader }
     onReminderVisibleChanged: {
-        if (root.reminderVisible) { keepReminder.stop(); reminderLoader.setSource("ReminderPopup.qml", { root: root }); }
-        else keepReminder.restart();
+        if (root.reminderVisible && !reminderLoader.item) {
+            reminderLoader.setSource("ReminderPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepReminder; interval: 400; onTriggered: reminderLoader.source = "" }
 
     Loader { id: mediaLoader }
     onMediaVisibleChanged: {
-        if (root.mediaVisible) { keepMedia.stop(); mediaLoader.setSource("MediaPopup.qml", { root: root }); }
-        else keepMedia.restart();
+        if (root.mediaVisible && !mediaLoader.item) {
+            mediaLoader.setSource("MediaPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepMedia; interval: 400; onTriggered: mediaLoader.source = "" }
 
     Loader { id: trayManageLoader }
     onTrayManageVisibleChanged: {
-        if (root.trayManageVisible) { keepTrayManage.stop(); trayManageLoader.setSource("TrayManagePopup.qml", { root: root }); }
-        else keepTrayManage.restart();
+        if (root.trayManageVisible && !trayManageLoader.item) {
+            trayManageLoader.setSource("TrayManagePopup.qml", { root: root });
+        }
     }
-    Timer { id: keepTrayManage; interval: 400; onTriggered: trayManageLoader.source = "" }
 
     Loader { id: trayMenuLoader }
     onTrayMenuVisibleChanged: {
-        if (root.trayMenuVisible) { keepTrayMenu.stop(); trayMenuLoader.setSource("TrayMenuPopup.qml", { root: root }); }
-        else keepTrayMenu.restart();
+        if (root.trayMenuVisible && !trayMenuLoader.item) {
+            trayMenuLoader.setSource("TrayMenuPopup.qml", { root: root });
+        }
     }
-    Timer { id: keepTrayMenu; interval: 400; onTriggered: trayMenuLoader.source = "" }
 
     Loader { id: aiLoader }
     onAiVisibleChanged: {
         if (root.aiVisible) {
-            keepAi.stop();
-            aiLoader.setSource("AiPopup.qml", { root: root });
+            if (!aiLoader.item) aiLoader.setSource("AiPopup.qml", { root: root });
             if (root.aiService) root.aiService.refresh(true);
-        } else {
-            keepAi.restart();
         }
     }
-    Timer { id: keepAi; interval: 400; onTriggered: aiLoader.source = "" }
 
     Loader { id: notificationCenterLoader }
     onNotificationCenterVisibleChanged: {
         if (root.notificationCenterVisible) {
-            keepNotificationCenter.stop();
-            notificationCenterLoader.setSource("NotificationPopup.qml", { root: root });
+            if (!notificationCenterLoader.item) notificationCenterLoader.setSource("NotificationPopup.qml", { root: root });
             if (root.notificationCenterService) root.notificationCenterService.load();
-        } else {
-            keepNotificationCenter.restart();
         }
     }
-    Timer { id: keepNotificationCenter; interval: 400; onTriggered: notificationCenterLoader.source = "" }
+
     Loader { id: wallpapersLoader }
     onWallpapersVisibleChanged: {
         if (root.wallpapersVisible) {

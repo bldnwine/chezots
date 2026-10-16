@@ -18,7 +18,7 @@ hl.monitor({
 	output = "eDP-1",
 	mode = "preferred",
 	position = "auto",
-	scale = "1",
+	scale = "0.83",
 })
 
 hl.monitor({
@@ -92,7 +92,7 @@ hl.on("hyprland.start", function()
 	-- hl.exec_cmd(launch("wl-paste --watch cliphist store"))
 	hl.exec_cmd(launch("playerctld"))
 	-- hl.exec_cmd(launch("hypridle"))
-      	-- hl.exec_cmd("brightnessctl set 30%") -- one-shot, exits instantly
+	-- hl.exec_cmd("brightnessctl set 30%") -- one-shot, exits instantly
 	-- hl.exec_cmd("notifier start")
 	-- hl.exec_cmd("swaybg -i ~/.config/aether/theme/backgrounds/* -m fill")
 	-- hl.exec_cmd(launch("swaybg -i ~/.config/omarchy/current/background -m fill"))
@@ -125,9 +125,15 @@ local fn = loadfile(look_state)
 if fn then
 	local ok, loaded = pcall(fn)
 	if ok and type(loaded) == "table" then
-		if loaded.gaps_in ~= nil then look.gaps_in = loaded.gaps_in end
-		if loaded.gaps_out ~= nil then look.gaps_out = loaded.gaps_out end
-		if loaded.rounding ~= nil then look.rounding = loaded.rounding end
+		if loaded.gaps_in ~= nil then
+			look.gaps_in = loaded.gaps_in
+		end
+		if loaded.gaps_out ~= nil then
+			look.gaps_out = loaded.gaps_out
+		end
+		if loaded.rounding ~= nil then
+			look.rounding = loaded.rounding
+		end
 	end
 end
 
@@ -135,7 +141,14 @@ local function save_look()
 	os.execute("mkdir -p " .. state_dir)
 	local f = io.open(look_state, "w")
 	if f then
-		f:write(string.format("return { gaps_in = %d, gaps_out = %d, rounding = %d }\n", look.gaps_in, look.gaps_out, look.rounding))
+		f:write(
+			string.format(
+				"return { gaps_in = %d, gaps_out = %d, rounding = %d }\n",
+				look.gaps_in,
+				look.gaps_out,
+				look.rounding
+			)
+		)
 		f:close()
 	end
 end
@@ -174,7 +187,7 @@ hl.config({
 		blur = {
 			enabled = true,
 			size = 5,
-			passes = 2,	
+			passes = 2,
 			new_optimizations = true,
 			-- vibrancy = 0.1696,
 		},
@@ -366,16 +379,8 @@ end)
 hl.bind("SUPER + ALT + Z", function()
 	hl.config({ cursor = { zoom_factor = 1 } })
 end)
-hl.bind(
-	mainMod .. " + CONTROL + up",
-	hl.dsp.global("quickshell:audio-vol-up"),
-	{ repeating = true }
-)
-hl.bind(
-	mainMod .. " + CONTROL + down",
-	hl.dsp.global("quickshell:audio-vol-down"),
-	{ repeating = true }
-)
+hl.bind(mainMod .. " + CONTROL + up", hl.dsp.global("quickshell:audio-vol-up"), { repeating = true })
+hl.bind(mainMod .. " + CONTROL + down", hl.dsp.global("quickshell:audio-vol-down"), { repeating = true })
 hl.bind(mainMod .. " + G", hl.dsp.global("quickshell:hyprland-toggle"))
 hl.bind(mainMod .. " + CONTROL + 6", hl.dsp.global("quickshell:media-next"), { locked = true })
 hl.bind(mainMod .. " + CONTROL + 5", hl.dsp.global("quickshell:media-play-pause"), { locked = true })
@@ -390,7 +395,6 @@ hl.bind("SUPER + SHIFT + left", hl.dsp.window.move({ direction = "left" }))
 hl.bind("SUPER + SHIFT + right", hl.dsp.window.move({ direction = "right" }))
 hl.bind("SUPER + SHIFT + up", hl.dsp.window.move({ direction = "up" }))
 hl.bind("SUPER + SHIFT + down", hl.dsp.window.move({ direction = "down" }))
-
 
 for i = 1, 10 do
 	local key = i == 10 and "0" or tostring(i)
@@ -409,28 +413,12 @@ hl.bind(mainMod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
-hl.bind(
-	"XF86AudioRaiseVolume",
-	hl.dsp.global("quickshell:audio-vol-up"),
-	{ locked = true, repeating = true }
-)
-hl.bind(
-	"XF86AudioLowerVolume",
-	hl.dsp.global("quickshell:audio-vol-down"),
-	{ locked = true, repeating = true }
-)
+hl.bind("XF86AudioRaiseVolume", hl.dsp.global("quickshell:audio-vol-up"), { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.global("quickshell:audio-vol-down"), { locked = true, repeating = true })
 hl.bind("XF86AudioMute", hl.dsp.global("quickshell:audio-vol-mute"), { locked = true })
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("~/.config/quickshell/desktop/scripts/mic-mute"), { locked = true })
-hl.bind(
-	"XF86MonBrightnessUp",
-	hl.dsp.global("quickshell:brightness-up"),
-	{ locked = true, repeating = true }
-)
-hl.bind(
-	"XF86MonBrightnessDown",
-	hl.dsp.global("quickshell:brightness-down"),
-	{ locked = true, repeating = true }
-)
+hl.bind("XF86MonBrightnessUp", hl.dsp.global("quickshell:brightness-up"), { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.global("quickshell:brightness-down"), { locked = true, repeating = true })
 
 hl.bind("XF86AudioNext", hl.dsp.global("quickshell:media-next"), { locked = true })
 hl.bind("XF86AudioPause", hl.dsp.global("quickshell:media-play-pause"), { locked = true })
@@ -547,14 +535,14 @@ hl.window_rule({
 	match = { class = "zen", title = "Zen Browser" },
 	float = true,
 	center = true,
-	size = { 1837, 922 },    --  1460, 912 / 1447, 1009 / 1875, 917
+	size = { 1837, 922 }, --  1460, 912 / 1447, 1009 / 1875, 917
 })
 hl.window_rule({
-        name = "Brave Origin",
-        match = { class = "^brave-origin-beta$" },
-        float = true,
-        center = true,
-        size = { 1837, 922 },   
+	name = "Brave Origin",
+	match = { class = "^brave-origin-beta$" },
+	float = true,
+	center = true,
+	size = { 1837, 922 },
 })
 -----------------------
 ---- QUAKE CONSOLE ----
@@ -566,5 +554,3 @@ dofile(os.getenv("HOME") .. "/.config/hypr/qconsole.lua")
 -----------------------
 -- Suppress compositor layer animation jitter on native-animated Quickshell surfaces
 hl.layer_rule({ match = { namespace = "^(omarchy-.*|locus-menu|appmenu)$" }, no_anim = true })
-
-

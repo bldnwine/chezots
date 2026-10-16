@@ -86,8 +86,11 @@ Item {
                     sourceSize.height: 36
                     fillMode: Image.PreserveAspectFit
                     smooth: true
-                    asynchronous: false
+                    asynchronous: true
                     cache: true
+                    onStatusChanged: {
+                        if (status === Image.Error) rl.omni.rejectIcon(row.modelData.rawIcon);
+                    }
                 }
             }
             Text {

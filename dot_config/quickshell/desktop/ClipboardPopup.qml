@@ -247,14 +247,12 @@ CardWindow {
                             anchors.bottomMargin: 7
                             spacing: 10
 
-                            Image {
+                            SizedImage {
                                 visible: parent.parent.previewImage.length > 0
                                 width: visible ? parent.height : 0
                                 height: parent.height
-                                source: parent.parent.previewImage
-                                fillMode: Image.PreserveAspectFit
+                                url: parent.parent.previewImage
                                 asynchronous: true
-                                smooth: true
                             }
 
                             Text {
@@ -317,16 +315,14 @@ CardWindow {
                     verticalAlignment: Text.AlignTop
                 }
 
-                Image {
+                SizedImage {
                     visible: parent.activeRow && parent.activeRow.previewImage
                     anchors.fill: parent
                     anchors.leftMargin: 14
                     anchors.topMargin: 2
-                    source: parent.activeRow ? parent.activeRow.previewImage : ""
-                    fillMode: Image.PreserveAspectFit
+                    url: parent.activeRow ? parent.activeRow.previewImage : ""
                     verticalAlignment: Image.AlignTop
                     asynchronous: true
-                    smooth: true
                 }
             }
         }

@@ -380,12 +380,21 @@ Item {
 
     function resolveIconUrl(raw) {
         if (!raw) return "";
-        if (raw.indexOf("file://") === 0 || raw.indexOf("image://") === 0) return raw;
-        if (raw.charAt(0) === "/") return "file://" + raw;
         if (root._iconCache.hasOwnProperty(raw)) return root._iconCache[raw];
-        const res = Quickshell.iconPath(raw, "") || "";
-        if (res) root._iconCache[raw] = res;
+        const res = raw.indexOf("file://") === 0 || raw.indexOf("image://") === 0
+            ? raw : raw.charAt(0) === "/" ? "file://" + raw
+            : Quickshell.iconPath(raw, "") || "";
+        root._iconCache[raw] = res;
         return res;
+    }
+
+    function rejectIcon(raw) {
+        if (!raw || root._iconCache[raw] === "") return;
+        // Notify existing delegates too, so an unavailable image is not
+        // retried whenever filtering recreates its row.
+        const cache = Object.assign({}, root._iconCache);
+        cache[raw] = "";
+        root._iconCache = cache;
     }
 
     Connections {
