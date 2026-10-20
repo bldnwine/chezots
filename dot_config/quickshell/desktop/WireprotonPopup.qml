@@ -46,12 +46,12 @@ CardWindow {
         var cmd = "sudo /usr/bin/wg-quick up " + name;
         if (root.wireprotonActiveIface.length > 0)
             cmd = "sudo /usr/bin/wg-quick down " + root.wireprotonActiveIface + " && " + cmd;
-        popup.root.run(cmd);
+        popup.root.runCommand("wireproton", cmd);
         popup.root.wireprotonVisible = false;
     }
 
     function disconnect() {
-        popup.root.run("sudo /usr/bin/wg-quick down " + root.wireprotonActiveIface);
+        popup.root.runCommand("wireproton", "sudo /usr/bin/wg-quick down " + root.wireprotonActiveIface);
         popup.root.wireprotonVisible = false;
     }
 

@@ -770,8 +770,8 @@ PanelWindow {
                     if (bar.root.audioVisible) bar.root.audioVisible = false;
                     else bar.root.openAudio();
                 }
-                onMiddleActivated: bar.root.run("pamixer -t && qs -c desktop ipc call audio refresh")
-                onRightActivated: bar.root.run("~/.config/waybar/scripts/pulse_switch.sh")
+                onMiddleActivated: bar.root.runCommand("audioOutput", "pamixer -t && qs -c desktop ipc call audio refresh")
+                onRightActivated: bar.root.runCommand("audioOutput", "~/.config/waybar/scripts/pulse_switch.sh")
                 onWheelActivated: (delta) => bar.root.nudgeVolume(delta)
             }
 

@@ -28,7 +28,7 @@ CardWindow {
     }
 
     function setLayout(name) {
-        popup.root.run("hyprctl eval \"hl.config({ general = { layout = '" + name + "' } })\"");
+        popup.root.runCommand("hyprland", "hyprctl eval \"hl.config({ general = { layout = '" + name + "' } })\"");
     }
 
     function editConfig() {

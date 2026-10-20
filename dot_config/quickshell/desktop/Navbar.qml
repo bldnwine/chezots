@@ -610,8 +610,8 @@ Item {
         }
     }
 
-    property int cpuVal: 0
-    property int memVal: 0
+    property int cpuVal: telemetry.cpuVal
+    property int memVal: telemetry.memVal
     property int batVal: 0
     property string batState: "Unknown"
     // Instantaneous power draw in watts; magnitude only — direction is in batState.
@@ -623,130 +623,29 @@ Item {
     property string wifiSsid: ""
     property int    wifiSignal: 0
 
-    // Wi-Fi scan state for the Quick panel. `wifiNetworks` is a list of
-    // {ssid, signal, security, inUse, known} sorted by inUse then signal.
-    // Backend is iwd (iwctl); populated on demand by refreshWifi().
-    property var    wifiNetworks: []
-    property bool   wifiRadioOn: true
-    property bool   wifiScanning: false
-    property bool   wifiBusy: false          // one iwctl action in flight
-    property string _wifiNetworksSer: ""
-    property string _wifiActionSsid: ""
-    property bool   _wifiIsConnect: false    // iwd-based: omarchy uses iwctl, not nmcli. The probe detects the
-    // first station-mode device dynamically so multi-radio laptops work.
+    // Persistent iwd state; keep these forwards for existing bar/Quick callers.
+    NetworkService { id: networkService; viewVisible: root.networkVisible }
+    readonly property var wifiNetworks: networkService.networks
+    readonly property bool wifiRadioOn: networkService.radioOn
+    readonly property bool wifiScanning: networkService.scanning
+    readonly property bool wifiBusy: networkService.busy
+    readonly property string wifiActionText: networkService.wifiActionText
+    readonly property string wifiError: networkService.wifiError
+    readonly property string wifiErrorKind: networkService.wifiErrorKind
+    readonly property string netDetailsError: networkService.netDetailsError
     signal wifiConnectResult(string ssid, bool ok)
-
-    // iwd-based: omarchy uses iwctl, not nmcli. The probe detects the
-    // first station-mode device dynamically so multi-radio laptops work.
-    function syncWifiActiveState(connectedSsid) {
-        if (!root.wifiNetworks || root.wifiNetworks.length === 0) return;
-        let changed = false;
-        const updated = root.wifiNetworks.map(n => {
-            const inUse = Boolean(connectedSsid && n.ssid === connectedSsid);
-            const known = inUse ? true : n.known;
-            if (n.inUse !== inUse || n.known !== known) changed = true;
-            return {
-                inUse: inUse,
-                ssid: n.ssid,
-                signal: n.signal,
-                security: n.security,
-                known: known
-            };
-        });
-        if (changed) {
-            updated.sort((a, b) => (b.inUse - a.inUse) || (b.signal - a.signal));
-            root._wifiNetworksSer = JSON.stringify(updated);
-            root.wifiNetworks = updated;
-        }
+    Connections {
+        target: networkService
+        function onWifiConnectResult(ssid, ok) { root.wifiConnectResult(ssid, ok); }
     }
-    function refreshWifi() {
-        if (wifiScanProbe.running) return;
-        root.wifiScanning = true;
-        wifiScanProbe.running = false;
-        wifiScanProbe.running = true;
-    }
-    function wifiConnect(ssid, passphrase) {
-        if (!ssid || root.wifiBusy) return;
-        // Known networks reconnect silently; unknown/stale ones get the
-        // passphrase via iwctl 3.x's --passphrase. Runs through
-        // wifiActionProbe so the exit code reaches the panel.
-        const devSel = "DEV=$(iwctl --dont-ask device list 2>/dev/null"
-                     + " | sed 's/\\x1b\\[[0-9;]*m//g'"
-                     + " | awk '/station/{print $1; exit}');";
-        let iwctlArgs = "iwctl --dont-ask";
-        if (passphrase) iwctlArgs += " --passphrase " + JSON.stringify(passphrase);
-        root._wifiActionSsid = ssid;
-        root._wifiIsConnect = true;
-        root.wifiBusy = true;
-        wifiActionProbe.command = ["bash", "-c",
-            devSel
-            + " [ -n \"$DEV\" ] && " + iwctlArgs
-            + " station \"$DEV\" connect " + JSON.stringify(ssid)];
-        wifiActionProbe.running = false;
-        wifiActionProbe.running = true;
-    }
-    function forgetWifi(ssid) {
-        if (!ssid || root.wifiBusy) return;
-        root._wifiActionSsid = ssid;
-        root._wifiIsConnect = false;
-        root.wifiBusy = true;
-        wifiActionProbe.command = ["bash", "-c",
-            "iwctl --dont-ask known-networks " + JSON.stringify(ssid) + " forget"];
-        wifiActionProbe.running = false;
-        wifiActionProbe.running = true;
-    }
-    function wifiToggleAutoConnect(ssid) {
-        if (!ssid) return;
-        root.run("A=$(iwctl --dont-ask known-networks " + JSON.stringify(ssid)
-            + " show 2>/dev/null"
-            + " | sed 's/\\x1b\\[[0-9;]*m//g'"
-            + " | awk '/AutoConnect/{print $NF; exit}');"
-            + " iwctl --dont-ask known-networks " + JSON.stringify(ssid)
-            + " set-property AutoConnect $([ \"$A\" = yes ] && echo no || echo yes)");
-        wifiPostConnectTimer.restart();
-    }
-    function disconnectWifi() {
-        if (root.wifiBusy) return;
-        root.syncWifiActiveState("");
-        root.run("DEV=$(iwctl --dont-ask device list 2>/dev/null"
-                 + " | sed 's/\\x1b\\[[0-9;]*m//g'"
-                 + " | awk '/station/{print $1; exit}');"
-                 + " [ -n \"$DEV\" ] && iwctl --dont-ask station \"$DEV\" disconnect");
-        wifiPostConnectTimer.restart();
-    }
-    function toggleWifiRadio() {
-        const target = root.wifiRadioOn ? "off" : "on";
-        root.wifiRadioOn = !root.wifiRadioOn;
-        root.run("DEV=$(iwctl --dont-ask device list 2>/dev/null"
-                 + " | sed 's/\\x1b\\[[0-9;]*m//g'"
-                 + " | awk '/^[[:space:]]+[a-z][a-z0-9]+/{print $1; exit}');"
-                 + " [ -n \"$DEV\" ] && iwctl --dont-ask device \"$DEV\" set-property Powered " + target);
-        wifiPostConnectTimer.restart();
-    }
-    // Serializes connect/forget so a fire-and-forget disconnect can't race
-    // the next connect and wedge iwd's state machine.
-    Process {
-        id: wifiActionProbe
-        running: false
-        onExited: function(exitCode, exitStatus) {
-            const ok = exitStatus === 0 && exitCode === 0;
-            if (root._wifiIsConnect) {
-                root._wifiIsConnect = false;
-                if (ok && root._wifiActionSsid) {
-                    root.syncWifiActiveState(root._wifiActionSsid);
-                }
-                root.wifiConnectResult(root._wifiActionSsid, ok);
-            }
-            root.wifiBusy = false;
-            wifiPostConnectTimer.restart();
-        }
-    }
-    Timer {
-        id: wifiPostConnectTimer
-        interval: 800
-        repeat: false
-        onTriggered: root.refreshWifi()
-    }
+    function syncWifiActiveState(ssid) { networkService.syncWifiActiveState(ssid); }
+    function refreshWifi(owner) { return networkService.requestScan(owner || "external"); }
+    function wifiConnect(ssid, passphrase) { return networkService.wifiConnect(ssid, passphrase); }
+    function forgetWifi(ssid) { return networkService.forgetWifi(ssid); }
+    function wifiToggleAutoConnect(ssid) { return networkService.wifiToggleAutoConnect(ssid); }
+    function disconnectWifi() { return networkService.disconnectWifi(); }
+    function toggleWifiRadio() { return networkService.toggleWifiRadio(); }
+    function copyNetworkText(value) { return networkService.copyText(value); }
     property string btIcon:  String.fromCodePoint(0xf00b2)
     property bool   btPowered: false
     property int    btCount: 0
@@ -774,18 +673,18 @@ Item {
         // --timeout keeps bluetoothctl (and its agent) alive in non-interactive
         // mode long enough to approve the async A2DP/HFP authorization, so
         // audio connects even when the device isn't trusted.
-        root.run("setsid -f bluetoothctl --timeout 25 --agent NoInputNoOutput connect "
+        root.runCommand("bluetooth", "setsid -f bluetoothctl --timeout 25 --agent NoInputNoOutput connect "
             + mac + " >/dev/null 2>&1");
         root.btPostAction();
     }
     function btDisconnect(mac) {
         if (!mac) return;
-        root.run("bluetoothctl disconnect " + mac + " >/dev/null 2>&1");
+        root.runCommand("bluetooth", "bluetoothctl disconnect " + mac + " >/dev/null 2>&1");
         root.btPostAction();
     }
     function btTogglePower() {
         root.btPowered = !root.btPowered;
-        root.run("bluetoothctl power " + (root.btPowered ? "on" : "off") + " >/dev/null 2>&1");
+        root.runCommand("bluetooth", "bluetoothctl power " + (root.btPowered ? "on" : "off") + " >/dev/null 2>&1");
         root.btPostAction();
     }
     function btToggleScan() {
@@ -794,7 +693,7 @@ Item {
         // Guard against a bogus toggle-off mid-scan.
         if (root.btScanning) return;
         root.btScanning = true;
-        root.run("setsid -f bluetoothctl --timeout 15 scan on >/dev/null 2>&1");
+        root.runCommand("bluetooth", "setsid -f bluetoothctl --timeout 15 scan on >/dev/null 2>&1");
         btScanStopTimer.restart();
         root.btPostAction();
     }
@@ -805,13 +704,13 @@ Item {
         for (let i = 0; i < devs.length; i++) {
             if (devs[i].mac === mac) { trusted = devs[i].trusted; break; }
         }
-        root.run("bluetoothctl " + (trusted ? "untrust" : "trust")
+        root.runCommand("bluetooth", "bluetoothctl " + (trusted ? "untrust" : "trust")
             + " " + mac + " >/dev/null 2>&1");
         root.btPostAction();
     }
     function btUnpair(mac) {
         if (!mac) return;
-        root.run("bluetoothctl remove " + mac + " >/dev/null 2>&1");
+        root.runCommand("bluetooth", "bluetoothctl remove " + mac + " >/dev/null 2>&1");
         root.btPostAction();
     }
     Timer {
@@ -962,20 +861,20 @@ Item {
         const v = Math.max(0, Math.min(100, Math.round(pct)));
         root.audioVol = v;
         root._lastVolChangeTime = Date.now();
-        root.run("target=$(pactl get-default-sink 2>/dev/null); "
+        root.runCommand("audioOutput", "target=$(pactl get-default-sink 2>/dev/null); "
             + "if [ \"$target\" = \"effect_input.eq\" ]; then "
             + "  phys=$(pw-link -l 2>/dev/null | awk -F: '/^effect_output\\.eq:output_FL/{f=1} f && /^[[:space:]]+\\|-> /{sub(/^[[:space:]]+\\|-> /,\"\"); print $1; exit}'); "
             + "  [ -n \"$phys\" ] && target=\"$phys\"; "
             + "fi; "
             + "pactl set-sink-volume \"$target\" " + v + "%; "
-            + "pactl set-sink-volume effect_input.eq 100% 2>/dev/null || true");
+            + "pactl set-sink-volume effect_input.eq 100% 2>/dev/null || true", "volume");
     }
 
     function setInputVolume(pct) {
         const v = Math.max(0, Math.min(100, Math.round(pct)));
         root.audioInputVol = v;
         root._lastVolChangeTime = Date.now();
-        root.run("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SOURCE@ " + v + "%");
+        root.runCommand("audioInput", "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SOURCE@ " + v + "%", "volume");
     }
 
     function setDefaultSink(name, port) {
@@ -1023,7 +922,7 @@ Item {
         root.updateAudioIcon();
         if (root.audioMuted) osdSurface.show("volume-muted", "MUTED", "", "100", "", "1200");
         else osdSurface.show("", "", String(root.audioVol), "100", "", "1200");
-        root.run("target=$(pactl get-default-sink 2>/dev/null); "
+        root.runCommand("audioOutput", "target=$(pactl get-default-sink 2>/dev/null); "
             + "if [ \"$target\" = \"effect_input.eq\" ]; then "
             + "  phys=$(pw-link -l 2>/dev/null | awk -F: '/^effect_output\\.eq:output_FL/{f=1} f && /^[[:space:]]+\\|-> /{sub(/^[[:space:]]+\\|-> /,\"\"); print $1; exit}'); "
             + "  [ -n \"$phys\" ] && target=\"$phys\"; "
@@ -1035,7 +934,7 @@ Item {
 
     function toggleInputMute() {
         root.audioInputMuted = !root.audioInputMuted;
-        root.run("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle");
+        root.runCommand("audioInput", "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle");
         root.refreshAudio();
     }
 
@@ -1055,7 +954,7 @@ Item {
     function setPowerProfile(name) {
         if (!name) return;
         root.powerProfile = name;
-        root.run("powerprofilesctl set " + name);
+        root.runCommand("power", "powerprofilesctl set " + name);
         // Re-probe so the chip reflects the daemon's actual state in
         // case it rejected the request (e.g. on AC-only machines).
         powerProfileRefreshTimer.restart();
@@ -1189,7 +1088,7 @@ Item {
         root.screenRecordVisible = true;
     }
     function stopScreenRecord() {
-        root.run("~/.local/bin/capture-screenrecording --stop-recording");
+        root.runCommand("recording", "~/.local/bin/capture-screenrecording --stop-recording");
         root.recordingActive = false;
         root.screenRecordVisible = false;
     }
@@ -1508,11 +1407,8 @@ Item {
 
     function applyAetherBlueprint(name) {
         if (!name) return;
-        themeApplier.command = ["bash", "-c",
-            root.aetherBin + " --apply-blueprint " + JSON.stringify(name)
-            + " && " + root.pushThemeScript];
-        themeApplier.running = false;
-        themeApplier.running = true;
+        root.runCommand("theme", root.aetherBin + " --apply-blueprint " + JSON.stringify(name)
+            + " && " + root.pushThemeScript);
     }
 
     // Snap selection back to the top whenever the filter changes, so the
@@ -1731,7 +1627,7 @@ Item {
         if (w === 6500 && g === 100 && b === 100 && p === 0) return;
         root.warmthK = w; root.gammaPct = g; root.brightnessPct = b; root.selectedPreset = p;
         var wcmd = (w >= 6500) ? "identity" : "temperature " + w;
-        root.run(root.ensureSunset
+        root.runCommand("display", root.ensureSunset
                  + "hyprctl hyprsunset " + wcmd
                  + " && hyprctl hyprsunset gamma " + g
                  + " && brightnessctl -q set " + b + "%");
@@ -2054,15 +1950,15 @@ Item {
     }
 
     function refreshSystemStats() {
-        if (systemProbe.running) return;
-        systemProbe.running = false;
-        systemProbe.running = true;
+        telemetry.requestSystemSample();
     }
 
     function runSunset(verb) {
         const cmd = "hyprctl hyprsunset " + verb;
-        if (root.sunsetReady) root.run(cmd);
-        else { root.run(root.ensureSunset + cmd); root.sunsetReady = true; }
+        const key = verb.indexOf("gamma ") === 0 ? "gamma" : "warmth";
+        if (root.sunsetReady) root.runCommand("display", cmd, key);
+        // Keep initialization as a barrier; later slider updates must not replace it.
+        else { root.runCommand("display", root.ensureSunset + cmd); root.sunsetReady = true; }
     }
 
     function setWarmth(k) {
@@ -2075,7 +1971,7 @@ Item {
     function setBrightness(pct) {
         pct = Math.max(1, Math.min(100, Math.round(pct)));
         root.brightnessPct = pct;
-        root.run("brightnessctl set " + pct + "%");
+        root.runCommand("display", "brightnessctl set " + pct + "%", "brightness");
         root.saveDisplayState();
     }
     function setVolume(pct) {
@@ -2083,11 +1979,11 @@ Item {
         root.audioVol = pct;
         // --allow-boost lets values above 100 land; pamixer caps at 150
         // anyway, matching the visible range on most distros.
-        root.run("pamixer --allow-boost --set-volume " + pct);
+        root.runCommand("audioOutput", "pamixer --allow-boost --set-volume " + pct, "volume");
     }
     function toggleMute() {
         root.audioMuted = !root.audioMuted;
-        root.run("pamixer -t");
+        root.runCommand("audioOutput", "pamixer -t");
         root.refreshAudio();
     }
     function setGamma(pct) {
@@ -2102,7 +1998,7 @@ Item {
         root.brightnessPct = p.bright;
         const w = (p.warmth >= 6500) ? "identity" : "temperature " + p.warmth;
         const prelude = root.sunsetReady ? "" : root.ensureSunset;
-        root.run(prelude
+        root.runCommand("display", prelude
                  + "hyprctl hyprsunset " + w
                  + " && hyprctl hyprsunset gamma " + p.gamma
                  + " && brightnessctl set " + p.bright + "%");
@@ -2112,7 +2008,7 @@ Item {
     function blankScreen() {
         // Wait out the close animation before the panel blanks, or the
         // reveal-out visibly stutters.
-        root.run("sleep 0.25 && hyprctl monitors -j | jq -e 'length > 1' >/dev/null && hyprctl dispatch dpms off");
+        root.runCommand("display", "sleep 0.25 && hyprctl monitors -j | jq -e 'length > 1' >/dev/null && hyprctl dispatch dpms off");
         root.displayVisible = false;
     }
     function resetDisplay() {
@@ -2121,7 +2017,7 @@ Item {
         root.brightnessPct = savedBrightnessPct;
         const w = (savedWarmthK >= 6500) ? "identity" : "temperature " + savedWarmthK;
         const prelude = root.sunsetReady ? "" : root.ensureSunset;
-        root.run(prelude
+        root.runCommand("display", prelude
                  + "hyprctl hyprsunset " + w
                  + " && hyprctl hyprsunset gamma " + savedGammaPct
                  + " && brightnessctl set " + savedBrightnessPct + "%");
@@ -2356,10 +2252,25 @@ Item {
     }
 
     // ---------- Generic launcher ----------
-    Process { id: runner; running: false
-        stderr: StdioCollector { onStreamFinished: if (this.text) console.log("[RUN-DIAG stderr] " + this.text) }
-    }
-    Process { id: themeApplier; running: false }
+    CommandQueue { id: audioOutputCommands; label: "audio-output" }
+    CommandQueue { id: audioInputCommands; label: "audio-input" }
+    CommandQueue { id: displayCommands; label: "display" }
+    CommandQueue { id: bluetoothCommands; label: "bluetooth" }
+    CommandQueue { id: mediaCommands; label: "media" }
+    CommandQueue { id: wireprotonCommands; label: "wireproton" }
+    CommandQueue { id: recordingCommands; label: "recording" }
+    CommandQueue { id: themeCommands; label: "theme" }
+    CommandQueue { id: hyprlandCommands; label: "hyprland" }
+    CommandQueue { id: powerCommands; label: "power" }
+    EqService { id: eqController }
+    readonly property var eqService: eqController
+    readonly property var commandQueues: ({
+        audioOutput: audioOutputCommands, audioInput: audioInputCommands,
+        display: displayCommands, bluetooth: bluetoothCommands,
+        media: mediaCommands, wireproton: wireprotonCommands,
+        recording: recordingCommands, theme: themeCommands,
+        hyprland: hyprlandCommands, power: powerCommands
+    })
     property string defaultTerminal: "kitty"
 
     function terminalExec(cmd, title) {
@@ -2377,42 +2288,26 @@ Item {
         root.run(root.terminalExec(cmd, title));
     }
 
-    function run(cmd) {
-        console.log("[RUN-DIAG] " + cmd);
-        runner.command = ["bash", "-c", cmd];
-        runner.running = false;
-        runner.running = true;
+    // App/terminal lifetime is independent of every control command.
+    function run(cmd) { Quickshell.execDetached(["bash", "-c", cmd]); }
+
+    function runCommand(owner, cmd, key) {
+        const queue = root.commandQueues[owner];
+        if (!queue) { console.warn("Unknown command owner: " + owner); return false; }
+        return queue.enqueue(["bash", "-c", cmd], key || "");
     }
 
     function focusWorkspace(id) {
         Hyprland.dispatch('hl.dsp.focus({ workspace = "' + id + '" })');
     }
 
-    // ---------- System stats (on demand) ----------
-    Process {
-        id: systemProbe
-        running: false
-        command: ["bash", "-c",
-            "read _ a b c d iowait irq softirq steal _ < <(grep '^cpu ' /proc/stat); "
-            + "sleep 2; "
-            + "read _ e f g h iowait2 irq2 softirq2 steal2 _ < <(grep '^cpu ' /proc/stat); "
-            + "ad=$(( (e+f+g+irq2+softirq2+steal2) - (a+b+c+irq+softirq+steal) )); "
-            + "td=$(( (e+f+g+h+iowait2+irq2+softirq2+steal2) - (a+b+c+d+iowait+irq+softirq+steal) )); "
-            + "cpu=$(( td>0 ? ad*100/td : 0 )); "
-            + "mem=$(awk '/MemTotal/{t=$2}/MemAvailable/{m=$2}END{printf \"%d\",(t-m)*100/t}' /proc/meminfo); "
-            + "printf '%d|%d' \"$cpu\" \"$mem\""]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const p = this.text.split("|");
-                if (p.length === 2) {
-                    root.cpuVal = parseInt(p[0]) || 0;
-                    root.memVal = parseInt(p[1]) || 0;
-                }
-            }
-        }
+    // ---------- Asynchronous system and network-counter telemetry ----------
+    TelemetryService {
+        id: telemetry
+        systemEnabled: !root.barHidden || root.systemVisible
+        burstEnabled: !root.barHidden
+        onNetBurst: root.netBurst()
     }
-    Timer { interval: 5000; running: !root.barHidden; repeat: true; triggeredOnStart: true
-        onTriggered: { systemProbe.running = false; systemProbe.running = true; } }
 
     // ---------- Native Clock (1 Hz, 0 process forks) ----------
     function updateClock() {
@@ -2531,124 +2426,18 @@ Item {
     Timer { interval: 3000; running: !root.barHidden; repeat: true; triggeredOnStart: true
         onTriggered: { netProbe.running = false; netProbe.running = true; } }
 
-    // ---------- Network burst detection ----------
-    // Samples cumulative rx+tx bytes from /proc/net/dev once per second.
-    // When the per-second delta crosses the threshold and the burst is
-    // armed, emits netBurst() and disarms for `burstCooldown.interval` ms
-    // so a sustained download doesn't keep retriggering — this should read
-    // as a rare event, not a continuous activity light.
+    // Kept as forwards for bar consumers; sampling and cooldowns live in
+    // TelemetryService so hiding the bar cancels and reseeds them together.
     signal netBurst()
-    property real netPrevBytes: -1
-    property bool burstArmed: false
-    // First sample after startup seeds netPrevBytes; arm only after a
-    // settling beat, otherwise the initial delta (counter vs 0) would
-    // always fire.
-    Timer { interval: 2500; running: true; repeat: false
-        onTriggered: root.burstArmed = true }
-
-    Process {
-        id: netBurstProbe
-        running: false
-        // $2 is rx_bytes, $10 is tx_bytes per /proc/net/dev's column layout.
-        // Skip loopback so localhost chatter doesn't count as "network".
-        // Direct argv (no shell) — saves the per-poll login-shell startup.
-        command: ["awk", "NR>2 && $1!~/^lo:/ {s+=$2+$10} END {print s+0}",
-                  "/proc/net/dev"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const cur = parseFloat(this.text.trim());
-                if (isNaN(cur)) return;
-                if (root.netPrevBytes < 0) { root.netPrevBytes = cur; return; }
-                const delta = cur - root.netPrevBytes;
-                root.netPrevBytes = cur;
-                // ~1.5 MB in a 1s sample window. Low enough that an active
-                // download or stream paints the arc regularly, high enough
-                // that idle browser chatter doesn't.
-                if (root.burstArmed && delta > 1.5 * 1024 * 1024) {
-                    root.burstArmed = false;
-                    root.netBurst();
-                    burstCooldown.restart();
-                }
-            }
-        }
-    }
-    Timer { interval: 1000; running: !root.barHidden; repeat: true; triggeredOnStart: true
-        onTriggered: { netBurstProbe.running = false; netBurstProbe.running = true; } }
-    Timer { id: burstCooldown; interval: 2000; repeat: false
-        onTriggered: root.burstArmed = true }
+    property real netPrevBytes: telemetry.netBytes
+    property bool burstArmed: telemetry.burstArmed
 
     // ---------- Network details (popup) ----------
-    // Ported from omarchy's network panel: one sample per poll of the
-    // active route's interface, throughput as byte deltas, ping latency
-    // as a rolling window (null = lost packet → packet-loss %).
-    property var    netInfo: ({})
-    property real   netPrevRx: 0
-    property real   netPrevTx: 0
-    property real   netPrevSampleTime: 0
-    property string netPrevIface: ""
-    property real   netDownloadRate: 0
-    property real   netUploadRate: 0
-    property string netPingIface: ""
-    property var    netRouterPingSamples: []
-    property var    netInternetPingSamples: []
-    property real   netRouterPing: -1
-    property real   netInternetPing: -1
-    property int    netPacketLoss: 0
-    readonly property int netPingWindow: 24
-    readonly property int netPingAvg: 5
-
-    function updateNetDetails(text) {
-        const kv = {};
-        const lines = String(text || "").split("\n");
-        for (const line of lines) {
-            const i = line.indexOf("\t");
-            if (i > -1) kv[line.slice(0, i)] = line.slice(i + 1).trim();
-        }
-        root.netInfo = kv;
-        const iface = kv.iface || "";
-        const now = Date.now() / 1000;
-        const rx = parseFloat(kv.rx_bytes) || 0;
-        const tx = parseFloat(kv.tx_bytes) || 0;
-        if (iface !== root.netPrevIface || root.netPrevSampleTime === 0) {
-            root.netPrevIface = iface; root.netPrevRx = rx; root.netPrevTx = tx;
-            root.netPrevSampleTime = now; root.netDownloadRate = 0; root.netUploadRate = 0;
-        } else {
-            const dt = now - root.netPrevSampleTime;
-            if (dt > 0) {
-                root.netDownloadRate = Math.max(0, (rx - root.netPrevRx) / dt);
-                root.netUploadRate = Math.max(0, (tx - root.netPrevTx) / dt);
-            }
-            root.netPrevRx = rx; root.netPrevTx = tx; root.netPrevSampleTime = now;
-        }
-        if (iface !== root.netPingIface) {
-            root.netPingIface = iface;
-            root.netRouterPingSamples = [];
-            root.netInternetPingSamples = [];
-        }
-        function pushSample(samples, raw) {
-            const v = parseFloat(raw);
-            samples.push(isFinite(v) && v >= 0 ? v : null);
-            return samples.slice(-root.netPingWindow);
-        }
-        root.netRouterPingSamples = pushSample(root.netRouterPingSamples.slice(), kv.router_ping_ms);
-        root.netInternetPingSamples = pushSample(root.netInternetPingSamples.slice(), kv.internet_ping_ms);
-        function avg(samples) {
-            let total = 0, count = 0;
-            for (let i = Math.max(0, samples.length - root.netPingAvg); i < samples.length; i++) {
-                if (typeof samples[i] === "number") { total += samples[i]; count++; }
-            }
-            return count > 0 ? total / count : -1;
-        }
-        function loss(samples) {
-            if (samples.length === 0) return 0;
-            let lost = 0;
-            for (const s of samples) if (s === null) lost++;
-            return Math.round((lost / samples.length) * 100);
-        }
-        root.netRouterPing = avg(root.netRouterPingSamples);
-        root.netInternetPing = avg(root.netInternetPingSamples);
-        root.netPacketLoss = loss(root.netInternetPingSamples);
-    }
+    readonly property var netInfo: networkService.info
+    readonly property real netDownloadRate: networkService.downloadRate
+    readonly property real netUploadRate: networkService.uploadRate
+    readonly property real netInternetPing: networkService.internetPing
+    readonly property int netPacketLoss: networkService.packetLoss
 
     function fmtBytes(n) {
         n = Number(n) || 0;
@@ -2664,27 +2453,6 @@ Item {
         return v.toFixed(v > 0 && v < 10 ? 1 : 0) + " MS";
     }
     function fmtLoss(pct) { return (parseInt(pct) || 0) + "%"; }
-
-    Process {
-        id: netDetailsProbe
-        running: false
-        command: ["bash", "-c",
-            "IF=$(ip route get 8.8.8.8 2>/dev/null | sed -n 's/.* dev \\([^ ]*\\).*/\\1/p');"
-            + " [ -z \"$IF\" ] && { echo 'iface'; exit 0; };"
-            + " ip=$(ip -o -4 addr show \"$IF\" 2>/dev/null | awk '{split($4,a,\"/\"); print a[1]; exit}');"
-            + " gw=$(ip route show default 2>/dev/null | awk '/via/{print $3; exit}');"
-            + " rx=$(awk -v f=\"$IF:\" '$1==f{print $2}' /proc/net/dev);"
-            + " tx=$(awk -v f=\"$IF:\" '$1==f{print $10}' /proc/net/dev);"
-            + " rp=$(ping -c1 -W1 \"$gw\" 2>/dev/null | awk -F'/' '/rtt/{print $5; exit}');"
-            + " ipg=$(ping -c1 -W1 1.1.1.1 2>/dev/null | awk -F'/' '/rtt/{print $5; exit}');"
-            + " printf 'iface\\t%s\\nip\\t%s\\ngateway\\t%s\\nrx_bytes\\t%s\\ntx_bytes\\t%s\\nrouter_ping_ms\\t%s\\ninternet_ping_ms\\t%s\\n'"
-            + " \"$IF\" \"$ip\" \"$gw\" \"$rx\" \"$tx\" \"$rp\" \"$ipg\""]
-        stdout: StdioCollector {
-            onStreamFinished: root.updateNetDetails(this.text)
-        }
-    }
-    Timer { interval: 1500; running: root.networkVisible; repeat: true; triggeredOnStart: true
-        onTriggered: { if (!netDetailsProbe.running) { netDetailsProbe.running = false; netDetailsProbe.running = true; } } }
 
     // ---------- Bluetooth status ----------
     // bluez-tools path: bt-adapter --info for power state only — the
@@ -2857,91 +2625,6 @@ Item {
     }
     Timer { interval: 30000; running: !root.barHidden; repeat: true; triggeredOnStart: true
         onTriggered: { btDevicesProbe.running = false; btDevicesProbe.running = true; } }
-
-    // ---------- Wi-Fi scan probe ----------
-    // iwctl path (omarchy ships iwd, not NetworkManager): detect the
-    // station device, check Powered state, kick a non-blocking scan,
-    // then parse human-formatted get-networks output. Signal is reported
-    // in tenths of dBm (e.g. -6400 = -64 dBm); convert to a 0-100% bar
-    // on the QML side. ANSI codes are stripped before parsing.
-    Process {
-        id: wifiScanProbe
-        running: false
-        command: ["bash", "-c",
-            "DEV=$(iwctl --dont-ask device list 2>/dev/null"
-            + "   | sed 's/\\x1b\\[[0-9;]*m//g'"
-            + "   | awk '/station/{print $1; exit}');"
-            + " if [ -z \"$DEV\" ]; then echo 'RADIO|off'; exit 0; fi;"
-            + " powered=$(iwctl --dont-ask device \"$DEV\" show 2>/dev/null"
-            + "   | sed 's/\\x1b\\[[0-9;]*m//g'"
-            + "   | awk '/Powered/{print $NF; exit}');"
-            + " if [ \"$powered\" != on ]; then echo 'RADIO|off'; exit 0; fi;"
-            + " echo 'RADIO|on';"
-            + " iwctl --dont-ask station \"$DEV\" scan 2>/dev/null || true;"
-            + " while [ \"$(iwctl --dont-ask station \"$DEV\" show 2>/dev/null | sed 's/\\x1b\\[[0-9;]*m//g' | awk '/Scanning/{print $NF; exit}')\" = \"yes\" ]; do sleep 0.3; done;"
-            + " iwctl --dont-ask station \"$DEV\" get-networks rssi-dbms 2>/dev/null"
-            + "   | sed 's/\\x1b\\[[0-9;]*m//g'"
-            + "   | awk '"
-            + "       /^-+$/ { sep++; next }"
-            + "       sep < 2 || $0 ~ /^[[:space:]]*$/ { next }"
-            + "       {"
-            + "         line=$0;"
-            + "         conn=(index(substr(line,1,4),\">\")>0)?1:0;"
-            + "         sub(/^[ >]+/, \"\", line);"
-            + "         sub(/[ ]+$/, \"\", line);"
-            + "         if (match(line, /^(.*[^ ])  +([^ ]+)  +(-?[0-9]+)$/, m))"
-            + "           printf \"%d\\t%s\\t%s\\t%s\\n\", conn, m[1], m[2], m[3];"
-            + "       }';"
-            + " echo '---KNOWN';"
-            + " iwctl --dont-ask known-networks list 2>/dev/null"
-            + "   | sed 's/\\x1b\\[[0-9;]*m//g'"
-            + "   | awk '!hdr && /Name/ { idx = index($0, \"Security\"); hdr = 1; next }"
-            + "       hdr && /^[[:space:]]*-/ { next }"
-            + "       hdr { line = $0; name = substr(line, 1, idx - 1);"
-            + "             gsub(/^[ \\t]+|[ \\t]+$/, \"\", name);"
-            + "             if (name != \"\") print \"KNOWN|\" name }'"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const lines = this.text.split("\n").filter(s => s.length > 0);
-                let radioOn = false;
-                const known = {};
-                const networks = [];
-                // Known-networks lines arrive after the scan rows, so collect
-                // them first and annotate in a second pass.
-                for (const line of lines) {
-                    if (line.startsWith("RADIO|")) {
-                        radioOn = line.slice(6) === "on";
-                        continue;
-                    }
-                    if (line.startsWith("KNOWN|")) known[line.slice(6).trim()] = true;
-                }
-                for (const line of lines) {
-                    if (line.startsWith("RADIO|") || line.startsWith("---")
-                        || line.startsWith("KNOWN|")) continue;
-                    const f = line.split("\t");
-                    if (f.length < 4) continue;
-                    // dBm tenths -> dBm -> 0-100%. -50dBm or stronger pegs at 100%.
-                    const dbm = parseInt(f[3]) / 100;
-                    const pct = Math.max(0, Math.min(100, Math.round(2 * (dbm + 100))));
-                    networks.push({
-                        inUse: f[0] === "1",
-                        ssid: f[1],
-                        signal: pct,
-                        security: f[2],
-                        known: known[f[1].trim()] === true
-                    });
-                }
-                networks.sort((a, b) => (b.inUse - a.inUse) || (b.signal - a.signal));
-                if (root.wifiRadioOn !== radioOn) root.wifiRadioOn = radioOn;
-                const ser = JSON.stringify(networks);
-                if (ser !== root._wifiNetworksSer) {
-                    root._wifiNetworksSer = ser;
-                    root.wifiNetworks = networks;
-                }
-                root.wifiScanning = false;
-            }
-        }
-    }
 
     // ---------- Audio sinks probe ----------
     // pactl JSON (pipewire-pulse supports -f json): each sink carries its
@@ -3326,9 +3009,18 @@ Item {
 
     Loader { id: networkLoader }
     onNetworkVisibleChanged: {
-        if (root.networkVisible && !networkLoader.item) {
-            networkLoader.setSource("NetworkPopup.qml", { root: root });
+        if (root.networkVisible) {
+            networkUnload.stop();
+            if (!networkLoader.item)
+                networkLoader.setSource("NetworkPopup.qml", { root: root });
+        } else {
+            networkUnload.restart();
         }
+    }
+    Timer {
+        id: networkUnload
+        interval: 250
+        onTriggered: if (!root.networkVisible) networkLoader.source = ""
     }
 
     Loader { id: btLoader }
@@ -3744,7 +3436,7 @@ Item {
         target: "nightlight"
         function toggle() {
             if (root.warmthK < 6500) {
-                root.run("PREV=$(cat /tmp/nightlight-prev-bright 2>/dev/null || echo 100); "
+                root.runCommand("display", "PREV=$(cat /tmp/nightlight-prev-bright 2>/dev/null || echo 100); "
                     + root.ensureSunset
                     + "hyprctl hyprsunset identity && hyprctl hyprsunset gamma 100"
                     + " && brightnessctl set \"$PREV\"%");
@@ -3754,7 +3446,7 @@ Item {
                 root.brightnessPct = 100;
                 root.saveDisplayState();
             } else {
-                root.run("echo $(( $(brightnessctl get) * 100 / $(brightnessctl max) )) > /tmp/nightlight-prev-bright; "
+                root.runCommand("display", "echo $(( $(brightnessctl get) * 100 / $(brightnessctl max) )) > /tmp/nightlight-prev-bright; "
                     + root.ensureSunset
                     + "hyprctl hyprsunset temperature 3000 && hyprctl hyprsunset gamma 85"
                     + " && brightnessctl set 30%");

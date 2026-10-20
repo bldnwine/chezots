@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# phone - Toggle Tailscale and KDE Connect integration
+
+set -euo pipefail
+
+elevate() {
+    if [ "$(id -u)" -eq 0 ]; then
+        sh -c "$1"
+    elif command -v pkexec >/dev/null 2>&1; then
+        pkexec sh -c "$1"
+    else
+        sudo sh -c "$1"
+    fi
+}
+
+is_running() {
+    systemctl is-active --quiet tailscaled.service || pgrep -x kdeconnect-indicator >/dev/null 2>&1
+}
+
+start_phone() {
+    echo "Starting Tailscale & KDE Connect..."
+    # Run all privileged operations in a single prompt
+    elevate "systemctl start tailscaled.service && tailscale up"
+    
+    if ! pgrep -x kdeconnect-indicator >/dev/null 2>&1; then
+        nohup kdeconnect-indicator >/dev/null 2>&1 &
+    fi
+    
+    kdeconnect-cli --refresh >/dev/null 2>&1 || true
+    notify-send -i kdeconnect "Phone Sync" "Tailscale & KDE Connect started" 2>/dev/null || true
+    echo "Started successfully."
+}
+
+stop_phone() {
+    echo "Stopping KDE Connect & Tailscale..."
+    # Terminate user-level KDE Connect apps
+    pkill -x kdeconnect-indicator 2>/dev/null || true
+    pkill -x kdeconnect-app 2>/dev/null || true
+    pkill -x kdeconnect-sms 2>/dev/null || true
+    pkill -x kdeconnectd 2>/dev/null || true
+    
+    # Run all privileged operations in a single prompt
+    elevate "tailscale down 2>/dev/null || true; systemctl stop tailscaled.service"
+    
+    notify-send -i kdeconnect "Phone Sync" "Tailscale & KDE Connect stopped" 2>/dev/null || true
+    echo "Stopped successfully."
+}
+
+case "${1:-toggle}" in
+    start|on|up)
+        start_phone
+        ;;
+    stop|off|down)
+        stop_phone
+        ;;
+    status)
+        if is_running; then
+            echo "Status: Active"
+            echo "--- Tailscale ---"
+            tailscale status 2>/dev/null || true
+            echo "--- KDE Connect ---"
+            kdeconnect-cli -a 2>/dev/null || true
+        else
+            echo "Status: Inactive"
+        fi
+        ;;
+    toggle)
+        if is_running; then
+            stop_phone
+        else
+            start_phone
+        fi
+        ;;
+    *)
+        echo "Usage: $0 [start|stop|toggle|status]"
+        exit 1
+        ;;
+esac

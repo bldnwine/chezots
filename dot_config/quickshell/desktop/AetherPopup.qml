@@ -521,7 +521,7 @@ CardWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 label: "RANDOM REGEN"
                 onActivated: {
-                    aetherPopup.root.run("sh -c '"
+                    aetherPopup.root.runCommand("theme", "sh -c '"
                         + aetherPopup.root.aetherBin + " --generate \"$(" + aetherPopup.root.aetherBin + " --random-wallpaper)\""
                         + " && " + aetherPopup.root.pushThemeScript + "'");
                 }

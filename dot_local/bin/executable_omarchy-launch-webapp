@@ -17,7 +17,7 @@ if [[ -z $URL ]]; then
 fi
 
 # Map a Hyprland window class / process tag to "<desktop-file>:<family>".
-# family is "chromium" (--app mode) or "firefox" (--new-window mode).
+# family is "chromium" (--app mode), "zen" (--blank-window mode), or "firefox" (--new-window mode).
 class_to_desktop() {
     case "${1,,}" in
     brave-origin-beta) echo "brave-origin-beta.desktop:chromium" ;;
@@ -28,7 +28,7 @@ class_to_desktop() {
     opera) echo "opera.desktop:chromium" ;;
     vivaldi) echo "vivaldi.desktop:chromium" ;;
     helium) echo "helium.desktop:chromium" ;;
-    zen | zen-browser) echo "zen.desktop:firefox" ;;
+    zen | zen-browser) echo "zen.desktop:zen" ;;
     firefox) echo "firefox.desktop:firefox" ;;
     *) return 1 ;;
     esac
@@ -131,7 +131,9 @@ if [[ -n $RUNNING_DESKTOP ]]; then
             echo "running:$RUNNING_DESKTOP:$RUNNING_FAMILY:$EXEC_PATH"
             exit 0
         fi
-        if [[ $RUNNING_FAMILY == firefox ]]; then
+        if [[ $RUNNING_FAMILY == zen ]]; then
+            exec "$EXEC_PATH" --blank-window "$URL" "${@:2}"
+        elif [[ $RUNNING_FAMILY == firefox ]]; then
             exec "$EXEC_PATH" --new-window "$URL" "${@:2}"
         else
             exec "$EXEC_PATH" --app="$URL" "${@:2}"
@@ -175,7 +177,9 @@ if [[ ${OMARCHY_LAUNCH_WEBAPP_DRYRUN:-} == 1 ]]; then
 fi
 
 # Launch
-if [[ -n $APP_MODE ]]; then
+if [[ $browser == zen* ]]; then
+    exec "$EXEC_PATH" --blank-window "$URL" "${@:2}"
+elif [[ -n $APP_MODE ]]; then
     exec "$EXEC_PATH" "$APP_MODE=$URL" "${@:2}"
 else
     exec "$EXEC_PATH" --new-window "$URL" "${@:2}"

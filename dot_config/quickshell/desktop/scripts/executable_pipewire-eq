@@ -6,6 +6,8 @@ import re
 import math
 import subprocess
 import time
+import fcntl
+import tempfile
 from pathlib import Path
 
 STATE_DIR = Path.home() / ".local" / "state" / "quickshell-desktop"
@@ -110,10 +112,20 @@ def load_presets():
     except Exception:
         return DEFAULT_PRESETS
 
+def atomic_write(path, text):
+    fd, temporary = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as file:
+            file.write(text)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 def save_presets(presets):
     ensure_dirs()
-    with open(PRESETS_FILE, "w") as f:
-        json.dump(presets, f, indent=2)
+    atomic_write(PRESETS_FILE, json.dumps(presets, indent=2))
 
 def load_state():
     ensure_dirs()
@@ -148,8 +160,7 @@ def save_state(state):
     ensure_dirs()
     if "activePreset" in state:
         state["activePreset"] = sanitize_preset_name(state["activePreset"])
-    with open(STATE_FILE, "w") as f:
-        json.dump(state, f, indent=2)
+    atomic_write(STATE_FILE, json.dumps(state, indent=2))
 
 def calculate_auto_preamp(bands: list) -> float:
     """Calculates safe negative preamp headroom: -max(0, max(gains))."""
@@ -326,20 +337,24 @@ def restart_pipewire():
 
             if eq_id:
                 # Set default sink to effect_input.eq and lock its volume at 1.00 unity gain
-                subprocess.run(["wpctl", "set-default", str(eq_id)], timeout=3)
-                subprocess.run(["wpctl", "set-volume", str(eq_id), "1.00"], timeout=3)
-                subprocess.run(["wpctl", "set-mute", str(eq_id), "0"], timeout=3)
-                return
+                subprocess.run(["wpctl", "set-default", str(eq_id)], timeout=3, check=True)
+                subprocess.run(["wpctl", "set-volume", str(eq_id), "1.00"], timeout=3, check=True)
+                subprocess.run(["wpctl", "set-mute", str(eq_id), "0"], timeout=3, check=True)
+                return True
             time.sleep(0.15)
     except Exception as e:
         print(f"Notice during pipewire reload: {e}", file=sys.stderr)
+    return False
 
-def cmd_apply(args, force_restart=False):
+def cmd_apply(args, force_restart=False, allow_restart=True):
     """Applies current or provided state to PipeWire with live 0ms updates when possible."""
     if args and args[0].strip():
         arg_str = " ".join(args).strip()
         try:
             payload = json.loads(arg_str)
+        except json.JSONDecodeError:
+            payload = None
+        if isinstance(payload, dict):
             state = load_state()
             if "preamp" in payload:
                 state["preamp"] = float(payload["preamp"])
@@ -350,7 +365,7 @@ def cmd_apply(args, force_restart=False):
             if "activePreset" in payload:
                 state["activePreset"] = sanitize_preset_name(payload["activePreset"])
             save_state(state)
-        except Exception:
+        else:
             presets = load_presets()
             clean_name = sanitize_preset_name(arg_str)
             matching_key = next((k for k in presets if k.lower() == clean_name.lower()), None)
@@ -370,17 +385,21 @@ def cmd_apply(args, force_restart=False):
     if not force_restart and apply_live_controls(state):
         conf = generate_pipewire_conf(state.get("preamp", 0.0), state.get("bands", DEFAULT_10_BANDS), state.get("enabled", True))
         ensure_dirs()
-        with open(PW_EQ_CONF, "w") as f:
-            f.write(conf)
+        atomic_write(PW_EQ_CONF, conf)
         print(json.dumps({"status": "applied_live", "preset": state.get("activePreset", "Custom"), "enabled": state.get("enabled", True)}))
         return
 
-    # Fallback only when node doesn't exist at all (initial setup)
+    # A live failure (including a temporarily unavailable graph) must never
+    # interrupt other applications by restarting PipeWire during a drag.
+    if not allow_restart:
+        raise RuntimeError("EQ unavailable; press APPLY to initialize it")
+
+    # Explicit APPLY is the initialization/restart path.
     conf = generate_pipewire_conf(state.get("preamp", 0.0), state.get("bands", DEFAULT_10_BANDS), state.get("enabled", True))
     ensure_dirs()
-    with open(PW_EQ_CONF, "w") as f:
-        f.write(conf)
-    restart_pipewire()
+    atomic_write(PW_EQ_CONF, conf)
+    if not restart_pipewire():
+        raise RuntimeError("PipeWire did not become ready; settings were saved but not applied")
     print(json.dumps({"status": "applied_restarted", "preset": state.get("activePreset", "Custom"), "enabled": state.get("enabled", True)}))
 
 def cmd_toggle(args):
@@ -388,7 +407,7 @@ def cmd_toggle(args):
     state = load_state()
     state["enabled"] = not state.get("enabled", True)
     save_state(state)
-    cmd_apply([])
+    cmd_apply([], allow_restart=False)
 
 def cmd_auto_preamp(args):
     """Calculates auto-preamp and applies it live."""
@@ -396,7 +415,7 @@ def cmd_auto_preamp(args):
     auto_val = calculate_auto_preamp(state.get("bands", DEFAULT_10_BANDS))
     state["preamp"] = auto_val
     save_state(state)
-    cmd_apply([])
+    cmd_apply([], allow_restart=False)
     print(json.dumps({"status": "auto_preamp_applied", "preamp": auto_val}))
 
 def cmd_disable(args):
@@ -404,7 +423,7 @@ def cmd_disable(args):
     state = load_state()
     state["enabled"] = False
     save_state(state)
-    cmd_apply([])
+    cmd_apply([], allow_restart=False)
     print(json.dumps({"status": "disabled"}))
 
 def cmd_get_state(args):
@@ -532,7 +551,7 @@ def cmd_import(args):
     save_presets(presets)
 
     # Apply live with 0ms latency and zero PipeWire restarts
-    cmd_apply([], force_restart=False)
+    cmd_apply([], allow_restart=False)
     print(json.dumps({"status": "imported", "name": preset_name, "bands_count": len(bands), "preamp": preamp}))
 
 def cmd_export(args):
@@ -559,8 +578,10 @@ def main():
     cmd = sys.argv[1].lower()
     args = sys.argv[2:]
 
-    if cmd in ("apply", "live", "set"):
+    if cmd == "apply":
         cmd_apply(args)
+    elif cmd in ("live", "set"):
+        cmd_apply(args, allow_restart=False)
     elif cmd in ("toggle", "bypass"):
         cmd_toggle(args)
     elif cmd in ("auto-preamp", "autopreamp", "auto"):
@@ -580,5 +601,17 @@ def main():
     else:
         cmd_apply([cmd] + args)
 
+def run():
+    ensure_dirs()
+    # Also serialize external CLI invocations with the shell's queued jobs.
+    with open(STATE_DIR / "eq.lock", "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            main()
+        except Exception as error:
+            print(json.dumps({"error": str(error)}), file=sys.stderr)
+            raise SystemExit(1)
+
+
 if __name__ == "__main__":
-    main()
+    run()

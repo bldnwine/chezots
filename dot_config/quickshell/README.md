@@ -35,6 +35,7 @@ This configuration runs a complete, unified desktop shell environment inside a *
     ├── Navbar.qml             # Primary bar coordinator, popup Loader host, hardware stepping engines, 22 GlobalShortcuts
     ├── CalendarService.qml    # Persistent Calendar cache, sync, and event action lifecycle
     ├── WarpService.qml        # Persistent WARP status and action lifecycle
+    ├── NetworkService.qml     # Persistent iwd actions, bounded scans, and active-route details
     ├── Bar.qml                # Default horizontal bar module layout (kanji workspaces, clock, telemetry)
     ├── BarHacker.qml          # Alternate hacker-style bar layout
     ├── BarWhiterose.qml       # Alternate minimal whiterose bar layout
@@ -88,7 +89,7 @@ This configuration runs a complete, unified desktop shell environment inside a *
 | `clipboard-toggle` | `SUPER + A` | Toggle clipboard history | `qs -c desktop ipc call clipboard toggle` |
 | `wallpapers-toggle` | `SUPER + ALT + A` | Toggle wallpaper selector | `qs -c desktop ipc call wallpapers toggle` |
 | `bluetooth-toggle` | `SUPER + CTRL + B` | Toggle Bluetooth manager | `qs -c desktop ipc call bluetooth toggle` |
-| `network-toggle` | `SUPER + CTRL + N` | Toggle Wi-Fi / network popup | `qs -c desktop ipc call wifi toggle` |
+| `network-toggle` | `SUPER + CTRL + N` | Toggle Wi-Fi / network popup | `qs -c desktop ipc call network toggle` |
 | `system-toggle` | `SUPER + CTRL + Q` | Toggle system performance popup | `qs -c desktop ipc call system toggle` |
 | `audio-toggle` | `SUPER + CTRL + M` | Toggle audio mixer popup | `qs -c desktop ipc call audio toggle` |
 | `bar-toggle` | `SUPER + H` | Toggle navigation bar visibility | `qs -c desktop ipc call bar toggle` |
@@ -208,6 +209,9 @@ pgrep -a -x qs
 
 ## 8. Performance Lifecycle & Regression Checks
 
+- **Command independence:** App/terminal launches are detached. Control commands use persistent queues per feature, so an audio/display/Bluetooth/VPN/theme action cannot cancel another feature's job. Discrete actions remain ordered; repeated pending absolute settings coalesce without crossing discrete-action boundaries. Existing dedicated workers and service deadlines remain in place.
+- **Equalizer:** One persistent service serializes live changes and preset operations across popup closure. Live changes retain only the latest pending snapshot; old state-file notifications cannot overwrite edits during a job or slider debounce. Helpers share a file lock and replace state/configuration atomically. Live updates and imports never restart PipeWire; use explicit APPLY to initialize an unavailable graph. Failed application or persistence is reported instead of showing a premature success.
+- **Telemetry:** CPU/memory and network-burst counters use asynchronous `FileView` reads with no subprocesses. CPU keeps a 2s measurement window on a 5s cadence, including while the System popup is open with the bar hidden; explicit popup refreshes remain supported. Network burst sampling keeps its 1s cadence, 1.5 MiB threshold, and 2s cooldown. Hiding the bar, failed reads, and interface/counter resets reseed network baselines; cancelled system reads cannot publish stale samples. Battery, link status, Bluetooth, and VPN polling are unchanged.
 - **Audio:** One persistent `pactl subscribe` connection drives debounced snapshots and device-list refreshes. Snapshots read each sink/source list once and preserve the equalizer's physical-sink routing. A 30s fallback runs only while the subscription is disconnected; reconnect attempts occur every 3s.
 - **Recording:** `capture-screenrecording` already sends `screenrecord sync` at start/stop. A direct `pgrep` every 15s reconciles externally launched recordings and unexpected exits.
 - **AI:** Visible active sessions update every 1.5s, but quotas refresh at most once per minute unless manually requested. Both active and inactive polling pause when the bar and AI popup are hidden. History metadata comes from one bounded tail read per scan.
@@ -216,13 +220,21 @@ pgrep -a -x qs
 - **Locus:** Closing cancels searches/previews, releases preview image sources, and unloads expanded Quick details. Result icons load asynchronously; failed lookups/loads are cached until the app index or theme changes. Theme discovery keeps the last complete list across closes and checks source metadata on entry and every 4s while the Themes view is open; unchanged inputs skip the full scan. Failed or cancelled scans preserve the cache.
 - **Bloom:** Hover uses a fixed circle with scale/opacity animation over 250ms. The effect and clipping are inactive between hovers, and hiding its host item or window cancels the animation.
 - **Calendar:** `CalendarService.qml` owns the cache and processes even when the popup closes. Opening a stale view starts the on-demand user service; failed syncs keep the last cache and retry with bounded backoff. Create, edit, and delete update the disk cache only after Google acknowledges the action, then request a full sync. The sync and actions share a file lock, write the cache atomically, and use bounded subprocess and service timeouts. Configure `gwsPath`, `profile`, calendar filters, and sync window in `~/.config/omarchy/calendar-sync.json`. Run `desktop/scripts/calendar-sync/login` to renew the full Calendar read/write scope. `gws auth status` does not report granted scopes; if a write gets a 403, rerun login and tick the Calendar consent checkbox. The old periodic systemd timer is retired.
+- **Network:** `NetworkService.qml` survives popup unload and serializes connect, disconnect, radio, forget, and autoconnect actions. The helper receives JSON on stdin and invokes tools with argument arrays; SSIDs/passwords never enter shell code or diagnostic logs. Actions finish after close, while popup scans/details are cancelled and password input is cleared immediately. The popup unloads after 250ms and rescans on every opening. Explicit refreshes from other callers remain supported while the network popup is hidden. Failed reads retain the last successful network list. Connect has a 30s deadline; other actions/state reads 10s, scans 15s, and details 4s, followed by bounded subprocess cleanup. Details resolve the IPv4 route to `1.1.1.1`, read counters once, timestamp them before pinging, and bind the ping to that interface; gatewayless VPN routes show no gateway. Only one detail sample runs at a time, every 1.5s while open. Each sample launches the helper plus one route query and one ping, replacing the previous shell/pipeline probe and unused router ping. The network list scrolls without truncation; unknown PSK networks prompt immediately, and failed saved credentials offer an explicit password retry.
 - **WARP:** Status reflects the daemon's reported connection state. Connection, mode, and daemon actions have timeouts; daemon start/stop uses the existing `sudo -n` allowlist without a password prompt. The popup expands after two valid startup status reads and confirms a brief daemon failure before collapsing again. Connectivity checks say "Verifying connectivity" instead of implying a tunnel connection. The widget does not change WARP connectivity-check settings or kill unrelated processes. Registration and settings responses are validated before replacing known state.
 
 Additional regression checks:
 
 ```sh
+python3 desktop/tests/network_helper_test.py
+python3 desktop/tests/network_service_lifecycle_test.py
+python3 desktop/tests/network_popup_test.py
 node desktop/tests/model.test.js
 node desktop/tests/performance-model.test.js
+node desktop/tests/telemetry-model.test.js
+python3 desktop/tests/telemetry_lifecycle_test.py
+python3 desktop/tests/eq_helper_test.py
+python3 desktop/tests/command_isolation_test.py
 python3 desktop/tests/performance_helpers_test.py
 node desktop/tests/locus-icons.test.js
 python3 desktop/tests/theme_cache_test.py

@@ -14,7 +14,9 @@ Item {
     property string activePreset: "Flat"
     property var presetList: ["Flat"]
     property var presetsMap: ({})
-    property bool isApplied: true
+    readonly property var service: root.eqService
+    readonly property bool isApplied: service.isApplied
+    enabled: !service.mutating
     property bool importOpen: false
     property string importText: ""
     property string statusMsg: ""
@@ -23,9 +25,9 @@ Item {
     implicitHeight: mainCol.implicitHeight
 
     readonly property int maxBands: 32
-    readonly property string scriptPath: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/pipewire-eq"
 
-    function loadFromState(txt) {
+    function loadFromState(txt, force) {
+        if (!force && (eqPanel.service.busy || liveDebounceTimer.running)) return;
         if (!txt || txt.trim().length === 0) return;
         try {
             const data = JSON.parse(txt.trim());
@@ -38,7 +40,6 @@ Item {
             if (Array.isArray(data.bands) && data.bands.length > 0) {
                 eqPanel.bands = data.bands.slice(0, eqPanel.maxBands);
             }
-            eqPanel.isApplied = true;
         } catch (e) {
             console.log("[EqPanel load error]", e);
         }
@@ -66,16 +67,18 @@ Item {
         }
     }
 
-    // Sends 0ms live update to running PipeWire filter graph
+    function snapshot() {
+        return { enabled: eqPanel.eqEnabled, activePreset: eqPanel.activePreset,
+                 preamp: eqPanel.preamp, bands: eqPanel.bands };
+    }
+
     function applyLive() {
-        const payload = JSON.stringify({
-            enabled: eqPanel.eqEnabled,
-            activePreset: eqPanel.activePreset,
-            preamp: eqPanel.preamp,
-            bands: eqPanel.bands
-        });
-        Quickshell.execDetached([eqPanel.scriptPath, "live", payload]);
-        eqPanel.isApplied = true;
+        liveDebounceTimer.stop();
+        eqPanel.service.apply(eqPanel.snapshot(), false);
+    }
+
+    function flushLive() {
+        if (liveDebounceTimer.running) eqPanel.applyLive();
     }
 
     function toggleEnabled() {
@@ -207,49 +210,59 @@ Item {
     }
 
     function applyEq() {
-        const payload = JSON.stringify({
-            enabled: eqPanel.eqEnabled,
-            activePreset: eqPanel.activePreset,
-            preamp: eqPanel.preamp,
-            bands: eqPanel.bands
-        });
-        Quickshell.execDetached([eqPanel.scriptPath, "apply", payload]);
-        eqPanel.isApplied = true;
-        eqPanel.statusMsg = "APPLIED";
-        clearStatusTimer.restart();
+        liveDebounceTimer.stop();
+        eqPanel.service.apply(eqPanel.snapshot(), true);
+        eqPanel.statusMsg = "APPLYING…";
     }
 
     function savePreset(name) {
         if (!name || name.trim().length === 0) return;
         const clean = name.trim().slice(0, 32);
-        Quickshell.execDetached([eqPanel.scriptPath, "save", clean]);
         eqPanel.activePreset = clean;
-        eqPanel.statusMsg = "SAVED: " + clean;
-        clearStatusTimer.restart();
+        // Save the displayed settings, even if their 30ms debounce has not fired.
+        eqPanel.applyLive();
+        eqPanel.service.save(clean);
+        eqPanel.statusMsg = "SAVING…";
     }
 
     function deletePreset(name) {
         if (!name) return;
-        Quickshell.execDetached([eqPanel.scriptPath, "delete", name]);
-        eqPanel.statusMsg = "DELETED";
-        clearStatusTimer.restart();
+        eqPanel.flushLive();
+        eqPanel.service.remove(name);
+        eqPanel.statusMsg = "DELETING…";
     }
 
     function runImport(text) {
         if (!text || text.trim().length === 0) return;
-        Quickshell.execDetached([eqPanel.scriptPath, "import", text.trim()]);
+        eqPanel.flushLive();
+        eqPanel.service.importText(text.trim());
         eqPanel.importOpen = false;
         eqPanel.importText = "";
-        eqPanel.statusMsg = "IMPORTED";
-        clearStatusTimer.restart();
+        eqPanel.statusMsg = "IMPORTING…";
     }
 
     function runExport() {
-        Quickshell.execDetached(["bash", "-c",
-            "\"" + eqPanel.scriptPath + "\" export | wl-copy"
-        ]);
-        eqPanel.statusMsg = "COPIED TO CLIPBOARD";
-        clearStatusTimer.restart();
+        eqPanel.flushLive();
+        eqPanel.service.exportToClipboard();
+        eqPanel.statusMsg = "COPYING…";
+    }
+
+    Component.onCompleted: {
+        if (eqPanel.service.busy && eqPanel.service.desiredState)
+            eqPanel.loadFromState(JSON.stringify(eqPanel.service.desiredState), true);
+    }
+    Connections {
+        target: eqPanel.service
+        function onBusyChanged() {
+            if (!eqPanel.service.busy) {
+                stateWatcher.reload();
+                presetsWatcher.reload();
+            }
+        }
+        function onCompleted(action, success, message) {
+            eqPanel.statusMsg = success ? message : "EQ ERROR";
+            clearStatusTimer.restart();
+        }
     }
 
     Timer {
@@ -262,7 +275,7 @@ Item {
     Timer {
         id: clearStatusTimer
         interval: 2200
-        onTriggered: eqPanel.statusMsg = ""
+        onTriggered: if (!eqPanel.service.busy) eqPanel.statusMsg = ""
     }
 
     Timer {
@@ -278,7 +291,7 @@ Item {
 
     FileView {
         id: stateWatcher
-        path: Quickshell.env("HOME") + "/.local/state/quickshell-desktop/eq-state.json"
+        path: eqPanel.service.statePath
         watchChanges: true
         printErrors: false
         onLoaded: eqPanel.loadFromState(text())
@@ -287,7 +300,7 @@ Item {
 
     FileView {
         id: presetsWatcher
-        path: Quickshell.env("HOME") + "/.local/state/quickshell-desktop/eq-presets.json"
+        path: eqPanel.service.presetsPath
         watchChanges: true
         printErrors: false
         onLoaded: eqPanel.loadPresets(text())
@@ -933,6 +946,16 @@ Item {
                     onClicked: eqPanel.runExport()
                 }
             }
+        }
+
+        Text {
+            visible: eqPanel.service.lastError.length > 0
+            width: parent.width
+            text: eqPanel.service.lastError
+            color: eqPanel.root.seal
+            font.family: eqPanel.root.mono
+            font.pixelSize: 10
+            wrapMode: Text.Wrap
         }
 
         // Presets Manager Row (Placed BELOW APPLY Button)

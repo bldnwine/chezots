@@ -62,7 +62,7 @@ CardWindow {
         if (popup.root && popup.root.stopScreenRecord) {
             popup.root.stopScreenRecord();
         } else {
-            popup.root.run("~/.local/bin/capture-screenrecording --stop-recording");
+            popup.root.runCommand("recording", "~/.local/bin/capture-screenrecording --stop-recording");
             popup.root.screenRecordVisible = false;
         }
     }

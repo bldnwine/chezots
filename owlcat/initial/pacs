@@ -115,6 +115,7 @@ winetricks
 wl-clipboard
 wireplumber
 xdg-desktop-portal-gtk
+xdg-desktop-portal-lxqt
 zathura
 zathura-pdf-poppler
 zram-generator

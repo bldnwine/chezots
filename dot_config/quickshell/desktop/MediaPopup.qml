@@ -28,10 +28,10 @@ CardWindow {
             mediaPopup.root.musicToggle();
             event.accepted = true;
         } else if (k === Qt.Key_Left || k === Qt.Key_H) {
-            mediaPopup.root.run("playerctl position 5-");
+            mediaPopup.root.runCommand("media", "playerctl position 5-");
             event.accepted = true;
         } else if (k === Qt.Key_Right || k === Qt.Key_L) {
-            mediaPopup.root.run("playerctl position 5+");
+            mediaPopup.root.runCommand("media", "playerctl position 5+");
             event.accepted = true;
         } else if (k === Qt.Key_B) {
             mediaPopup.root.musicPrev();
