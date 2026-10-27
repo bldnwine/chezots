@@ -1,0 +1,4 @@
+{
+  "template": "theme.toml",
+  "destination": "~/.config/yazi/theme.toml"
+}

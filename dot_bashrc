@@ -18,6 +18,7 @@ alias aurupdate='yay -Syu --aur'
 alias ff='fastfetch'
 alias lsn="nu -c 'ls'"
 alias edgrub='sudo nano /etc/default/grub'
+alias tails='tailscale status --peers=true'
 alias grubre='sudo grub-mkconfig -o /boot/grub/grub.cfg'
 alias gmed='amd engage 10w mid'
 alias cecil='python ~/Projects/council/council.py new'
@@ -76,7 +77,10 @@ alias y='yazi'
 alias ocol='ollama launch opencode --config'
 alias wifipw='iw dev wlan0 get power_save 2>/dev/null'
 alias sdmcams="./go2rtc_linux_amd64 & sleep 2 && gtk-launch DMSS"
+
+
 ##FUNCTIONS##
+
 twitch() {
     if [ -z "$1" ] || [ -z "$2" ]; then
         echo "Usage: twitch <channel> <quality> (e.g., twitch chess24 480p or twitch chess24 best)"

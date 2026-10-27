@@ -217,6 +217,16 @@ CardWindow {
         width: parent.width
         spacing: 6
 
+        Text {
+            width: parent.width
+            visible: text.length > 0
+            text: barStylePopup.root.barSettingsError
+            wrapMode: Text.Wrap
+            color: barStylePopup.root.seal
+            font.family: barStylePopup.root.mono
+            font.pixelSize: 10
+        }
+
         SelRow {
             sty: barStylePopup.root
             label: "TEMPLATE"

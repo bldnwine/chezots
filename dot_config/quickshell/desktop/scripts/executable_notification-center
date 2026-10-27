@@ -18,6 +18,7 @@ images="$store/images"
 seen_file="$store/seen"
 lock_file="$store/lock"
 dismissed_file="$store/dismissed"
+sources="$store/screenshot-sources"
 cleared_at_file="$store/cleared_at"
 
 keep_days=${NC_KEEP_DAYS:-30}
@@ -36,14 +37,71 @@ with_lock() {
 }
 
 ensure_store() {
-  mkdir -p "$store" "$images" || die "cannot create $store"
+  mkdir -p "$store" "$images" "$sources" || die "cannot create $store"
   [[ -f $archive ]] || : > "$archive"
   [[ -f $dismissed_file ]] || : > "$dismissed_file"
-  chmod 700 "$store" "$images" 2>/dev/null || true
+  chmod 700 "$store" "$images" "$sources" 2>/dev/null || true
   chmod 600 "$archive" "$dismissed_file" "$seen_file" "$cleared_at_file" 2>/dev/null || true
 }
 
 now_ms() { printf '%s' "$(($(date +%s%N) / 1000000))"; }
+
+# Called under the store lock. Explicit candidates are deleted immediately only
+# when unreferenced; other abandoned managed files get a one-hour grace period.
+cleanup_sources() {
+  python3 - "$store" "$src_dir" "$src_history" "$@" <<'PYHELPER'
+import fcntl, json, os, glob, stat, sys, time
+store, src, history, *candidates = sys.argv[1:]
+sources = os.path.abspath(os.path.join(store, 'screenshot-sources'))
+refs = set()
+def read_records(path, pending=False):
+    try:
+        with open(path, encoding='utf-8') as f:
+            lines = [f.read()] if pending else f
+            for line in lines:
+                try:
+                    item = json.loads(line)
+                    if isinstance(item, dict) and item.get('screenshotTemporary') is True and isinstance(item.get('screenshotPath'), str):
+                        refs.add(item['screenshotPath'])
+                except (ValueError, TypeError): pass
+    except (OSError, UnicodeError): pass
+read_records(os.path.join(store, 'archive.jsonl'))
+for directory in (src, history):
+    for path in glob.glob(os.path.join(directory, '*.json')):
+        read_records(path, True)
+now = time.time()
+try:
+    if not stat.S_ISDIR(os.lstat(sources).st_mode): raise OSError('invalid source directory')
+    for name in os.listdir(sources):
+        path = os.path.join(sources, name)
+        try:
+            info = os.lstat(path)
+            if not stat.S_ISREG(info.st_mode) or path in refs: continue
+            if path in candidates or now - info.st_mtime >= 3600:
+                os.unlink(path)
+        except OSError: pass
+except OSError: pass
+# A held lease keeps a long-running editor's working directory alive.
+work = os.path.join(store, 'edit-work')
+try:
+    for name in os.listdir(work):
+        directory = os.path.join(work, name)
+        try:
+            if not stat.S_ISDIR(os.lstat(directory).st_mode) or now - os.stat(directory).st_mtime < 3600: continue
+            fd = os.open(os.path.join(directory, 'lease'), os.O_RDWR | os.O_NOFOLLOW)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                import shutil
+                shutil.rmtree(directory)
+            finally: os.close(fd)
+        except OSError: pass
+except OSError: pass
+PYHELPER
+}
+
+source_of() {
+  jq -r 'select(.screenshotTemporary == true and (.screenshotPath | type) == "string") | .screenshotPath' "$@" 2>/dev/null || true
+}
 
 # ---------------------------------------------------------------- ingesting
 
@@ -124,6 +182,9 @@ ingest_file() {
   key=$(basename -- "$file"); key=${key%.json}
   [[ -n $key ]] || return 0
   if is_dismissed "$key"; then
+    local rejected; rejected=$(source_of "$file")
+    rm -f -- "$file"
+    cleanup_sources "$rejected"
     return 0
   fi
   if have_key "$key"; then
@@ -140,23 +201,29 @@ ingest_file() {
     if [[ $cleared_at =~ ^[0-9]+$ ]] && (( cleared_at > 0 )); then
       file_stamp=$(jq -r '(.timestamp // 0) | tonumber?' "$file" 2>/dev/null || echo 0)
       if [[ $file_stamp =~ ^[0-9]+$ ]] && (( file_stamp > 0 && file_stamp <= cleared_at )); then
+        local rejected; rejected=$(source_of "$file")
+        rm -f -- "$file"
+        cleanup_sources "$rejected"
         return 0
       fi
     fi
   fi
 
   # Content-based duplicate guard: avoid re-ingesting identical notification emitted within recent entries
-  local app_text sum_text body_text
+  local app_text sum_text body_text screenshot_text
   app_text=$(jq -r '.app // ""' "$file" 2>/dev/null)
   sum_text=$(jq -r '.summary // ""' "$file" 2>/dev/null)
   body_text=$(jq -r '.body // ""' "$file" 2>/dev/null)
+  screenshot_text=$(jq -r 'if (.screenshotPath | type) == "string" then .screenshotPath else "" end' "$file" 2>/dev/null)
 
   if [[ -s $archive ]]; then
     local recent_dup
-    recent_dup=$(jq -r --arg app "$app_text" --arg sum "$sum_text" --arg body "$body_text" \
-      'select(.app == $app and .summary == $sum and .body == $body) | .key' "$archive" 2>/dev/null | head -n 1)
+    recent_dup=$(jq -r --arg app "$app_text" --arg sum "$sum_text" --arg body "$body_text" --arg screenshot "$screenshot_text" \
+      'select(.app == $app and .summary == $sum and .body == $body and (.screenshotPath // "") == $screenshot) | .key' "$archive" 2>/dev/null | head -n 1)
     if [[ -n $recent_dup ]]; then
+      local rejected; rejected=$(source_of "$file")
       rm -f -- "$file"
+      cleanup_sources "$rejected"
       return 0
     fi
   fi
@@ -170,7 +237,8 @@ ingest_file() {
   is_path "$app_icon" && icon_copy=$(copy_image "$app_icon" "$key" "appIcon")
   is_path "$image_src" && image_copy=$(copy_image "$image_src" "$key" "image")
 
-  file_src=$(preview_source "$exec_src")
+  file_src=$screenshot_text
+  [[ -n $file_src ]] || file_src=$(preview_source "$exec_src")
   file_src=${file_src#file://}
 
   preview_copy=""
@@ -193,6 +261,8 @@ ingest_file() {
        image: $image,
        preview: $preview,
        file: $file,
+       screenshotPath: (if (.screenshotPath | type) == "string" then .screenshotPath else "" end),
+       screenshotTemporary: (.screenshotTemporary == true),
        glyph: (.glyph // ""),
        urgency: (.urgency // 1),
        timestamp: (.timestamp // 0)
@@ -233,7 +303,7 @@ prune() {
     tail -n 2000 "$dismissed_file" > "$dismissed_file.tmp" 2>/dev/null && mv -f "$dismissed_file.tmp" "$dismissed_file"
   fi
 
-  [[ -s $archive ]] || return 0
+  if [[ ! -s $archive ]]; then cleanup_sources; return 0; fi
 
   kept=$(jq -c --argjson cutoff "$cutoff" 'select(.timestamp >= $cutoff)' "$archive" 2>/dev/null | tail -n "$max_items")
   dropped=$(comm -23 \
@@ -241,13 +311,14 @@ prune() {
     <(printf '%s\n' "$kept" | jq -r 'select(.key) | .key' 2>/dev/null | sort))
 
   printf '%s\n' "$kept" | grep -v '^$' > "$archive.tmp" 2>/dev/null || : > "$archive.tmp"
-  mv -f "$archive.tmp" "$archive"
-
-  local key
+  local key path candidates=()
   while IFS= read -r key; do
+    while IFS= read -r path; do [[ -n $path ]] && candidates+=("$path"); done < <(jq -r --arg key "$key" 'select(.key == $key and .screenshotTemporary == true) | .screenshotPath // empty' "$archive" 2>/dev/null)
     [[ -n $key ]] || continue
     rm -f -- "$images/$key-appIcon" "$images/$key-image" "$images/$key-preview"
   done <<< "$dropped"
+  mv -f "$archive.tmp" "$archive"
+  cleanup_sources "${candidates[@]}"
 }
 
 # ---------------------------------------------------------------- commands
@@ -303,11 +374,14 @@ cmd_list() {
 remove_key() {
   local key=$1
   [[ -n $key ]] || return 0
+  local candidates=() path
+  while IFS= read -r path; do [[ -n $path ]] && candidates+=("$path"); done < <(jq -r --arg key "$key" 'select(.key == $key and .screenshotTemporary == true) | .screenshotPath // empty' "$archive" 2>/dev/null; source_of "$src_history/$key.json" "$src_dir/$key.json")
   printf '%s\n' "$key" >> "$dismissed_file"
   grep -vF "\"key\":\"$key\"" "$archive" > "$archive.tmp" 2>/dev/null || : > "$archive.tmp"
   mv -f "$archive.tmp" "$archive"
   rm -f -- "$images/$key-appIcon" "$images/$key-image" "$images/$key-preview"
   rm -f -- "$src_history/$key.json" "$src_dir/$key.json"
+  cleanup_sources "${candidates[@]}"
 }
 
 cmd_remove() {
@@ -319,17 +393,96 @@ cmd_remove() {
 }
 
 clear_all() {
+  local candidates=() path file
+  while IFS= read -r path; do [[ -n $path ]] && candidates+=("$path"); done < <(source_of "$archive"; for file in "$src_history"/*.json "$src_dir"/*.json; do [[ -f $file ]] && source_of "$file"; done)
   now_ms > "$cleared_at_file"
   : > "$archive"
   : > "$dismissed_file"
   rm -f -- "$images"/*
   rm -f -- "$src_history"/*.json "$src_dir"/*.json
+  cleanup_sources "${candidates[@]}"
 }
 
 cmd_clear() {
   ensure_store
   with_lock clear_all
   printf '{"ok":true,"cleared":true}\n'
+}
+
+cmd_edit_screenshot() {
+  ensure_store
+  python3 - "$store" "${1:-}" "${2:-}" "${3:-}" <<'PYEDIT'
+import fcntl, json, os, shutil, stat, subprocess, sys, tempfile
+store, key, source, temporary = sys.argv[1:]
+def fail(message):
+    try: subprocess.run(['notify-send', 'Screenshot editor', 'Could not edit screenshot'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    except OSError: pass
+    print(json.dumps({'ok': False, 'error': message}), flush=True)
+    sys.exit(1)
+if not key or not source or temporary not in ('true', 'false'):
+    fail('edit-screenshot requires KEY PATH and true or false')
+lock = os.open(os.path.join(store, 'lock'), os.O_WRONLY | os.O_CREAT, 0o600)
+fcntl.flock(lock, fcntl.LOCK_EX)
+work = None
+try:
+    if temporary == 'true':
+        sources = os.path.abspath(os.path.join(store, 'screenshot-sources'))
+        if not stat.S_ISDIR(os.lstat(sources).st_mode): raise ValueError('invalid managed source directory')
+        if os.path.dirname(source) != sources or not os.path.basename(source):
+            raise ValueError('temporary screenshot is outside the managed source directory')
+        fd = os.open(source, os.O_RDONLY | os.O_NOFOLLOW)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode): raise ValueError('screenshot is not a regular file')
+            workroot = os.path.join(store, 'edit-work')
+            os.makedirs(workroot, mode=0o700, exist_ok=True)
+            work = tempfile.mkdtemp(prefix='edit-', dir=workroot)
+            lease = os.open(os.path.join(work, 'lease'), os.O_CREAT | os.O_RDWR, 0o600)
+            fcntl.flock(lease, fcntl.LOCK_EX)
+            target = os.path.join(work, 'screenshot.png')
+            with os.fdopen(fd, 'rb', closefd=False) as src, open(target, 'wb') as dest:
+                shutil.copyfileobj(src, dest)
+        finally: os.close(fd)
+    else:
+        if not os.path.isfile(source) or not os.access(source, os.R_OK): raise ValueError('screenshot is not readable')
+        target = source
+    read_fd, write_fd = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(read_fd)
+        os.close(lock)
+        try:
+            os.setsid()
+            # Do not keep the caller's process-collection pipes open.
+            null = os.open(os.devnull, os.O_RDWR)
+            for n in (0, 1, 2): os.dup2(null, n)
+            if null > 2: os.close(null)
+            try:
+                proc = subprocess.Popen(['omasnap', '--file', target], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True)
+                os.write(write_fd, b'OK')
+                os.close(write_fd)
+                status = proc.wait()
+                if status:
+                    subprocess.run(['notify-send', 'Screenshot editor', 'Could not edit screenshot'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+            except Exception as exc:
+                try: os.write(write_fd, str(exc).encode()[:4096])
+                except OSError: pass
+        finally:
+            if work: shutil.rmtree(work, ignore_errors=True)
+            os._exit(0)
+    os.close(write_fd)
+    if work: os.close(lease)
+    response = os.read(read_fd, 4096)
+    os.close(read_fd)
+    if response != b'OK':
+        if work: shutil.rmtree(work, ignore_errors=True)
+        raise ValueError(response.decode(errors='replace') or 'editor failed to start')
+    print(json.dumps({'ok': True, 'key': key}), flush=True)
+except (OSError, ValueError) as exc:
+    if work: shutil.rmtree(work, ignore_errors=True)
+    fail(str(exc))
+finally:
+    os.close(lock)
+PYEDIT
 }
 
 cmd_seen() {
@@ -432,6 +585,7 @@ case ${1:-} in
   sync)   shift; quiet=1; cmd_sync; printf '{"ok":true,"synced":true}\n' ;;
   watch)  shift; cmd_watch ;;
   list)   shift; cmd_list "${1:-200}" ;;
+  edit-screenshot) shift; cmd_edit_screenshot "$@" ;;
   remove) shift; cmd_remove "${1:-}" ;;
   clear)  shift; cmd_clear ;;
   seen)   shift; cmd_seen "$@" ;;
@@ -445,6 +599,7 @@ notification-center: query and storage engine for notifications
   watch              follow incoming notifications and archive them
   sync               catch up on any pending un-archived notifications
   list [LIMIT]       return archive as JSON (newest first)
+  edit-screenshot KEY PATH TEMP  edit a saved or temporary screenshot
   remove KEY         remove single notification
   clear              clear all notifications
   seen [MS]          get or set last opened timestamp

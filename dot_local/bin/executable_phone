@@ -14,7 +14,7 @@ elevate() {
 }
 
 is_running() {
-    systemctl is-active --quiet tailscaled.service || pgrep -x kdeconnect-indicator >/dev/null 2>&1
+    systemctl is-active --quiet tailscaled.service || pgrep -f kdeconnect-indicator >/dev/null 2>&1 || pgrep -x kdeconnectd >/dev/null 2>&1
 }
 
 start_phone() {
@@ -22,7 +22,7 @@ start_phone() {
     # Run all privileged operations in a single prompt
     elevate "systemctl start tailscaled.service && tailscale up"
     
-    if ! pgrep -x kdeconnect-indicator >/dev/null 2>&1; then
+    if ! pgrep -f kdeconnect-indicator >/dev/null 2>&1; then
         nohup kdeconnect-indicator >/dev/null 2>&1 &
     fi
     
@@ -34,10 +34,11 @@ start_phone() {
 stop_phone() {
     echo "Stopping KDE Connect & Tailscale..."
     # Terminate user-level KDE Connect apps
-    pkill -x kdeconnect-indicator 2>/dev/null || true
+    pkill -f kdeconnect-indicator 2>/dev/null || true
     pkill -x kdeconnect-app 2>/dev/null || true
     pkill -x kdeconnect-sms 2>/dev/null || true
     pkill -x kdeconnectd 2>/dev/null || true
+    systemctl --user stop "dbus-*.org.kde.kdeconnect*.service" 2>/dev/null || true
     
     # Run all privileged operations in a single prompt
     elevate "tailscale down 2>/dev/null || true; systemctl stop tailscaled.service"

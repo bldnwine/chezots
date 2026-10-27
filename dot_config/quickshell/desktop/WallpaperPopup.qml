@@ -38,6 +38,34 @@ PanelWindow {
     property var favoritesMap: ({})
     property bool favOnlyMode: false
 
+    // Editor State
+    property alias editor: wallpaperEditor
+    readonly property bool editorActive: wallpaperEditor ? wallpaperEditor.active : false
+
+    function openEditor(entry) {
+        if (!entry || !entry.path) return;
+        if (wallpaperEditor) {
+            wallpaperEditor.open(entry);
+        }
+    }
+
+    function onEditorClosed() {
+        Qt.callLater(() => surface.forceActiveFocus());
+    }
+
+    function showToast(msg) {
+        appliedToast = msg;
+        toastTimer.restart();
+    }
+
+    function applyCustomWallpaper(path, originalEntry) {
+        if (!path) return;
+        currentWallpaperPath = path;
+        currentWallpaperName = originalEntry ? ("CROPPED: " + originalEntry.name) : "Custom Wallpaper";
+        Quickshell.execDetached(["omarchy-theme-bg-set", path]);
+        showToast("󰄬 APPLIED CROPPED: " + (originalEntry ? originalEntry.name : ""));
+    }
+
     function toggleFavorite(entry) {
         if (!entry || !entry.path) return;
         const p = entry.path;
@@ -367,7 +395,10 @@ PanelWindow {
     // Dismiss on outside tap
     MouseArea {
         anchors.fill: parent
-        onClicked: root.wallpapersVisible = false
+        onClicked: {
+            if (wallpaperWindow.editorActive) return;
+            root.wallpapersVisible = false;
+        }
     }
 
     // Main Shelf Card anchored to bottom of screen
@@ -516,6 +547,11 @@ PanelWindow {
             // Normal Navigation Mode Key Handling
             if (k === Qt.Key_Escape || k === Qt.Key_Q) {
                 root.wallpapersVisible = false;
+                event.accepted = true;
+                return;
+            } else if ((k === Qt.Key_E || k === Qt.Key_C) && !wallpaperWindow.searchActive && !wallpaperWindow.editorActive) {
+                const entry = wallpaperWindow.filteredWallpapers[wallpaperWindow.selectedIndex];
+                if (entry) wallpaperWindow.openEditor(entry);
                 event.accepted = true;
                 return;
             } else if (k === Qt.Key_Slash) {
@@ -892,16 +928,23 @@ PanelWindow {
                         MouseArea {
                             id: cardMouse
                             anchors.fill: parent
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: {
+                            onClicked: (mouse) => {
                                 wallpaperWindow.selectedIndex = cardItem.index;
-                                surface.forceActiveFocus();
+                                if (mouse.button === Qt.RightButton) {
+                                    wallpaperWindow.openEditor(cardItem.modelData);
+                                } else {
+                                    surface.forceActiveFocus();
+                                }
                             }
-                            onDoubleClicked: {
-                                wallpaperWindow.selectedIndex = cardItem.index;
-                                wallpaperWindow.applyWallpaper(cardItem.modelData);
-                                surface.forceActiveFocus();
+                            onDoubleClicked: (mouse) => {
+                                if (mouse.button === Qt.LeftButton) {
+                                    wallpaperWindow.selectedIndex = cardItem.index;
+                                    wallpaperWindow.applyWallpaper(cardItem.modelData);
+                                    surface.forceActiveFocus();
+                                }
                             }
                         }
                     }
@@ -986,7 +1029,7 @@ PanelWindow {
                           ? wallpaperWindow.appliedToast
                           : (wallpaperWindow.pendingSortPrefix
                              ? "SORT: (M/m)odified · (B/b)irth · (a/A)lphabetical · (S/s)ize · (r)andom"
-                             : "h/l: Navigate  ·  M/m: Mod  ·  B/b: Birth  ·  a/A: Name  ·  S/s: Size  ·  ^S: Star  ·  ^F: " + (wallpaperWindow.favOnlyMode ? "All" : "Favs") + "  ·  /: Search  ·  ↵: Apply")
+                             : "h/l: Navigate  ·  R-Click/e: Crop & Rotate  ·  M/m: Mod  ·  ^S: Star  ·  ^F: " + (wallpaperWindow.favOnlyMode ? "All" : "Favs") + "  ·  /: Search  ·  ↵: Apply")
                     color: wallpaperWindow.appliedToast.length > 0 || wallpaperWindow.pendingSortPrefix ? root.seal : root.inkDeep
                     font.family: root.mono
                     font.pixelSize: 10
@@ -1022,5 +1065,11 @@ PanelWindow {
                 }
             }
         }
+    }
+
+    WallpaperEditor {
+        id: wallpaperEditor
+        root: wallpaperWindow.root
+        wallpaperWindow: wallpaperWindow
     }
 }

@@ -16,6 +16,9 @@ ShellRoot {
         property var notificationCenterService: QtObject {
             property int maxItems: 3
             property int keepDays: 30
+            property var editArgs: []
+            signal screenshotOpened(string key)
+            function editScreenshot(key, path, temporary) { editArgs = [key, path, temporary]; }
         }
         property string barEdge: "top"
         property int barOffset: 0
@@ -66,6 +69,19 @@ ShellRoot {
         const duplicate = fakeNotification.createObject(test, { id: 6, summary: "Notification 4" });
         test.check(!overlay.recordNotification(duplicate), "duplicate archive entry was accepted");
         test.check(overlay.recordNotification(notifications[3]), "replacement should preserve live actions");
+        const screenshot1 = fakeNotification.createObject(test, { id: 7, summary: "Screenshot", hints: {
+            "x-owlcat-screenshot-path": "/tmp/first.png", "x-owlcat-screenshot-temporary": true } });
+        const screenshot2 = fakeNotification.createObject(test, { id: 8, summary: "Screenshot", hints: {
+            "x-owlcat-screenshot-path": "/tmp/second.png", "x-owlcat-screenshot-temporary": true } });
+        test.check(overlay.recordNotification(screenshot1), "first screenshot rejected");
+        test.check(overlay.recordNotification(screenshot2), "distinct screenshot deduplicated");
+        overlay.showNotif(screenshot2);
+        const key = overlay.currentNotifKey;
+        test.check(key.length > 0, "screenshot key missing");
+        overlay.invoke();
+        const args = navbar.notificationCenterService.editArgs;
+        test.check(args[0] === key && args[1] === "/tmp/second.png" && args[2] === true,
+                   "screenshot click did not route metadata");
         completed = true;
     }
     Timer {

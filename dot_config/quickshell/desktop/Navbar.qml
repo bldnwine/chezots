@@ -80,314 +80,93 @@ Item {
     readonly property string aetherBin: "/home/bldnwine/aethergo/build/bin/aether"
     readonly property string pushThemeScript: Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/aether-push-theme.sh"
 
-    // ---------- Edge ----------
-    // Drives bar anchors, internal Row/Column flow, and where the toggle
-    // arrow points. Persisted to its own one-line state file so the choice
-    // survives a relogin.
+    // ---------- Persistent bar settings ----------
+    BarSettings { id: barSettings }
+    readonly property string barSettingsError: barSettings.lastError
+    Connections {
+        target: barSettings
+        function onReadyChanged() {
+            if (!barSettings.ready) return;
+            const saved = barSettings.document;
+            root.barEdge = saved.settings.edge;
+            root.barVariant = saved.settings.variant;
+            root.barTransparent = saved.settings.transparent;
+            root.barType = saved.settings.type;
+            root.barHeight = saved.settings.height;
+            root.barOpacity = saved.settings.opacity;
+            root.barAir = saved.settings.air;
+            root.barRounding = saved.settings.rounding;
+            root.barTemplates = saved.templates;
+            root.barTemplateSelected = saved.selectedTemplate;
+        }
+    }
     readonly property var barEdges: ["top", "right", "bottom", "left"]
-    readonly property string barEdgeStatePath:
-        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-edge"
+    readonly property var barVariants: ["zen"]
+    readonly property var barTypes: ["floating", "slab", "notch"]
     property string barEdge: "top"
+    property string barVariant: "zen"
+    property string barType: "floating"
+    property bool barTransparent: false
+    property bool barHidden: false
+    property real barOpacity: 1.0
+    property int barAir: 5
+    property int barRounding: 6
+    property var barTemplates: ({})
+    property string barTemplateSelected: "zen"
     readonly property bool isHorizontal: barEdge === "top" || barEdge === "bottom"
+    AppScan { id: appScan }
+    readonly property alias appScan: appScan
 
     function setBarEdge(edge) {
         const want = root.barEdges.indexOf(edge) !== -1 ? edge : "top";
         root.barEdge = want;
-        barEdgeWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.barEdgeStatePath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(want)
-            + " > " + JSON.stringify(root.barEdgeStatePath)];
-        barEdgeWriter.running = false;
-        barEdgeWriter.running = true;
+        barSettings.setSetting("edge", want);
     }
-
-    function cycleBarEdge(dir) {
-        const order = root.barEdges;
-        let idx = order.indexOf(root.barEdge);
-        if (idx === -1) idx = 0;
-        const step = (dir === undefined || dir >= 0) ? 1 : -1;
-        root.setBarEdge(order[(idx + step + order.length) % order.length]);
-    }
-
-    function edgeArrow() {
-        return ({top: "↑", right: "→", bottom: "↓", left: "←"})[root.barEdge] || "?";
-    }
-
-    Process { id: barEdgeWriter; running: false }
-    Process {
-        id: barEdgeReader
-        running: true
-        command: ["cat", root.barEdgeStatePath]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const v = this.text.trim();
-                if (root.barEdges.indexOf(v) !== -1) root.barEdge = v;
-            }
-        }
-        onExited: function(code) { if (code !== 0) root.barEdge = "top"; }
-    }
-
-    // ---------- Bar variant ----------
-    // Which bar face is rendered. "zen" is the original 静 minimalist bar.
-    //
-    // Persisted to its own one-line state file (same scheme as Theme's
-    // corner toggle) so the choice survives a relogin. Read once at startup
-    // via cat — a FileView's initial load races property assignment in some
-    // Quickshell builds and can clobber the value back to the default.
-    readonly property var barVariants: ["zen"]
-    readonly property string barVariantStatePath:
-        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-variant"
-    property string barVariant: "zen"
-    property bool  barHidden: false
-
-    AppScan { id: appScan }
-    readonly property alias appScan: appScan
-
     function setBarVariant(name) {
         const want = root.barVariants.indexOf(name) !== -1 ? name : "zen";
         root.barVariant = want;
-        barVariantWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.barVariantStatePath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(want)
-            + " > " + JSON.stringify(root.barVariantStatePath)];
-        barVariantWriter.running = false;
-        barVariantWriter.running = true;
+        barSettings.setSetting("variant", want);
     }
-
-    Process { id: barVariantWriter; running: false }
-    Process {
-        id: barVariantReader
-        running: true
-        command: ["cat", root.barVariantStatePath]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const v = this.text.trim();
-                if (root.barVariants.indexOf(v) !== -1) root.barVariant = v;
-            }
-        }
-        // Missing file -> keep the "zen" default.
-        onExited: function(code) { if (code !== 0) root.barVariant = "zen"; }
-    }
-
-    // ---------- Bar transparency ----------
-    // Background-only transparent bar (text/icons stay). Persisted to its
-    // own state file so the choice survives a relogin, same scheme as the
-    // bar-variant file above.
-    readonly property string barTransparentStatePath:
-        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-transparent"
-    property bool barTransparent: false
-
-    function setBarTransparent(on) {
-        root.barTransparent = on;
-        barTransparentWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.barTransparentStatePath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(on ? "1" : "0")
-            + " > " + JSON.stringify(root.barTransparentStatePath)];
-        barTransparentWriter.running = false;
-        barTransparentWriter.running = true;
-    }
-
-    Process { id: barTransparentWriter; running: false }
-    Process {
-        id: barTransparentReader
-        running: true
-        command: ["cat", root.barTransparentStatePath]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const v = this.text.trim();
-                if (v === "1") root.barTransparent = true;
-            }
-        }
-        // Missing file -> keep the opaque default.
-        onExited: function(code) { if (code !== 0) root.barTransparent = false; }
-    }
-
-    // ---------- Bar type ----------
-    // Bar geometry mode: "floating" (cloud pill with air/pad margins),
-    // "slab" (edge-to-edge full width, air insets left/right), or "notch"
-    // (slab with angular outward-tapering left/right ends, air + scaled
-    // notch cut). Persisted to its own one-line state file so the choice
-    // survives a relogin. Notch/slab air applies horizontally only;
-    // vertical bars keep the original slab geometry.
-    readonly property var barTypes: ["floating", "slab", "notch"]
-    readonly property string barTypeStatePath:
-        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-type"
-    property string barType: "floating"
-
     function setBarType(type) {
         const want = root.barTypes.indexOf(type) !== -1 ? type : "floating";
         root.barType = want;
-        barTypeWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.barTypeStatePath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(want)
-            + " > " + JSON.stringify(root.barTypeStatePath)];
-        barTypeWriter.running = false;
-        barTypeWriter.running = true;
+        barSettings.setSetting("type", want);
     }
-
-    function toggleBarType() {
-        root.cycleBarType(1);
+    function setBarTransparent(on) {
+        const want = !!on;
+        root.barTransparent = want;
+        barSettings.setSetting("transparent", want);
     }
-
-    function cycleBarType(dir) {
-        const order = root.barTypes;
-        let idx = order.indexOf(root.barType);
-        if (idx === -1) idx = 0;
-        const step = dir < 0 ? -1 : 1;
-        root.setBarType(order[(idx + step + order.length) % order.length]);
-    }
-
-    Process { id: barTypeWriter; running: false }
-    Process {
-        id: barTypeReader
-        running: true
-        command: ["cat", root.barTypeStatePath]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const v = this.text.trim();
-                root.barType = root.barTypes.indexOf(v) !== -1 ? v : "floating";
-            }
-        }
-        onExited: function(code) { if (code !== 0) root.barType = "floating"; }
-    }
-
-    // ---------- Bar height ----------
-    // Thickness of the bar strip in px. Same one-line state file scheme;
-    // every face and module binds root.barHeight so it applies live.
-    readonly property string barHeightStatePath:
-        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-height"
     function setBarHeight(h) {
         const want = Math.max(22, Math.min(40, Math.round(h)));
         root.barHeight = want;
-        barHeightWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.barHeightStatePath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(String(want))
-            + " > " + JSON.stringify(root.barHeightStatePath)];
-        barHeightWriter.running = false;
-        barHeightWriter.running = true;
+        barSettings.setSetting("height", want);
     }
-
-    Process { id: barHeightWriter; running: false }
-    Process {
-        id: barHeightReader
-        running: true
-        command: ["cat", root.barHeightStatePath]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const v = parseInt(this.text.trim(), 10);
-                if (!isNaN(v)) root.barHeight = Math.max(22, Math.min(40, v));
-            }
-        }
-        onExited: function(code) { if (code !== 0) root.barHeight = 26; }
-    }
-
-    // ---------- Bar opacity ----------
-    // Background fill opacity, independent from the barTransparent toggle
-    // (which drops the background entirely). Applies to the slab/cloud
-    // backplates; glyphs and hairlines stay full-strength.
-    readonly property string barOpacityStatePath:
-        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-opacity"
-    property real barOpacity: 1.0
     function setBarOpacity(o) {
         const want = Math.max(0.2, Math.min(1.0, o));
         root.barOpacity = want;
-        barOpacityWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.barOpacityStatePath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(String(want))
-            + " > " + JSON.stringify(root.barOpacityStatePath)];
-        barOpacityWriter.running = false;
-        barOpacityWriter.running = true;
+        barSettings.setSetting("opacity", want);
     }
-
-    Process { id: barOpacityWriter; running: false }
-    Process {
-        id: barOpacityReader
-        running: true
-        command: ["cat", root.barOpacityStatePath]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const v = parseFloat(this.text.trim());
-                if (!isNaN(v)) root.barOpacity = Math.max(0.2, Math.min(1.0, v));
-            }
-        }
-        onExited: function(code) { if (code !== 0) root.barOpacity = 1.0; }
-    }
-
-    // ---------- Bar air ----------
-    // End gap in px. Floating: pill end margins. Slab/notch (horizontal
-    // only): left/right inset of the bar background + content. Same
-    // one-line state file scheme.
-    readonly property string barAirStatePath:
-        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-air"
-    property int barAir: 5
     function setBarAir(a) {
         const want = Math.max(0, Math.min(360, Math.round(a)));
         root.barAir = want;
-        barAirWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.barAirStatePath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(String(want))
-            + " > " + JSON.stringify(root.barAirStatePath)];
-        barAirWriter.running = false;
-        barAirWriter.running = true;
+        barSettings.setSetting("air", want);
     }
-
-    Process { id: barAirWriter; running: false }
-    Process {
-        id: barAirReader
-        running: true
-        command: ["cat", root.barAirStatePath]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const v = parseInt(this.text.trim(), 10);
-                if (!isNaN(v)) root.barAir = Math.max(0, Math.min(360, v));
-            }
-        }
-        onExited: function(code) { if (code !== 0) root.barAir = 5; }
-    }
-
-    // ---------- Bar rounding ----------
-    // Floating-pill corner radius in px.
-    readonly property string barRoundingStatePath:
-        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-rounding"
-    property int barRounding: 6
     function setBarRounding(r) {
         const want = Math.max(0, Math.min(12, Math.round(r)));
         root.barRounding = want;
-        barRoundingWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.barRoundingStatePath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(String(want))
-            + " > " + JSON.stringify(root.barRoundingStatePath)];
-        barRoundingWriter.running = false;
-        barRoundingWriter.running = true;
+        barSettings.setSetting("rounding", want);
     }
-
-    Process { id: barRoundingWriter; running: false }
-    Process {
-        id: barRoundingReader
-        running: true
-        command: ["cat", root.barRoundingStatePath]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const v = parseInt(this.text.trim(), 10);
-                if (!isNaN(v)) root.barRounding = Math.max(0, Math.min(12, v));
-            }
-        }
-        onExited: function(code) { if (code !== 0) root.barRounding = 6; }
+    function cycleBarEdge(dir) {
+        let idx = root.barEdges.indexOf(root.barEdge);
+        root.setBarEdge(root.barEdges[(Math.max(0, idx) + (dir === undefined || dir >= 0 ? 1 : -1) + 4) % 4]);
     }
-
-    // ---------- Bar templates ----------
-    // Named snapshots of the bar-style settings (see BarStylePopup).
-    // "zen" is the builtin default and is never stored; anything else
-    // lives in one JSON object file. The selected name persists
-    // separately so an unsaved "custom" (dirty) state also survives a
-    // relogin — every control writes through the persisted setters
-    // above, so live values always restore even without a template.
-    readonly property string barTemplatesPath:
-        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-templates.json"
-    readonly property string barTemplateSelPath:
-        Quickshell.env("HOME") + "/.local/state/quickshell-desktop/bar-template"
-    property var barTemplates: ({})
-    property string barTemplateSelected: "zen"
+    function edgeArrow() { return ({top: "↑", right: "→", bottom: "↓", left: "←"})[root.barEdge] || "?"; }
+    function toggleBarType() { root.cycleBarType(1); }
+    function cycleBarType(dir) {
+        let idx = root.barTypes.indexOf(root.barType);
+        root.setBarType(root.barTypes[(Math.max(0, idx) + (dir < 0 ? -1 : 1) + 3) % 3]);
+    }
 
     function barZenDefaults() {
         return { variant: "zen", type: "floating", transparent: false,
@@ -445,12 +224,7 @@ Item {
     }
     function setBarTemplateSelected(name) {
         root.barTemplateSelected = name;
-        barTemplateSelWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.barTemplateSelPath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(name)
-            + " > " + JSON.stringify(root.barTemplateSelPath)];
-        barTemplateSelWriter.running = false;
-        barTemplateSelWriter.running = true;
+        barSettings.setSelected(name);
     }
     function saveBarTemplate(name) {
         const clean = (name || "").trim();
@@ -470,44 +244,7 @@ Item {
     }
     function writeBarTemplates(obj) {
         root.barTemplates = obj;
-        barTemplatesWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.barTemplatesPath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(JSON.stringify(obj))
-            + " > " + JSON.stringify(root.barTemplatesPath)];
-        barTemplatesWriter.running = false;
-        barTemplatesWriter.running = true;
-    }
-
-    Process { id: barTemplatesWriter; running: false }
-    Process { id: barTemplateSelWriter; running: false }
-    Process {
-        id: barTemplatesReader
-        running: true
-        command: ["cat", root.barTemplatesPath]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const v = JSON.parse(this.text);
-                    if (v && typeof v === "object") root.barTemplates = v;
-                } catch (e) { /* corrupt file -> start empty */ }
-                if (root.barTemplateSelected !== "zen"
-                    && !root.barTemplates[root.barTemplateSelected])
-                    root.barTemplateSelected = "zen";
-            }
-        }
-        onExited: function(code) { if (code !== 0) root.barTemplates = ({}); }
-    }
-    Process {
-        id: barTemplateSelReader
-        running: true
-        command: ["cat", root.barTemplateSelPath]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const v = this.text.trim();
-                if (v.length > 0) root.barTemplateSelected = v;
-            }
-        }
-        onExited: function(code) { if (code !== 0) root.barTemplateSelected = "zen"; }
+        barSettings.setTemplates(obj);
     }
 
     // ---------- Tooltips ----------
@@ -612,11 +349,11 @@ Item {
 
     property int cpuVal: telemetry.cpuVal
     property int memVal: telemetry.memVal
-    property int batVal: 0
-    property string batState: "Unknown"
+    readonly property int batVal: batteryService.percentage
+    readonly property string batState: batteryService.state
     // Instantaneous power draw in watts; magnitude only — direction is in batState.
-    property real batPower: 0
-    property bool batPresent: false
+    readonly property real batPower: batteryService.watts
+    readonly property bool batPresent: batteryService.present
 
     property string netIcon: "󰤯"
     property string netKind: "none"   // "eth" | "wifi" | "none"
@@ -646,94 +383,24 @@ Item {
     function disconnectWifi() { return networkService.disconnectWifi(); }
     function toggleWifiRadio() { return networkService.toggleWifiRadio(); }
     function copyNetworkText(value) { return networkService.copyText(value); }
-    property string btIcon:  String.fromCodePoint(0xf00b2)
-    property bool   btPowered: false
-    property int    btCount: 0
-    // Bluetooth device list for the Quick panel. Each entry:
-    // { mac, name, connected, paired, trusted }.
-    property var    btDevices: []
-    property bool   btScanning: false
-    property string _btDevicesSer: ""
-    property int    _btPostTicks: 0
+    BluetoothService { id: bluetoothService }
+    readonly property bool btAvailable: bluetoothService.available
+    readonly property bool btPowered: bluetoothService.powered
+    readonly property int btCount: bluetoothService.count
+    readonly property var btDevices: bluetoothService.devices
+    readonly property bool btScanning: bluetoothService.scanning
+    readonly property bool btBusy: bluetoothService.busy
+    readonly property string btActionText: bluetoothService.actionText
+    readonly property string btError: bluetoothService.lastError
+    readonly property string btIcon: !btPowered ? root.icoBtOff : btCount > 0 ? root.icoBtConnected : root.icoBtOn
+    function refreshBluetooth() { return bluetoothService.available; }
+    function btConnect(mac) { return bluetoothService.connectDevice(mac); }
+    function btDisconnect(mac) { return bluetoothService.nativeAction("disconnect", mac); }
+    function btTogglePower() { return bluetoothService.togglePower(); }
+    function btToggleScan() { return bluetoothService.toggleScan(); }
+    function btToggleTrust(mac) { return bluetoothService.nativeAction("trust", mac); }
+    function btUnpair(mac) { return bluetoothService.nativeAction("forget", mac); }
 
-    function refreshBluetooth() {
-        if (btDevicesProbe.running) return;
-        btDevicesProbe.running = false;
-        btDevicesProbe.running = true;
-    }
-    // bluetoothctl path (bluez-tools' bt-device/bt-adapter aren't installed
-    // on this system; bluetoothd + bluetoothctl are the whole stack).
-    // Kick the post-action refresh loop after a connect/disconnect/power.
-    function btPostAction() {
-        root._btPostTicks = 0;
-        btPostActionTimer.restart();
-    }
-    function btConnect(mac) {
-        if (!mac) return;
-        // --timeout keeps bluetoothctl (and its agent) alive in non-interactive
-        // mode long enough to approve the async A2DP/HFP authorization, so
-        // audio connects even when the device isn't trusted.
-        root.runCommand("bluetooth", "setsid -f bluetoothctl --timeout 25 --agent NoInputNoOutput connect "
-            + mac + " >/dev/null 2>&1");
-        root.btPostAction();
-    }
-    function btDisconnect(mac) {
-        if (!mac) return;
-        root.runCommand("bluetooth", "bluetoothctl disconnect " + mac + " >/dev/null 2>&1");
-        root.btPostAction();
-    }
-    function btTogglePower() {
-        root.btPowered = !root.btPowered;
-        root.runCommand("bluetooth", "bluetoothctl power " + (root.btPowered ? "on" : "off") + " >/dev/null 2>&1");
-        root.btPostAction();
-    }
-    function btToggleScan() {
-        // The scan is forked (`setsid -f`) with no PID tracked, so it can't be
-        // stopped early; --timeout 15 self-terminates it and stops discovery.
-        // Guard against a bogus toggle-off mid-scan.
-        if (root.btScanning) return;
-        root.btScanning = true;
-        root.runCommand("bluetooth", "setsid -f bluetoothctl --timeout 15 scan on >/dev/null 2>&1");
-        btScanStopTimer.restart();
-        root.btPostAction();
-    }
-    function btToggleTrust(mac) {
-        if (!mac) return;
-        const devs = root.btDevices;
-        let trusted = false;
-        for (let i = 0; i < devs.length; i++) {
-            if (devs[i].mac === mac) { trusted = devs[i].trusted; break; }
-        }
-        root.runCommand("bluetooth", "bluetoothctl " + (trusted ? "untrust" : "trust")
-            + " " + mac + " >/dev/null 2>&1");
-        root.btPostAction();
-    }
-    function btUnpair(mac) {
-        if (!mac) return;
-        root.runCommand("bluetooth", "bluetoothctl remove " + mac + " >/dev/null 2>&1");
-        root.btPostAction();
-    }
-    Timer {
-        id: btPostActionTimer
-        interval: 1500
-        repeat: true
-        // Poll for a few seconds after connect/disconnect/power so the panel
-        // reflects bluetoothd's settled state even when the async connect
-        // takes a few seconds. Extra ticks are cheap: the probe's serialized
-        // equality guard keeps QML from churning.
-        onTriggered: {
-            if (root._btPostTicks >= 8) { root._btPostTicks = 0; stop(); return; }
-            root._btPostTicks++;
-            root.refreshBluetooth();
-        }
-    }
-    Timer {
-        // Clear the "scanning" flag once the bluetoothctl --timeout expires.
-        id: btScanStopTimer
-        interval: 15000
-        repeat: false
-        onTriggered: root.btScanning = false
-    }
     property string audioIcon: ""
     property string audioDevType: "spk"
     property string audioSinkDesc: ""
@@ -2326,39 +1993,9 @@ Item {
         onTriggered: root.updateClock()
     }
 
-    // ---------- Battery status (4s cadence) ----------
-    Process {
-        id: batProbe
-        running: false
-        command: ["bash", "-c",
-            "bat=0; bst=Unknown; pwr=0; batFound=0; "
-            + "if [ -d /sys/class/power_supply/BAT0 ]; then "
-            + "  bat=$(cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo 0); "
-            + "  bst=$(cat /sys/class/power_supply/BAT0/status 2>/dev/null || echo Unknown); "
-            + "  pwr=$(cat /sys/class/power_supply/BAT0/power_now 2>/dev/null || echo 0); "
-            + "  batFound=1; "
-            + "elif [ -d /sys/class/power_supply/BAT1 ]; then "
-            + "  bat=$(cat /sys/class/power_supply/BAT1/capacity 2>/dev/null || echo 0); "
-            + "  bst=$(cat /sys/class/power_supply/BAT1/status 2>/dev/null || echo Unknown); "
-            + "  pwr=$(cat /sys/class/power_supply/BAT1/power_now 2>/dev/null || echo 0); "
-            + "  batFound=1; "
-            + "fi; "
-            + "pwr=${pwr#-}; "  // some kernels prefix '-' on discharge; magnitude is enough, sign comes from $bst
-            + "printf '%d|%s|%d|%d' \"$bat\" \"$bst\" \"$pwr\" \"$batFound\""]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const p = this.text.split("|");
-                if (p.length === 4) {
-                    root.batVal = parseInt(p[0]) || 0;
-                    root.batState = p[1] || "Unknown";
-                    root.batPower = (parseInt(p[2]) || 0) / 1e6;
-                    root.batPresent = p[3] === "1";
-                }
-            }
-        }
-    }
-    Timer { interval: 4000; running: !root.barHidden; repeat: true; triggeredOnStart: true
-        onTriggered: { batProbe.running = false; batProbe.running = true; } }
+    // Native UPower updates; no battery polling or subprocesses.
+    BatteryService { id: batteryService }
+    readonly property bool batReady: batteryService.ready
 
     // ---------- Network status ----------
     Process {
@@ -2454,40 +2091,6 @@ Item {
     }
     function fmtLoss(pct) { return (parseInt(pct) || 0) + "%"; }
 
-    // ---------- Bluetooth status ----------
-    // bluez-tools path: bt-adapter --info for power state only — the
-    // per-device connected count is updated by btDevicesProbe which
-    // runs on-demand from the Quick panel. Keeping the 5s loop here
-    // single-shell-out avoids N+1 forks on machines with several
-    // paired devices.
-    Process {
-        id: btProbe
-        running: false
-        command: ["bash", "-c",
-            "if command -v bt-adapter >/dev/null 2>&1; then"
-            + "  p=$(bt-adapter --info 2>/dev/null | awk '/Powered:/{print $2; exit}');"
-            + "  [ \"$p\" = 1 ] && echo on || echo off;"
-            +             "elif command -v bluetoothctl >/dev/null 2>&1; then"
-            + "  echo 'show' | bluetoothctl 2>/dev/null | awk '/Powered:/{print ($2==\"yes\")?\"on\":\"off\"; exit}';"
-            + "else echo off; fi"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const s = this.text.trim();
-                const powered = (s === "on");
-                if (root.btPowered !== powered) root.btPowered = powered;
-                if (!powered) {
-                    if (root.btIcon !== root.icoBtOff) root.btIcon = root.icoBtOff;
-                    if (root.btCount !== 0)  root.btCount = 0;
-                } else {
-                    const icon = (root.btCount > 0) ? root.icoBtConnected : root.icoBtOn;
-                    if (root.btIcon !== icon) root.btIcon = icon;
-                }
-            }
-        }
-    }
-    Timer { interval: 5000; running: !root.barHidden; repeat: true; triggeredOnStart: true
-        onTriggered: { btProbe.running = false; btProbe.running = true; } }
-
     // ---------- Audio status ----------
     // One snapshot per burst of Pulse events. Preserve the EQ's physical
     // sink mapping, but read each device list only once and parse it in QML.
@@ -2563,68 +2166,6 @@ Item {
         repeat: true
         onTriggered: root.refreshAudio()
     }
-
-    // ---------- Bluetooth device probe ----------
-    // Walks every paired/known device through `bt-device --info` to pull
-    // its name + connected/paired/trusted flags. Cheap at the few-devices-
-    // per-machine scale; the `bt-device -l` output is "Name (MAC)" lines
-    // with a leading "Added devices:" header that tail strips.
-    Process {
-        id: btDevicesProbe
-        running: false
-        command: ["bash", "-c",
-            "macs=$(bt-device -l 2>/dev/null | tail -n +2 | sed -n 's/.*(\\([0-9A-F:]\\{17\\}\\))$/\\1/p');"
-            + " [ -z \"$macs\" ] && macs=$(bluetoothctl devices 2>/dev/null | sed -n 's/^Device \\([0-9A-F:]\\{17\\}\\) .*/\\1/p');"
-            + " for m in $macs; do"
-            + "   info=$(bt-device --info \"$m\" 2>/dev/null || bluetoothctl info \"$m\" 2>/dev/null);"
-            + "   [ -z \"$info\" ] && continue;"
-            + "   name=$(printf '%s' \"$info\" | awk -F': ' '/^[[:space:]]*Name:/{print $2; exit}');"
-            + "   [ -z \"$name\" ] && name=$(printf '%s' \"$info\" | sed -n 's/^[[:space:]]*Name: \\(.*\\)/\\1/p');"
-            + "   conn=$(printf '%s' \"$info\" | awk '/^[[:space:]]*Connected: (1|yes)/{print 1; exit}');"
-            + "   paired=$(printf '%s' \"$info\" | awk '/^[[:space:]]*Paired: (1|yes)/{print 1; exit}');"
-            + "   trusted=$(printf '%s' \"$info\" | awk '/^[[:space:]]*Trusted: (1|yes)/{print 1; exit}');"
-            + "   batt=$(printf '%s' \"$info\" | awk -F': ' '/Battery Percentage:/{if(match($2,/\\(([0-9]+)\\)/,a)) print a[1]}');"
-            + "   [ -z \"$batt\" ] && batt=0;"
-            + "   printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' \"$m\" \"${name:-$m}\" \"${conn:-0}\" \"${paired:-0}\" \"${trusted:-0}\" \"$batt\";"
-            + " done"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const lines = this.text.trim().split("\n").filter(s => s.length > 0);
-                const devs = lines.map(line => {
-                    const f = line.split("\t");
-                    return {
-                        mac:       f[0] || "",
-                        name:      (f[1] || "").trim() || (f[0] || ""),
-                        connected: f[2] === "1",
-                        paired:    f[3] === "1",
-                        trusted:   f[4] === "1",
-                        battery:   parseInt(f[5]) || 0
-                    };
-                });
-                // Connected first, then paired, then everything else.
-                devs.sort((a, b) =>
-                    (b.connected - a.connected)
-                    || (b.paired - a.paired)
-                    || a.name.localeCompare(b.name));
-                // Equality guard so the Quick panel's Repeater doesn't
-                // re-evaluate every refresh when nothing has changed.
-                const serialised = JSON.stringify(devs);
-                if (serialised === root._btDevicesSer) return;
-                root._btDevicesSer = serialised;
-                root.btDevices = devs;
-                const connCount = devs.filter(d => d.connected).length;
-                if (root.btCount !== connCount) {
-                    root.btCount = connCount;
-                    if (root.btPowered) {
-                        const icon = (connCount > 0) ? root.icoBtConnected : root.icoBtOn;
-                        if (root.btIcon !== icon) root.btIcon = icon;
-                    }
-                }
-            }
-        }
-    }
-    Timer { interval: 30000; running: !root.barHidden; repeat: true; triggeredOnStart: true
-        onTriggered: { btDevicesProbe.running = false; btDevicesProbe.running = true; } }
 
     // ---------- Audio sinks probe ----------
     // pactl JSON (pipewire-pulse supports -f json): each sink carries its
@@ -3025,10 +2566,12 @@ Item {
 
     Loader { id: btLoader }
     onBtVisibleChanged: {
-        if (root.btVisible && !btLoader.item) {
-            btLoader.setSource("BluetoothPopup.qml", { root: root });
-        }
+        if (root.btVisible) {
+            btUnload.stop();
+            if (!btLoader.item) btLoader.setSource("BluetoothPopup.qml", { root: root });
+        } else btUnload.restart();
     }
+    Timer { id: btUnload; interval: 250; onTriggered: if (!root.btVisible) btLoader.source = "" }
 
     Loader { id: audioLoader }
     onAudioVisibleChanged: {
@@ -3348,6 +2891,14 @@ Item {
                 if (entry) it.toggleFavorite(entry);
             }
         }
+        function edit() {
+            root.openWallpapers();
+            if (wallpapersLoader.item) {
+                const it = wallpapersLoader.item;
+                const entry = it.filteredWallpapers[it.selectedIndex];
+                if (entry) it.openEditor(entry);
+            }
+        }
     }
 
     IpcHandler {
@@ -3381,6 +2932,14 @@ Item {
                 const it = wallpapersLoader.item;
                 const entry = it.filteredWallpapers[it.selectedIndex];
                 if (entry) it.toggleFavorite(entry);
+            }
+        }
+        function edit() {
+            root.openWallpapers();
+            if (wallpapersLoader.item) {
+                const it = wallpapersLoader.item;
+                const entry = it.filteredWallpapers[it.selectedIndex];
+                if (entry) it.openEditor(entry);
             }
         }
     }

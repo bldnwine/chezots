@@ -80,6 +80,8 @@ CardWindow {
                     image: String(e.image || ""),
                     preview: String(e.preview || ""),
                     file: String(e.file || ""),
+                    screenshotPath: String(e.screenshotPath || ""),
+                    screenshotTemporary: e.screenshotTemporary === true,
                     glyph: String(e.glyph || ""),
                     urgency: Number(e.urgency || 1),
                     timestamp: ts,
@@ -134,6 +136,11 @@ CardWindow {
         if (!item) return;
 
         var key = item.key;
+        if (item.screenshotPath && service) {
+            root.notificationCenterVisible = false;
+            service.editScreenshot(key, item.screenshotPath, item.screenshotTemporary);
+            return;
+        }
         var summary = item.summary;
         var body = item.body;
         var file = item.file;

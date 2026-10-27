@@ -117,7 +117,8 @@ This configuration runs a complete, unified desktop shell environment inside a *
 | **Backlight** | In-shell stepping via `brightnessctl` | Steps in 5% increments with clamp; shows OSD bar. |
 | **Media** | Native QML MPRIS service integration | Tracks active media player (Spotify, browser, etc.) and routes playback commands. |
 | **Wi-Fi** | **`iwd` (`iwctl`)** | **NEVER use `nmcli`**. Omarchy and this setup rely strictly on `iwd`. |
-| **Bluetooth** | `bluetoothctl` and `bt-device` | Powers on/off, scans devices, and connects via BlueZ CLI. |
+| **Bluetooth** | Native `Quickshell.Bluetooth` state and controls | Persistent `BluetoothService.qml`; supervised `bluetoothctl` agent only for pairing/connect. No status polling. |
+| **Battery** | Native `Quickshell.Services.UPower` | `BatteryService.qml` exposes percentage, watts, presence, and state without subprocesses. |
 | **Night Light** | `hyprsunset` | Controls color temperature and gamma via DisplayPopup. |
 | **Wallpaper** | `omarchy-theme-bg-set <path>` -> `Background.qml` | Updates `~/.config/omarchy/current/background`; Quickshell runs a GPU diagonal wipe. No `swaybg`. |
 | **Polkit** | `PolkitAgent.qml` | Handles native PolicyKit auth popups with shake animation. Privileged operations must use `pkexec`. |
@@ -132,8 +133,8 @@ The Zen bar shows a plain rotated song title on vertical edges (bottom-to-top on
 ## 5. State & Configuration Locations
 
 - **Quickshell State**: `~/.local/state/quickshell-desktop/`
-  - `bar-templates.json`: Stored templates for bar heights, air, margins, and styles.
-  - Setting overrides: Bar opacity, edge, and visibility state.
+  - `bar.json`: Version 1 bar settings, named templates, and selected template; old individual files are imported once and retained.
+  - Bar style settings save atomically after a 250ms debounce. Visibility remains session-only.
 - **Omarchy System State**: `~/.local/state/omarchy/`
   - `calendar-events.json`: Cached Google Calendar events for `CalendarService.qml` and `CalendarPopup.qml`.
   - `clipboard-history.json`: Active clipboard ring entries for `ClipboardPopup.qml`.
@@ -211,7 +212,7 @@ pgrep -a -x qs
 
 - **Command independence:** App/terminal launches are detached. Control commands use persistent queues per feature, so an audio/display/Bluetooth/VPN/theme action cannot cancel another feature's job. Discrete actions remain ordered; repeated pending absolute settings coalesce without crossing discrete-action boundaries. Existing dedicated workers and service deadlines remain in place.
 - **Equalizer:** One persistent service serializes live changes and preset operations across popup closure. Live changes retain only the latest pending snapshot; old state-file notifications cannot overwrite edits during a job or slider debounce. Helpers share a file lock and replace state/configuration atomically. Live updates and imports never restart PipeWire; use explicit APPLY to initialize an unavailable graph. Failed application or persistence is reported instead of showing a premature success.
-- **Telemetry:** CPU/memory and network-burst counters use asynchronous `FileView` reads with no subprocesses. CPU keeps a 2s measurement window on a 5s cadence, including while the System popup is open with the bar hidden; explicit popup refreshes remain supported. Network burst sampling keeps its 1s cadence, 1.5 MiB threshold, and 2s cooldown. Hiding the bar, failed reads, and interface/counter resets reseed network baselines; cancelled system reads cannot publish stale samples. Battery, link status, Bluetooth, and VPN polling are unchanged.
+- **Telemetry:** CPU/memory and network-burst counters use asynchronous `FileView` reads with no subprocesses. CPU keeps a 2s measurement window on a 5s cadence, including while the System popup is open with the bar hidden; explicit popup refreshes remain supported. Network burst sampling keeps its 1s cadence, 1.5 MiB threshold, and 2s cooldown. Hiding the bar, failed reads, and interface/counter resets reseed network baselines; cancelled system reads cannot publish stale samples. Link status and VPN polling are unchanged; battery and Bluetooth now use native events.
 - **Audio:** One persistent `pactl subscribe` connection drives debounced snapshots and device-list refreshes. Snapshots read each sink/source list once and preserve the equalizer's physical-sink routing. A 30s fallback runs only while the subscription is disconnected; reconnect attempts occur every 3s.
 - **Recording:** `capture-screenrecording` already sends `screenrecord sync` at start/stop. A direct `pgrep` every 15s reconciles externally launched recordings and unexpected exits.
 - **AI:** Visible active sessions update every 1.5s, but quotas refresh at most once per minute unless manually requested. Both active and inactive polling pause when the bar and AI popup are hidden. History metadata comes from one bounded tail read per scan.
@@ -244,3 +245,18 @@ python3 desktop/tests/service_lifecycle_test.py
 # Requires a running Wayland compositor; uses a private D-Bus session and temporary archives.
 python3 desktop/tests/notification_retention_test.py
 ```
+
+## 9. Hyprperks-inspired native services and settings
+
+- `BarSettings.qml` owns `~/.local/state/quickshell-desktop/bar.json`: `{version: 1, settings: {...}, templates: {...}, selectedTemplate: "zen"}`. One initial directory check precedes asynchronous FileView loading. When absent, ten legacy files are imported without deletion. Pending edits survive loading; persistence is atomic and debounced 250ms. Corrupt/unsupported JSON is retained and write-disabled, with an error in Bar Style; repair the JSON and reload to resume persistence. Existing Navbar setters and bar IPC stay compatible.
+- `BluetoothService.qml` uses the default native adapter and reactive device objects. Power, trust, disconnect, forget, and discovery use native controls. Pair/connect commands receive argument arrays and retain `NoInputNoOutput` authorization; operations survive popup closure and have deadlines. Discovery is cancellable and stops after 15s. Adapter replacement stops discovery owned by the old adapter. The standalone popup shows all devices in a scrolling list and unloads after 250ms; the persistent service stays alive. Quick menu bodies and Whiterose are outside this change.
+- `BatteryService.qml` reads UPower's aggregate display device. Percentages convert from fractions to 0–100; `changeRate` is already watts. Only present laptop batteries count; unavailable data remains Unknown, and batteryless systems report AC. Power-profile controls are unchanged.
+
+Regression checks:
+
+```sh
+node desktop/tests/bar-settings.test.js
+python3 desktop/tests/adoption_lifecycle_test.py
+```
+
+The lifecycle suite uses private buses, temporary files, fake adapters/batteries, and a fake authorization agent; it does not modify live hardware or desktop state.

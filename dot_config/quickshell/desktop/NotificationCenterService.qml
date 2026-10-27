@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -40,6 +41,7 @@ Item {
 
     signal entryAdded(var entry)
     signal entriesReset()
+    signal screenshotOpened(string key)
 
     function storeCommand(args) {
         return [root.script].concat(args);
@@ -48,14 +50,66 @@ Item {
     function differsFrom(data) {
         if (!data || !entries) return true;
         if (data.length !== entries.length) return true;
-        if (data.length === 0) return false;
-        return String(data[0].key) !== String(entries[0].key);
+        return JSON.stringify(data) !== JSON.stringify(entries);
     }
 
     function load() {
         if (listProc.running) return;
         listProc.command = root.storeCommand(["list", String(root.pageSize)]);
         listProc.running = true;
+    }
+
+    function pruneAndLoad() {
+        if (pruneProc.running) return;
+        pruneProc.command = root.storeCommand(["prune"]);
+        pruneProc.running = true;
+    }
+
+    function editScreenshot(key, path, temporary) {
+        if (!key || !path) return;
+        editJob.createObject(root, { notificationKey: String(key), screenshotPath: String(path),
+                                     temporary: temporary === true });
+    }
+
+    Component {
+        id: editJob
+        Process {
+            id: job
+            required property string notificationKey
+            required property string screenshotPath
+            required property bool temporary
+            property bool succeeded: false
+            property bool outputFinished: false
+            property bool processExited: false
+            property int exitCode: -1
+            function finishIfReady() {
+                if (!outputFinished || !processExited) return;
+                if (exitCode === 0 && succeeded) root.screenshotOpened(notificationKey);
+                destroy();
+            }
+            command: root.storeCommand(["edit-screenshot", notificationKey, screenshotPath,
+                                        temporary ? "true" : "false"])
+            environment: root.storeEnvironment
+            running: true
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    try { job.succeeded = JSON.parse(text).ok === true; } catch (e) {}
+                    job.outputFinished = true;
+                    job.finishIfReady();
+                }
+            }
+            onExited: function(exitCode) {
+                job.exitCode = exitCode;
+                job.processExited = true;
+                job.finishIfReady();
+            }
+        }
+    }
+
+    Process {
+        id: pruneProc
+        environment: root.storeEnvironment
+        onExited: root.load()
     }
 
     function readSeen() {
@@ -126,9 +180,9 @@ Item {
 
     Timer {
         interval: 60000
-        running: false
+        running: true
         repeat: true
-        onTriggered: root.load()
+        onTriggered: root.pruneAndLoad()
     }
 
     Process {
@@ -172,6 +226,6 @@ Item {
 
     Component.onCompleted: {
         readSeen();
-        load();
+        pruneAndLoad();
     }
 }

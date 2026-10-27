@@ -1,0 +1,79 @@
+# Aether Yazi Theme Template
+# Generated dynamically by Aether (https://github.com/bldnwine/aethergo)
+
+[mgr]
+cwd = { fg = "{accent}" }
+
+# Find
+find_keyword  = { fg = "{yellow}", bold = true, italic = true, underline = true }
+find_position = { fg = "{magenta}", bold = true, italic = true }
+
+# Markers & Selection
+marker_copied   = { fg = "{green}", bg = "{green}" }
+marker_cut      = { fg = "{red}", bg = "{red}" }
+marker_marked   = { fg = "{cyan}", bg = "{cyan}" }
+marker_selected = { fg = "{accent}", bg = "{accent}" }
+
+# Border
+border_style = { fg = "{bright_black}" }
+
+[tabs]
+active   = { fg = "{background}", bg = "{accent}", bold = true }
+inactive = { fg = "{foreground}", bg = "{dark_bg}" }
+
+[mode]
+normal_main = { fg = "{background}", bg = "{accent}", bold = true }
+normal_alt  = { fg = "{accent}", bg = "{dark_bg}" }
+select_main = { fg = "{background}", bg = "{yellow}", bold = true }
+select_alt  = { fg = "{yellow}", bg = "{dark_bg}" }
+unset_main  = { fg = "{background}", bg = "{red}", bold = true }
+unset_alt   = { fg = "{red}", bg = "{dark_bg}" }
+
+[status]
+progress_normal = { fg = "{accent}", bg = "{dark_bg}" }
+progress_error  = { fg = "{red}", bg = "{dark_bg}" }
+
+[which]
+cand = { fg = "{cyan}" }
+rest = { fg = "{bright_black}" }
+desc = { fg = "{magenta}" }
+
+[filetype]
+prepend_rules = [
+	{ url = "*/", fg = "{foreground}" }
+]
+
+[icon]
+# Override fallback folder icons with the current theme's dynamic yellow variable
+prepend_conds = [
+	{ if = "dir & hovered", text = "", fg = "{yellow}" },
+	{ if = "dir", text = "", fg = "{yellow}" }
+]
+
+# Override common named directory icons with the current theme's dynamic yellow variable
+prepend_dirs = [
+	{ name = ".config",      text = "", fg = "{yellow}" },
+	{ name = ".git",         text = "", fg = "{accent}" },
+	{ name = ".github",      text = "", fg = "{accent}" },
+	{ name = ".npm",         text = "", fg = "{accent}" },
+	{ name = "Desktop",      text = "", fg = "{yellow}" },
+	{ name = "Development",  text = "", fg = "{yellow}" },
+	{ name = "Documents",    text = "", fg = "{yellow}" },
+	{ name = "Downloads",    text = "", fg = "{yellow}" },
+	{ name = "Library",      text = "", fg = "{yellow}" },
+	{ name = "Movies",       text = "", fg = "{yellow}" },
+	{ name = "Music",        text = "", fg = "{yellow}" },
+	{ name = "Pictures",     text = "", fg = "{yellow}" },
+	{ name = "Public",       text = "", fg = "{yellow}" },
+	{ name = "Videos",       text = "", fg = "{yellow}" },
+	{ name = "desktop",      text = "", fg = "{yellow}" },
+	{ name = "development",  text = "", fg = "{yellow}" },
+	{ name = "documents",    text = "", fg = "{yellow}" },
+	{ name = "downloads",    text = "", fg = "{yellow}" },
+	{ name = "library",      text = "", fg = "{yellow}" },
+	{ name = "movies",       text = "", fg = "{yellow}" },
+	{ name = "music",        text = "", fg = "{yellow}" },
+	{ name = "pictures",     text = "", fg = "{yellow}" },
+	{ name = "public",       text = "", fg = "{yellow}" },
+	{ name = "videos",       text = "", fg = "{yellow}" }
+]

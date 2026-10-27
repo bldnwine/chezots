@@ -115,7 +115,7 @@ Icons live as `icoFoo` properties on `Navbar.qml`'s `root`. Add new ones with `S
 | `barType` | One of `floating`, `slab`, `notch`. Notch is a horizontal slab with angular outward-tapering ends (taper scales with `barHeight`). Cycle in the Bar Style popup TYPE row or via `qs -c desktop ipc call barType notch`. |
 | `barEdge: "top"` | Initial edge. One of `top`, `right`, `bottom`, `left`. Click the edge arrow in the bar to cycle. |
 
-Bar templates (named snapshots of the above + face/type/transparent) live in `~/.local/state/quickshell-desktop/bar-templates.json`, selected via the Template row in the Bar Style popup (`qs -c desktop ipc call barstyle toggle`). Unsaved tweaks show as `<name> custom` and still persist across restarts through the individual setting files.
+Bar settings and templates live in versioned `~/.local/state/quickshell-desktop/bar.json`, selected via the Template row in the Bar Style popup (`qs -c desktop ipc call barstyle toggle`). Unsaved tweaks show as `<name> custom` and persist across restarts. The previous individual files and `bar-templates.json` are imported once when `bar.json` is absent and retained for rollback.
 
 Workspace count lives in `Bar.qml`:
 

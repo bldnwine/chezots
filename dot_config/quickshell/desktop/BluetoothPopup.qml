@@ -1,10 +1,7 @@
 import QtQuick
+import QtQuick.Controls
 
-// Bluetooth popup — same iwd-free bluez-tools body as QuickBluetoothBody
-// (power toggle, scan, device list) in a CardWindow, plus the connected
-// device's battery percentage in the status tag. Backed by Navbar's
-// btDevices probe (already carries { mac, name, connected, paired,
-// trusted, battery }).
+// Native Bluetooth view. Operations and live state belong to the persistent service.
 CardWindow {
     id: btpopup
     required property var root
@@ -18,7 +15,7 @@ CardWindow {
     subtitle: root.btPowered
                ? (root.btDevices.length + " DEVICES"
                   + (root.btCount > 0 ? " · " + root.btCount + " CONN" : ""))
-               : "POWER OFF"
+               : root.btAvailable ? "POWER OFF" : "NO ADAPTER"
     footer: "T TRUST · S SCAN · U UNPAIR"
 
     anchorEdge: btpopup.root.barEdge
@@ -31,12 +28,12 @@ CardWindow {
 
     readonly property int headerCount: 2
     property var visibleDevs: root.btPowered
-                              ? root.btDevices.slice(0, 8)
+                              ? root.btDevices
                               : []
     readonly property int kbdMax: headerCount + visibleDevs.length
 
     // Re-home the selection cursor whenever the device list changes
-    onVisibleDevsChanged: btpopup.rehome()
+    onVisibleDevsChanged: { btpopup.rehome(); Qt.callLater(btpopup.syncMac); }
 
     // Keep kbdMac in sync whenever the keyboard cursor moves
     onKbdIndexChanged: btpopup.syncMac()
@@ -44,6 +41,12 @@ CardWindow {
     function syncMac() {
         const d = btpopup.visibleDevs[btpopup.kbdIndex - btpopup.headerCount];
         btpopup.kbdMac = d ? d.mac : "";
+        if (d && deviceScroll) {
+            const top = (btpopup.kbdIndex - btpopup.headerCount) * 38;
+            if (top < deviceScroll.contentY) deviceScroll.contentY = top;
+            else if (top + 32 > deviceScroll.contentY + deviceScroll.height)
+                deviceScroll.contentY = top + 32 - deviceScroll.height;
+        }
     }
 
     function rehome() {
@@ -103,7 +106,7 @@ CardWindow {
         else root.btConnect(dev.mac);
     }
 
-    Component.onCompleted: root.refreshBluetooth()
+    Component.onCompleted: { root.refreshBluetooth(); Qt.callLater(btpopup.syncMac); }
 
     onDismiss: root.btVisible = false
     onKeyPressed: (event) => {
@@ -121,7 +124,7 @@ CardWindow {
             Text {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                text: !root.btPowered ? "POWER OFF"
+                text: !root.btAvailable ? "NO ADAPTER" : !root.btPowered ? "POWER OFF"
                       : (root.btDevices.length + " DEVICES"
                          + (root.btCount > 0
                             ? "  ·  " + root.btCount + " CONN"
@@ -144,7 +147,7 @@ CardWindow {
                 }
                 QuickButton {
                     root: btpopup.root
-                    label: root.btScanning ? "SCANNING" : "SCAN"
+                    label: root.btScanning ? "STOP SCAN" : "SCAN"
                     selected: btpopup.kbdIndex === 1 || root.btScanning
                     onClicked: root.btToggleScan()
                 }
@@ -153,84 +156,111 @@ CardWindow {
 
         Rectangle { width: parent.width; height: 1; color: root.sep }
 
-        Repeater {
-            model: btpopup.visibleDevs
-            delegate: Rectangle {
-                required property var modelData
-                required property int index
-                readonly property bool kbdFocused: btpopup.kbdIndex === (index + btpopup.headerCount)
-                readonly property bool dimmed: !modelData.paired && !modelData.connected
-                width: col.width
-                height: 32
-                radius: root.cornerRadius
-                color: modelData.connected || kbdFocused
-                       ? root.rowSel
-                       : devMouse.containsMouse
-                           ? root.rowHi
-                           : "transparent"
-                border.color: modelData.connected || kbdFocused ? root.seal : root.sep
-                border.width: kbdFocused ? 2 : 1
-                Behavior on color        { ColorAnimation { duration: 120 } }
-                Behavior on border.color { ColorAnimation { duration: 120 } }
-                Behavior on border.width { NumberAnimation { duration: 120 } }
+        Text {
+            width: parent.width
+            visible: text.length > 0
+            text: root.btError || root.btActionText
+            wrapMode: Text.Wrap
+            color: root.btError ? root.seal : root.inkDeep
+            font.family: root.mono
+            font.pixelSize: 10
+        }
 
-                Text {
-                    id: devIcon
-                    anchors.left: parent.left
-                    anchors.leftMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: modelData.connected ? "󰂱" : (modelData.paired ? "󰂯" : "󰂲")
-                    color: modelData.connected ? root.seal : root.ink
-                    font.family: root.mono
-                    font.pixelSize: 14
-                    opacity: dimmed ? 0.55 : 1
-                }
-                Text {
-                    anchors.left: devIcon.right
-                    anchors.right: tag.left
-                    anchors.leftMargin: 10
-                    anchors.rightMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: modelData.name
-                    elide: Text.ElideRight
-                    color: modelData.connected ? root.ink : root.fg
-                    font.family: root.mono
-                    font.pixelSize: 11
-                    font.weight: modelData.connected ? Font.Medium : Font.Normal
-                    opacity: dimmed ? 0.55 : 1
-                }
-                Text {
-                    id: tag
-                    anchors.right: parent.right
-                    anchors.rightMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: (modelData.trusted ? "✓ " : "")
-                          + (modelData.connected
-                             ? "CONNECTED" + (modelData.battery > 0
-                                              ? " · " + modelData.battery + "%"
-                                              : "")
-                             : modelData.paired ? "PAIRED"
-                                                : "")
-                    color: root.inkDeep
-                    font.family: root.mono
-                    font.pixelSize: 9
-                    font.letterSpacing: 1.5
-                    opacity: dimmed ? 0.55 : 1
-                }
-                MouseArea {
-                    id: devMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    onClicked: (mouse) => {
-                        if (mouse.button === Qt.RightButton) {
-                            root.btUnpair(modelData.mac);
-                            return;
+        Flickable {
+            id: deviceScroll
+            width: col.width
+            height: Math.min(deviceCol.height, Math.max(64, Math.min(360, (btpopup.screen ? btpopup.screen.height : btpopup.height) - 260)))
+            contentWidth: width
+            contentHeight: deviceCol.height
+            onContentHeightChanged: Qt.callLater(btpopup.syncMac)
+            onHeightChanged: Qt.callLater(btpopup.syncMac)
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+            Column {
+                id: deviceCol
+                width: deviceScroll.width
+                spacing: 6
+                Repeater {
+                    model: btpopup.visibleDevs
+                    delegate: Rectangle {
+                        required property var modelData
+                        required property int index
+                        readonly property bool kbdFocused: btpopup.kbdIndex === (index + btpopup.headerCount)
+                        readonly property bool dimmed: !modelData.paired && !modelData.connected
+                        width: col.width
+                        height: 32
+                        radius: root.cornerRadius
+                        color: modelData.connected || kbdFocused
+                               ? root.rowSel
+                               : devMouse.containsMouse
+                                   ? root.rowHi
+                                   : "transparent"
+                        border.color: modelData.connected || kbdFocused ? root.seal : root.sep
+                        border.width: kbdFocused ? 2 : 1
+                        Behavior on color        { ColorAnimation { duration: 120 } }
+                        Behavior on border.color { ColorAnimation { duration: 120 } }
+                        Behavior on border.width { NumberAnimation { duration: 120 } }
+
+                        Text {
+                            id: devIcon
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData.connected ? "󰂱" : (modelData.paired ? "󰂯" : "󰂲")
+                            color: modelData.connected ? root.seal : root.ink
+                            font.family: root.mono
+                            font.pixelSize: 14
+                            opacity: dimmed ? 0.55 : 1
                         }
-                        btpopup._activateAt(index + btpopup.headerCount);
+                        Text {
+                            anchors.left: devIcon.right
+                            anchors.right: tag.left
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData.name
+                            elide: Text.ElideRight
+                            color: modelData.connected ? root.ink : root.fg
+                            font.family: root.mono
+                            font.pixelSize: 11
+                            font.weight: modelData.connected ? Font.Medium : Font.Normal
+                            opacity: dimmed ? 0.55 : 1
+                        }
+                        Text {
+                            id: tag
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: (modelData.trusted ? "✓ " : "")
+                                  + (modelData.connected
+                                     ? "CONNECTED" + (modelData.batteryAvailable
+                                                      ? " · " + modelData.battery + "%"
+                                                      : "")
+                                     : modelData.state || (modelData.paired ? "PAIRED" : ""))
+                            color: root.inkDeep
+                            font.family: root.mono
+                            font.pixelSize: 9
+                            font.letterSpacing: 1.5
+                            opacity: dimmed ? 0.55 : 1
+                        }
+                        MouseArea {
+                            id: devMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            onClicked: (mouse) => {
+                                if (mouse.button === Qt.RightButton) {
+                                    root.btUnpair(modelData.mac);
+                                    return;
+                                }
+                                btpopup._activateAt(index + btpopup.headerCount);
+                            }
+                        }
                     }
                 }
+
             }
         }
 

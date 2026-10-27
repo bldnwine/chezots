@@ -1,33 +1,67 @@
 #!/bin/bash
 
+set -o pipefail
+
 OUTPUT_DIR="$HOME/Pictures/ss"
+SOURCE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/notification-center/screenshot-sources"
 
 pkill slurp && exit 0
 
 MODE="${1:-smart}"
 PROCESSING="${2:-slurp}"
+PRIVATE_PENDING=""
 
-cleanup_freeze() {
-  [[ -n $FREEZE_PID ]] && kill $FREEZE_PID 2>/dev/null
+cleanup() {
+  [[ -n $FREEZE_PID ]] && kill "$FREEZE_PID" 2>/dev/null
+  [[ -n $PRIVATE_PENDING ]] && rm -f -- "$PRIVATE_PENDING"
+  return 0
 }
-trap cleanup_freeze EXIT
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 
 { read -r FREEZE_PID; read -r SELECTION; } < <(capture-region "$MODE" --keep-freeze)
 
 [[ -z $SELECTION ]] && exit 0
 
+notify_screenshot() {
+  local title=$1 path=$2 temporary=$3 timeout=$4 body=$5
+  notify-send --app-name Screenshot \
+    -h "string:x-owlcat-screenshot-path:$path" \
+    -h "boolean:x-owlcat-screenshot-temporary:$temporary" \
+    "$title" "$body" -t "$timeout"
+}
+
 case "$PROCESSING" in
   copy)
-    grim -g "$SELECTION" - | wl-copy --type image/png
-    notify-send "Screenshot copied to clipboard" -t 2000
+    umask 077
+    mkdir -p -- "$SOURCE_DIR" || exit 1
+    chmod 700 -- "$SOURCE_DIR" || exit 1
+    FILEPATH=$(mktemp "$SOURCE_DIR/source-XXXXXX.png") || exit 1
+    PRIVATE_PENDING=$FILEPATH
+    grim -g "$SELECTION" "$FILEPATH" || { rm -f -- "$FILEPATH"; exit 1; }
+    if ! wl-copy --type image/png <"$FILEPATH"; then
+      notify-send "Screenshot could not be copied" -t 3000
+      exit 1
+    fi
+    notify_screenshot "Screenshot copied to clipboard" "$FILEPATH" true 2000 "Click to annotate" || exit 1
+    PRIVATE_PENDING=""
     ;;
   save|slurp|*)
-    mkdir -p "$OUTPUT_DIR"
+    mkdir -p -- "$OUTPUT_DIR" || exit 1
     FILENAME="screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png"
     FILEPATH="$OUTPUT_DIR/$FILENAME"
-    grim -g "$SELECTION" "$FILEPATH" || exit 1
-    wl-copy --type image/png <"$FILEPATH"
-    notify-send "Screenshot saved" "$FILEPATH" -t 3000
-    echo "$FILEPATH"
+    if [[ -e $FILEPATH ]]; then
+      FILEPATH=$(mktemp "$OUTPUT_DIR/${FILENAME%.png}-XXXXXX.png") || exit 1
+    fi
+    grim -g "$SELECTION" "$FILEPATH" || { rm -f -- "$FILEPATH"; exit 1; }
+    if ! wl-copy --type image/png <"$FILEPATH"; then
+      notify-send "Screenshot saved, but could not be copied" "$FILEPATH" -t 3000
+      printf '%s\n' "$FILEPATH"
+      exit 1
+    fi
+    notify_screenshot "Screenshot saved" "$FILEPATH" false 3000 "$FILEPATH"
+    printf '%s\n' "$FILEPATH"
     ;;
 esac

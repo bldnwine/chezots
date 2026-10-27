@@ -13,6 +13,7 @@ Item {
     property bool opened: false
     readonly property bool doNotDisturb: Boolean(root.root && root.root.doNotDisturb)
     property var currentNotif: null
+    property string currentNotifKey: ""
 
     property real _opacity: 0
     Behavior on _opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
@@ -67,6 +68,12 @@ Item {
             function onClosed() { root.releaseNotification(key); }
         }
     }
+    Connections {
+        target: root.root ? root.root.notificationCenterService : null
+        function onScreenshotOpened(key) {
+            if (root.root && root.root.removeNotification) root.root.removeNotification(key);
+        }
+    }
     Timer {
         id: dedupExpiry
         interval: 3000
@@ -84,7 +91,15 @@ Item {
         var app = String(notification.appName || "");
         var summary = String(notification.summary || "");
         var body = String(notification.body || "");
-        var hash = app + "|" + summary + "|" + body;
+        var screenshotPath = "";
+        var screenshotTemporary = false;
+        try {
+            if (notification.hints) {
+                screenshotPath = String(notification.hints["x-owlcat-screenshot-path"] || "");
+                screenshotTemporary = notification.hints["x-owlcat-screenshot-temporary"] === true;
+            }
+        } catch (e) {}
+        var hash = JSON.stringify([app, summary, body, screenshotPath]);
         var now = Date.now();
         root._recentNotifHashes = NotificationModel.recentHashes(root._recentNotifHashes, now);
         if (root._recentNotifHashes[hash] && (now - root._recentNotifHashes[hash] < 3000)) {
@@ -134,7 +149,9 @@ Item {
             glyph: glyph,
             urgency: urgency,
             timestamp: stamp,
-            execArgv: execArgv
+            execArgv: execArgv,
+            screenshotPath: screenshotPath,
+            screenshotTemporary: screenshotTemporary
         };
 
         var dir = root.archiveDirectory;
@@ -164,6 +181,14 @@ Item {
 
     function showNotif(notification) {
         root.currentNotif = notification;
+        root.currentNotifKey = "";
+        for (let i = 0; i < retainedNotifications.count; i++) {
+            const entry = retainedNotifications.get(i);
+            if (entry.notification === notification) {
+                root.currentNotifKey = entry.key;
+                break;
+            }
+        }
         notification.tracked = true;
         root.opened = true;
         var ms = Number(notification.expireTimeout || 0);
@@ -178,12 +203,27 @@ Item {
     function close() {
         root.opened = false;
         root.currentNotif = null;
+        root.currentNotifKey = "";
         hideTimer.stop();
     }
 
     function invoke() {
         if (!root.currentNotif) return;
         const notification = root.currentNotif;
+        const key = root.currentNotifKey;
+        var screenshotPath = "";
+        var screenshotTemporary = false;
+        try {
+            if (notification.hints) {
+                screenshotPath = String(notification.hints["x-owlcat-screenshot-path"] || "");
+                screenshotTemporary = notification.hints["x-owlcat-screenshot-temporary"] === true;
+            }
+        } catch (e) {}
+        if (screenshotPath && key && root.root && root.root.notificationCenterService) {
+            root.close();
+            root.root.notificationCenterService.editScreenshot(key, screenshotPath, screenshotTemporary);
+            return;
+        }
         // Non-resident actions may destroy the notification synchronously.
         // Close the card first and avoid a second dismiss after invoking.
         root.close();

@@ -18,7 +18,7 @@ hl.monitor({
 	output = "eDP-1",
 	mode = "preferred",
 	position = "auto",
-	scale = "0.83",
+	scale = "1",
 })
 
 hl.monitor({
@@ -112,6 +112,8 @@ hl.env("HYPRCURSOR_THEME", "hypr_Bibata-Modern-Classic")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("LIBVA_DRIVER_NAME", "iHD")
 -- hl.env("MOZ_DRM_DEVICE", "/dev/dri/by-path/pci-0000:00:02.0-render")
+hl.env("QT_QPA_PLATFORM", "wayland;xcb")
+hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 
 -----------------------
 ---- LOOK AND FEEL ----
@@ -187,8 +189,9 @@ hl.config({
 		blur = {
 			enabled = true,
 			size = 5,
-			passes = 2,
+			passes = 3,
 			new_optimizations = true,
+			-- ignore_opacity = true,
 			-- vibrancy = 0.1696,
 		},
 	},
@@ -364,6 +367,7 @@ hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(launch('brave-origin-beta --pro
 hl.bind(mainMod .. " + ALT + SHIFT + B", hl.dsp.exec_cmd(launch("brave-origin-beta --incognito")))
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(launch("zen --private-window")))
 hl.bind(mainMod .. " + ALT", hl.dsp.exec_cmd("sh -c 'killall -SIGUSR1 waybar'"))
+hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("omasnap smart"))
 hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("capture-screenshot smart slurp"))
 hl.bind(mainMod .. " + SHIFT + Z", hl.dsp.exec_cmd("capture-screenshot smart copy"))
 hl.bind(mainMod .. " + ALT + Space", hl.dsp.global("quickshell:locusfavs-toggle"))
@@ -431,6 +435,20 @@ hl.bind("XF86AudioNext", hl.dsp.global("quickshell:media-next"), { locked = true
 hl.bind("XF86AudioPause", hl.dsp.global("quickshell:media-play-pause"), { locked = true })
 hl.bind("XF86AudioPlay", hl.dsp.global("quickshell:media-play-pause"), { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.global("quickshell:media-prev"), { locked = true })
+
+-- resize
+for _, resize in ipairs({
+	{ "left", -10, 0 },
+	{ "right", 10, 0 },
+	{ "up", 0, -10 },
+	{ "down", 0, 10 },
+}) do
+	hl.bind(
+		mainMod .. " + ALT + " .. resize[1],
+		hl.dsp.window.resize({ x = resize[2], y = resize[3], relative = true }),
+		{ repeating = true }
+	)
+end
 
 --------------------------------
 ---- WINDOWS AND WORKSPACES ----
