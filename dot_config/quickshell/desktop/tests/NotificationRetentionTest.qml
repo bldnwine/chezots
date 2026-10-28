@@ -78,10 +78,26 @@ ShellRoot {
         overlay.showNotif(screenshot2);
         const key = overlay.currentNotifKey;
         test.check(key.length > 0, "screenshot key missing");
+        test.check(overlay._offsetY === 0, "arrival must be stationary at resting offset 0");
+        test.check(overlay.displayedSummary === "Screenshot", "display snapshot not populated on arrival");
         overlay.invoke();
         const args = navbar.notificationCenterService.editArgs;
         test.check(args[0] === key && args[1] === "/tmp/second.png" && args[2] === true,
                    "screenshot click did not route metadata");
+        test.check(overlay._leaving === true, "invoke should transition to leaving state");
+
+        // Test mid-exit revival
+        const revivalNotif = fakeNotification.createObject(test, { id: 9, summary: "Revived" });
+        overlay.showNotif(revivalNotif);
+        test.check(!overlay._leaving, "revival did not clear _leaving");
+        test.check(overlay.opened, "revival did not keep opened");
+        test.check(overlay._offsetY === 0, "revival did not reset offset to resting position");
+        test.check(overlay.displayedSummary === "Revived", "revival snapshot not set");
+
+        // Test instant close
+        overlay.close(true);
+        test.check(!overlay.opened && !overlay._leaving && overlay._opacity === 0, "instant close failed");
+
         completed = true;
     }
     Timer {

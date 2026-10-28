@@ -24,6 +24,10 @@ ShellRoot {
     }
     QtObject {
         id: c
+        property bool canPlay: true
+        property bool canPause: true
+        property bool canGoNext: true
+        property bool canGoPrevious: false
         property string dbusName: "org.mpris.MediaPlayer2.music"
         property string identity: "Music"
         property string trackTitle: "Song C"
@@ -85,6 +89,17 @@ ShellRoot {
             test.check(service.selectedPlayer === a, "removed playing source left stale selection");
             service.inputPlayers = [];
             test.check(service.selectedPlayer === null && service.title === "" && !service.playing, "last player removal did not clear state");
+            c.isPlaying = false;
+            c.trackTitle = "";
+            service.inputPlayers = [proxy, c];
+            test.check(service.selectedPlayer === null, "untitled paused player changed display selection");
+            test.check(service.playerForAction("toggle") === c, "untitled paused source cannot resume");
+            test.check(service.playerForAction("next") === c, "capable untitled source cannot skip");
+            test.check(service.playerForAction("previous") === null, "unsupported command routed");
+            service.selectPlayer(c);
+            test.check(service.playerForAction("previous") === null, "manual source capability ignored");
+            service.inputPlayers = [proxy];
+            test.check(service.playerForAction("toggle") === null, "excluded proxy used for hardware keys");
             console.log("music service regression tests passed");
             Qt.quit();
         }

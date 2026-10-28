@@ -15,8 +15,62 @@ Item {
     property var currentNotif: null
     property string currentNotifKey: ""
 
+    // Emil Kowalski Motion System:
+    readonly property var motionCurve: [0.23, 1.0, 0.32, 1.0, 1.0, 1.0]
+    readonly property int arriveDuration: 160
+    readonly property int leaveDuration: 200
+    readonly property real travel: 24
+
+    property real _offsetY: 0
     property real _opacity: 0
-    Behavior on _opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+    property bool _leaving: false
+
+    // Decoupled display snapshot (preserves content during exit animation and C++ D-Bus destruction)
+    property string displayedSummary: ""
+    property string displayedBody: ""
+    property string displayedApp: ""
+
+    // Arrival: Clean stationary fade-in as before (zero vertical translation, zero stutter)
+    NumberAnimation {
+        id: arriveAnim
+        target: root
+        property: "_opacity"
+        from: 0
+        to: 1
+        duration: root.arriveDuration
+        easing.type: Easing.OutCubic
+    }
+
+    // Departure: Smooth Kowalski lift-out toward the bar
+    ParallelAnimation {
+        id: leaveAnim
+        NumberAnimation {
+            target: root
+            property: "_offsetY"
+            to: -root.travel
+            duration: root.leaveDuration
+            easing.type: Easing.Bezier
+            easing.bezierCurve: root.motionCurve
+        }
+        NumberAnimation {
+            target: root
+            property: "_opacity"
+            to: 0
+            duration: root.leaveDuration
+            easing.type: Easing.Bezier
+            easing.bezierCurve: root.motionCurve
+        }
+        onFinished: {
+            root._leaving = false;
+            root.opened = false;
+            root._offsetY = 0;
+            root.currentNotif = null;
+            root.currentNotifKey = "";
+            root.displayedSummary = "";
+            root.displayedBody = "";
+            root.displayedApp = "";
+        }
+    }
 
     property var _recentNotifHashes: ({})
     property string archiveDirectory: Quickshell.env("HOME") + "/.local/state/quickshell-desktop/notifications"
@@ -180,7 +234,20 @@ Item {
     }
 
     function showNotif(notification) {
+        if (!notification) return;
+
+        // Mid-exit revival: if departing, cancel exit and bring back smoothly to rest
+        const wasLeaving = root._leaving;
+        if (root._leaving) {
+            leaveAnim.stop();
+            root._leaving = false;
+        }
+
         root.currentNotif = notification;
+        root.displayedSummary = String(notification.summary || "");
+        root.displayedBody = String(notification.body || "");
+        root.displayedApp = String(notification.appName || "");
+
         root.currentNotifKey = "";
         for (let i = 0; i < retainedNotifications.count; i++) {
             const entry = retainedNotifications.get(i);
@@ -190,7 +257,14 @@ Item {
             }
         }
         notification.tracked = true;
-        root.opened = true;
+
+        if (!root.opened || wasLeaving) {
+            root.opened = true;
+            leaveAnim.stop();
+            root._offsetY = 0;
+            arriveAnim.restart();
+        }
+
         var ms = Number(notification.expireTimeout || 0);
         if (notification.urgency === NotificationUrgency.Critical) {
             hideTimer.stop();
@@ -200,15 +274,31 @@ Item {
         }
     }
 
-    function close() {
-        root.opened = false;
-        root.currentNotif = null;
-        root.currentNotifKey = "";
+    function close(instant) {
         hideTimer.stop();
+        if (instant) {
+            arriveAnim.stop();
+            leaveAnim.stop();
+            root._leaving = false;
+            root.opened = false;
+            root._opacity = 0;
+            root._offsetY = 0;
+            root.currentNotif = null;
+            root.currentNotifKey = "";
+            root.displayedSummary = "";
+            root.displayedBody = "";
+            root.displayedApp = "";
+            return;
+        }
+
+        if (!root.opened || root._leaving) return;
+        root._leaving = true;
+        arriveAnim.stop();
+        leaveAnim.restart();
     }
 
     function invoke() {
-        if (!root.currentNotif) return;
+        if (!root.currentNotif || root._leaving) return;
         const notification = root.currentNotif;
         const key = root.currentNotifKey;
         var screenshotPath = "";
@@ -220,13 +310,13 @@ Item {
             }
         } catch (e) {}
         if (screenshotPath && key && root.root && root.root.notificationCenterService) {
-            root.close();
+            root.close(false);
             root.root.notificationCenterService.editScreenshot(key, screenshotPath, screenshotTemporary);
             return;
         }
         // Non-resident actions may destroy the notification synchronously.
-        // Close the card first and avoid a second dismiss after invoking.
-        root.close();
+        // Close first with snapshot preserved before invoking action.
+        root.close(false);
         try {
             for (var i = 0; i < notification.actions.length; i++) {
                 var a = notification.actions[i];
@@ -238,7 +328,7 @@ Item {
 
     Timer {
         id: hideTimer
-        onTriggered: root.close()
+        onTriggered: root.close(false)
     }
 
     NotificationServer {
@@ -258,36 +348,40 @@ Item {
 
     IpcHandler {
         target: "notifications"
-        function close(): string { root.close(); return "ok"; }
+        function close(): string { root.close(true); return "ok"; }
+        function dismiss(): string { root.close(true); return "ok"; }
         function ping(): string { return "ok"; }
-        function state(): string { return root.opened ? "open" : "closed"; }
+        function state(): string { return (root.opened && !root._leaving) ? "open" : "closed"; }
         function toggleDnd(): string {
             if (root.root) root.root.toggleDnd();
             return root.doNotDisturb ? "on" : "off";
         }
     }
 
-    onOpenedChanged: root._opacity = root.opened ? 1 : 0
-
     PanelWindow {
         id: panel
-        visible: _opacity > 0.001
+        visible: root.opened || root._opacity > 0.001
         color: "transparent"
         anchors { top: true; right: true }
         margins {
-            top: root.root.barEdge === "top" ? root.root.barOffset + 7 : 7
+            top: Math.max(0, (root.root.barEdge === "top" ? root.root.barOffset + 7 : 7) - root.travel)
             right: root.root.barEdge === "right" ? root.root.barOffset + 8 : 8
         }
         implicitWidth: card.implicitWidth
-        implicitHeight: card.implicitHeight
+        implicitHeight: card.implicitHeight + root.travel
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "omarchy-notifications"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
+        mask: Region { item: card }
+
         Rectangle {
             id: card
-            anchors.fill: parent
+            x: 0
+            y: root.travel + root._offsetY
+            width: card.implicitWidth
+            height: card.implicitHeight
             color: root.root.bg
             border.color: root.root.sep
             border.width: 1
@@ -300,9 +394,16 @@ Item {
             )
             implicitWidth: Math.min(900, Math.max(320, contentNaturalWidth + 120))
             implicitHeight: col.implicitHeight + 60
+            Behavior on implicitHeight {
+                enabled: root.opened && !root._leaving
+                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+            }
 
             MouseArea {
+                id: cardMouse
                 anchors.fill: parent
+                enabled: root.opened && !root._leaving
+                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                 onClicked: root.invoke()
             }
 
@@ -316,7 +417,7 @@ Item {
                 Text {
                     id: summaryText
                     width: col.width
-                    text: root.currentNotif ? root.currentNotif.summary : ""
+                    text: root.displayedSummary
                     font.family: root.root.mono
                     font.pixelSize: 16
                     font.weight: Font.Medium
@@ -329,7 +430,7 @@ Item {
                 Text {
                     id: bodyText
                     width: col.width
-                    text: root.currentNotif ? root.currentNotif.body : ""
+                    text: root.displayedBody
                     font.family: root.root.mono
                     font.pixelSize: 13
                     color: root.root.inkDeep

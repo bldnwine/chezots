@@ -18,6 +18,9 @@ ShellRoot {
                 property int btCount: 0
                 property bool btScanning: false
                 property bool btBusy: false
+                property var btPrompt: ({kind: ""})
+                property string submittedPairCode: ""
+                function btPairAnswer(accept, value) { if (accept) submittedPairCode = value; }
                 property string btError: ""
                 property string btActionText: ""
                 property var btDevices: []
@@ -74,6 +77,12 @@ ShellRoot {
                         break;
                     case 4:
                         test.check(popup.visibleDevs.length === 0, "powered-off list not cleared");
+                        fakeRoot.btPrompt = {kind: "passkey", id: 1, code: ""};
+                        popup.testPairCode = "42";
+                        popup.kbdHandle({key: Qt.Key_Return});
+                        test.check(fakeRoot.submittedPairCode === "42", "pairing input was not submitted");
+                        popup.dismiss();
+                        test.check(!fakeRoot.btVisible, "pairing popup did not dismiss");
                         console.log("Bluetooth popup lifecycle tests passed");
                         Qt.quit();
                     }

@@ -32,13 +32,15 @@ ShellRoot {
     QtObject {
         id: power
         property bool ready: false
+        property bool powerSupply: false
+        property string nativePath: "AA_BB_CC_DD_EE_FF"
         property bool isPresent: true
         property bool isLaptopBattery: true
         property real percentage: 0.42
         property real changeRate: 6.5
         property int state: UPowerDeviceState.Discharging
     }
-    Desktop.BluetoothService { id: bt; adapter: adapter; actionTimeoutMs: 100; connectTimeoutMs: 100; cliPath: Quickshell.env("QS_TEST_AGENT") }
+    Desktop.BluetoothService { id: bt; adapter: adapter; powerDevices: [power]; actionTimeoutMs: 100; connectTimeoutMs: 100; cliPath: Quickshell.env("QS_TEST_AGENT") }
     Desktop.BatteryService { id: battery; device: power }
     Timer {
         interval: 150; repeat: true; running: true
@@ -56,6 +58,9 @@ ShellRoot {
                 power.isPresent = false;
                 test.check(!battery.present, "missing battery present");
                 test.check(bt.count === 1 && bt.devices[0].battery === 0 && bt.devices[0].batteryAvailable, "zero battery hidden");
+                device.batteryAvailable = false;
+                test.check(bt.devices[0].batteryAvailable && bt.devices[0].battery === 42, "UPower battery fallback failed");
+                device.batteryAvailable = true;
                 device.battery = .65;
                 test.check(bt.devices[0].battery === 65, "native battery change not reactive");
                 bt.nativeAction("trust", device.address);

@@ -287,6 +287,16 @@ CardWindow {
                 // when an application starts or stops playback.
                 width: controlsScroll.width - 12
                 spacing: 8
+                Text {
+                    width: parent.width
+                    visible: audioPopup.root.audioDeviceError.length > 0
+                    text: audioPopup.root.audioDeviceError
+                    color: audioPopup.root.warn
+                    font.family: audioPopup.root.mono
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
+
 
                 // ---------- OUTPUT ----------
                 Column {

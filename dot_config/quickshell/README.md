@@ -114,10 +114,10 @@ This configuration runs a complete, unified desktop shell environment inside a *
 | Subsystem | Tool / Implementation | Notes for Agents |
 |---|---|---|
 | **Audio** | In-shell stepping via `omarchy-cmd-audio-step.sh`, `pamixer`; native PipeWire playback controls | Instant OSD update; queries default PipeWire sink. AudioPopup provides separate 0–100% volume and mute controls for each application playback stream, hiding system sounds and internal equalizer streams. `pavucontrol` remains available for advanced mixing. |
-| **Backlight** | In-shell stepping via `brightnessctl` | Steps in 5% increments with clamp; shows OSD bar. |
+| **Backlight** | Persistent `BrightnessService.qml` and connector-specific `brightnessctl` | Hardware-seeded 5% steps on the focused internal display; popup controls remain on their opening monitor. External displays have no brightness control; no DDC/CI commands are sent. |
 | **Media** | Native QML MPRIS service integration | Tracks active media player (Spotify, browser, etc.) and routes playback commands. |
 | **Wi-Fi** | **`iwd` (`iwctl`)** | **NEVER use `nmcli`**. Omarchy and this setup rely strictly on `iwd`. |
-| **Bluetooth** | Native `Quickshell.Bluetooth` state and controls | Persistent `BluetoothService.qml`; supervised `bluetoothctl` agent only for pairing/connect. No status polling. |
+| **Bluetooth** | Native `Quickshell.Bluetooth` state and controls | Persistent service; local BlueZ `KeyboardDisplay` agent for interactive pairing, supervised `bluetoothctl` for already-paired connection. Native battery data with event-driven UPower fallback. No status polling. |
 | **Battery** | Native `Quickshell.Services.UPower` | `BatteryService.qml` exposes percentage, watts, presence, and state without subprocesses. |
 | **Night Light** | `hyprsunset` | Controls color temperature and gamma via DisplayPopup. |
 | **Wallpaper** | `omarchy-theme-bg-set <path>` -> `Background.qml` | Updates `~/.config/omarchy/current/background`; Quickshell runs a GPU diagonal wipe. No `swaybg`. |
@@ -216,7 +216,7 @@ pgrep -a -x qs
 - **Audio:** One persistent `pactl subscribe` connection drives debounced snapshots and device-list refreshes. Snapshots read each sink/source list once and preserve the equalizer's physical-sink routing. A 30s fallback runs only while the subscription is disconnected; reconnect attempts occur every 3s.
 - **Recording:** `capture-screenrecording` already sends `screenrecord sync` at start/stop. A direct `pgrep` every 15s reconciles externally launched recordings and unexpected exits.
 - **AI:** Visible active sessions update every 1.5s, but quotas refresh at most once per minute unless manually requested. Both active and inactive polling pause when the bar and AI popup are hidden. History metadata comes from one bounded tail read per scan.
-- **Notifications:** Deduplication hashes expire after 3s. Live notification actions remain available within the archive's count/age limits, with declarative cleanup on closure. `NotificationOverlay.archiveDirectory` defaults to the production inbox and can be overridden by isolated tests.
+- **Notifications:** Archive pruning batches watcher arrivals against a fixed one-second deadline, checked between ingestions; display and archive announcements remain immediate. Disk history can briefly exceed retention limits until cleanup, while live notification-object limits stay immediate. Startup, explicit remove/clear, and periodic cleanup retain their existing protections. Deduplication hashes expire after 3s. Live notification actions remain available within the archive's count/age limits, with declarative cleanup on closure. `NotificationOverlay.archiveDirectory` defaults to the production inbox and can be overridden by isolated tests.
 - **Wallpaper:** The wipe mask is allocated only during the transition. The displayed image supplies the old frame unless an explicit alternate `fromPath` is provided. Final cleanup waits for every monitor to load its base image.
 - **Locus:** Closing cancels searches/previews, releases preview image sources, and unloads expanded Quick details. Result icons load asynchronously; failed lookups/loads are cached until the app index or theme changes. Theme discovery keeps the last complete list across closes and checks source metadata on entry and every 4s while the Themes view is open; unchanged inputs skip the full scan. Failed or cancelled scans preserve the cache.
 - **Bloom:** Hover uses a fixed circle with scale/opacity animation over 250ms. The effect and clipping are inactive between hovers, and hiding its host item or window cancels the animation.
@@ -249,7 +249,7 @@ python3 desktop/tests/notification_retention_test.py
 ## 9. Hyprperks-inspired native services and settings
 
 - `BarSettings.qml` owns `~/.local/state/quickshell-desktop/bar.json`: `{version: 1, settings: {...}, templates: {...}, selectedTemplate: "zen"}`. One initial directory check precedes asynchronous FileView loading. When absent, ten legacy files are imported without deletion. Pending edits survive loading; persistence is atomic and debounced 250ms. Corrupt/unsupported JSON is retained and write-disabled, with an error in Bar Style; repair the JSON and reload to resume persistence. Existing Navbar setters and bar IPC stay compatible.
-- `BluetoothService.qml` uses the default native adapter and reactive device objects. Power, trust, disconnect, forget, and discovery use native controls. Pair/connect commands receive argument arrays and retain `NoInputNoOutput` authorization; operations survive popup closure and have deadlines. Discovery is cancellable and stops after 15s. Adapter replacement stops discovery owned by the old adapter. The standalone popup shows all devices in a scrolling list and unloads after 250ms; the persistent service stays alive. Quick menu bodies and Whiterose are outside this change.
+- `BluetoothService.qml` uses the default native adapter and reactive device objects. Power, trust, disconnect, forget, and discovery use native controls. Pairing uses an application-local `KeyboardDisplay` agent with PIN/passkey/confirmation prompts; paired-device connection receives argument arrays. Explicit dismissal cancels pairing; ordinary connections survive popup closure. All operations have deadlines. Discovery is cancellable and stops after 15s. Adapter replacement stops discovery owned by the old adapter. The standalone popup shows all devices in a scrolling list and unloads after 250ms; the persistent service stays alive. Quick menu bodies and Whiterose are outside this change.
 - `BatteryService.qml` reads UPower's aggregate display device. Percentages convert from fractions to 0–100; `changeRate` is already watts. Only present laptop batteries count; unavailable data remains Unknown, and batteryless systems report AC. Power-profile controls are unchanged.
 
 Regression checks:
@@ -260,3 +260,28 @@ python3 desktop/tests/adoption_lifecycle_test.py
 ```
 
 The lifecycle suite uses private buses, temporary files, fake adapters/batteries, and a fake authorization agent; it does not modify live hardware or desktop state.
+
+
+## 10. Pond implementation adaptations
+
+- `BrightnessService.qml` is the sole owner of brightness reads and writes, including keys, standalone display controls, presets/reset, startup restore, and nightlight. It serializes operations, coalesces pending absolute settings and consecutive same-direction steps, and measures hardware before relative changes. Only a uniquely associated internal DRM backlight is supported; external displays report unavailable without DDC/CI probing or writes. A removed connector invalidates pending/stale work. The display popup pins its opening monitor and captures its baseline before allowing brightness edits. New input takes precedence over startup restoration.
+- `display-state.json` retains its existing keys and adds `brightnessByOutput`, `nightlightPreviousByOutput`, and `nightlightOutput`. Legacy `bright` imports for the unique internal display. Writes are atomic and serialized. Nightlight measures its previous brightness immediately before dimming and restores the originating display, including rapid on/off sequences.
+- `BluetoothService.qml` owns pairing prompts across lazy loading. Its short-lived Gio/GLib helper registers an application-local agent, validates the BlueZ sender/device and prompt IDs, and never becomes the default agent. New prompts open the standalone popup; explicit dismissal cancels pairing and clears input. Ordinary connect/disconnect operations continue after closure. BlueZ battery data takes precedence over a MAC-matched UPower fallback. Dependencies: Python `gi` with Gio/GLib (already available on this system).
+- `AudioDeviceService.qml` serializes output/input switches through an argv-safe helper, preserving EQ routing and selectable ports. Errors appear in the audio popup; each completed operation refreshes device state. Master volume retains the existing backend. Per-app playback already uses native PipeWire controls.
+- Media keys can target a capable, untitled paused player when no display source is selected. Existing selected-source precedence remains intact. Volume and brightness OSD cards expose accessible progress roles and labels.
+
+Additional isolated regression checks (fake hardware and temporary state):
+
+```sh
+python3 desktop/tests/brightness_helper_test.py
+python3 desktop/tests/brightness_service_test.py
+node desktop/tests/brightness_integration.test.js
+python3 desktop/tests/display_state_write_test.py
+python3 desktop/tests/bluetooth_helper_test.py
+python3 desktop/tests/bluetooth_pairing_test.py
+python3 desktop/tests/audio_device_helper_test.py
+python3 desktop/tests/audio_device_service_test.py
+node desktop/tests/audio_device_integration.test.js
+python3 desktop/tests/notification_watch_batch_test.py
+python3 desktop/tests/adoption_compile_test.py
+```

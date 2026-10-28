@@ -339,6 +339,19 @@ cmd_sync() {
   with_lock sync_and_prune
 }
 
+monotonic_ms() {
+  local uptime ignored
+  read -r uptime ignored < /proc/uptime
+  REPLY=$(( ${uptime%.*} * 1000 + 10#${uptime#*.} * 10 ))
+}
+
+watch_flush() {
+  if (( watch_deadline )); then
+    watch_deadline=0
+    with_lock prune
+  fi
+}
+
 cmd_watch() {
   ensure_store
   mkdir -p "$src_dir" "$src_history"
@@ -349,20 +362,36 @@ cmd_watch() {
   # Terminate any stale or orphaned inotifywait instances from previous runs
   pkill -f "inotifywait.*$src_dir" 2>/dev/null || true
 
-  trap 'pkill -P $$ 2>/dev/null || true' EXIT INT TERM HUP
+  watch_deadline=0
+  trap 'watch_flush; pkill -P $$ 2>/dev/null || true' EXIT
+  trap 'exit 0' INT TERM HUP
 
   exec 3< <(inotifywait -m -q -e close_write -e moved_to --format '%w%f' \
     "$src_dir" "$src_history" 2>/dev/null)
 
-  while IFS= read -r file <&3; do
+  local file status remaining timeout partial=''
+  while :; do
+    if (( watch_deadline )); then
+      monotonic_ms
+      remaining=$(( watch_deadline - REPLY ))
+      if (( remaining <= 0 )); then watch_flush; continue; fi
+      printf -v timeout '%d.%03d' "$((remaining / 1000))" "$((remaining % 1000))"
+      IFS= read -r -t "$timeout" file <&3 && status=0 || status=$?
+      if (( status > 128 )); then partial+=$file; continue; fi
+    else
+      IFS= read -r file <&3 && status=0 || status=$?
+    fi
+    (( status == 0 )) || break
+    file=$partial$file
+    partial=''
     [[ $file == *.json ]] || continue
-    with_lock ingest_one "$file"
+    if (( ! watch_deadline )); then
+      monotonic_ms
+      watch_deadline=$(( REPLY + 1000 ))
+    fi
+    with_lock ingest_file "$file" 1
   done
-}
-
-ingest_one() {
-  ingest_file "$1" 1
-  prune
+  watch_flush
 }
 
 cmd_list() {

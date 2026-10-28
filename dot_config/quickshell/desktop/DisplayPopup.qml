@@ -15,7 +15,7 @@ CardWindow {
     anchorBarY: displayPopup.root.popupAnchorY
 
     title: "DISPLAY"
-    subtitle: Math.round(displayPopup.root.warmthK) + "K  ·  BR " + displayPopup.root.brightnessPct
+    subtitle: Math.round(displayPopup.root.warmthK) + "K  ·  BR " + (displayPopup.root.brightnessAvailable ? displayPopup.root.brightnessPct : "UNAVAILABLE")
               + "  ·  γ " + Math.round(displayPopup.root.gammaPct)
               + "  ·  " + displayPopup.root.monitorRate.toFixed(0) + "HZ"
 
@@ -95,6 +95,8 @@ CardWindow {
                 root: displayPopup.root
                 width: dispCol.width
                 label: modelData.label
+                enabled: modelData.row !== 1 || displayPopup.root.brightnessAvailable
+                opacity: enabled ? 1 : 0.45
                 value: displayPopup.root[modelData.valKey]
                 minV: modelData.lo
                 maxV: modelData.hi
@@ -107,6 +109,16 @@ CardWindow {
                 }
                 onFocusRequested: displayPopup.root.displayRow = modelData.row
             }
+        }
+
+        Text {
+            width: parent.width
+            visible: displayPopup.root.brightnessError.length > 0
+            text: displayPopup.root.brightnessError
+            color: displayPopup.root.warn
+            font.family: displayPopup.root.mono
+            font.pixelSize: 11
+            wrapMode: Text.WordWrap
         }
 
         Rectangle { width: parent.width; height: 1; color: displayPopup.root.sep }
@@ -138,6 +150,8 @@ CardWindow {
                         required property int index
                         root: displayPopup.root
                         label: modelData.label
+                        enabled: !displayPopup.root._displayBaselinePending
+                        opacity: enabled ? 1 : 0.45
                         selected: displayPopup.root.selectedPreset === index
                         onActivated: {
                             displayPopup.root.selectedPreset = index;

@@ -64,6 +64,17 @@ Item {
         root.selectedPlayer = best;
     }
 
+    function playerForAction(action) {
+        function capable(player) {
+            if (action === "toggle") return player.isPlaying ? player.canPause : player.canPlay;
+            if (action === "next") return player.canGoNext;
+            if (action === "previous") return player.canGoPrevious;
+            return false;
+        }
+        if (root.selectedPlayer) return capable(root.selectedPlayer) ? root.selectedPlayer : null;
+        return root.players.find(capable) || null;
+    }
+
     function selectPlayer(player) {
         if (root.players.indexOf(player) === -1) return;
         root._manualName = player.dbusName;

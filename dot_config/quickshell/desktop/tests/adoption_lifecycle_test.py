@@ -45,7 +45,7 @@ with tempfile.TemporaryDirectory(prefix='quickshell-adoption-') as directory:
     assert (state/'bar.json').read_text()=='{broken'
     run('HardwareServicesTest.qml')
     popup=(source/'BluetoothPopup.qml').read_text().replace('    id: btpopup',
-        '    id: btpopup\n    readonly property real testScrollY: deviceScroll.contentY\n    readonly property real testScrollHeight: deviceScroll.height',1)
+        '    id: btpopup\n    property alias testPairCode: pairCode.text\n    readonly property real testScrollY: deviceScroll.contentY\n    readonly property real testScrollHeight: deviceScroll.height',1)
     (root/'BluetoothPopup.qml').write_text(popup)
     card=(source/'tests/NetworkPopupCardWindow.qml').read_text().replace('    id: card',
         '    id: card\n    property var screen: ({height: 480})',1)

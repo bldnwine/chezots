@@ -1,0 +1,17 @@
+-- new motion
+hl.animation({ leaf = "global", enabled = true, speed = 2.5, bezier = "easeOutQuint" })
+hl.animation({ leaf = "border", enabled = true, speed = 1.5, bezier = "easeOutQuint" })
+hl.animation({ leaf = "windows", enabled = true, speed = 2.5, bezier = "easeOutQuint" })
+hl.animation({ leaf = "windowsIn", enabled = true, speed = 2.5, bezier = "easeOutQuint", style = "popin 95%" })
+hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.6, bezier = "easeOutQuint", style = "popin 95%" })
+hl.animation({ leaf = "fadeIn", enabled = true, speed = 1.8, bezier = "easeOutQuint" })
+hl.animation({ leaf = "fadeOut", enabled = true, speed = 1.2, bezier = "easeOutQuint" })
+hl.animation({ leaf = "fade", enabled = true, speed = 2, bezier = "easeOutQuint" })
+hl.animation({ leaf = "fadeSwitch", enabled = false })
+
+hl.animation({ leaf = "layers", enabled = true, speed = 2.5, bezier = "easeOutQuint" })
+hl.animation({ leaf = "layersIn", enabled = true, speed = 2.5, bezier = "easeOutQuint", style = "fade" })
+hl.animation({ leaf = "layersOut", enabled = true, speed = 1.6, bezier = "easeOutQuint", style = "fade" })
+hl.animation({ leaf = "fadeLayersIn", enabled = true, speed = 1.8, bezier = "easeOutQuint" })
+hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 1.2, bezier = "easeOutQuint" })
+hl.animation({ leaf = "workspaces", enabled = false })

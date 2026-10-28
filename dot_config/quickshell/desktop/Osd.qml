@@ -11,6 +11,7 @@ Item {
     property bool opened: false
     property string icon: ""
     property string message: ""
+    property string accessibleLabel: "Volume"
     property real value: 0
     property real maxValue: 1
     property bool hasProgress: false
@@ -21,6 +22,12 @@ Item {
 
     function show(iconName, rawMessage, rawValue, rawMax, rawProgressText, rawDuration) {
         var next = OsdModel.stateForShow(iconName, rawMessage, rawValue, rawMax, rawProgressText, rawDuration);
+        const name = String(iconName || "").toLowerCase();
+        root.accessibleLabel = /brightness|display/.test(name) ? "Brightness"
+            : /microphone|^mic/.test(name) ? "Microphone"
+            : name === "keyboard" ? "Keyboard" : name === "touchpad" ? "Touchpad"
+            : /touch|touchscreen/.test(name) ? "Touchscreen"
+            : !name || /volume|mute/.test(name) ? "Volume" : "Status";
         root.maxValue = next.maxValue;
         root.hasProgress = next.hasProgress;
         root.value = next.value;
@@ -83,6 +90,8 @@ Item {
 
         Rectangle {
             id: card
+            Accessible.role: root.hasProgress ? Accessible.ProgressBar : Accessible.AlertMessage
+            Accessible.name: root.accessibleLabel + " " + root.message
             anchors.top: parent.top
             anchors.topMargin: root.root.barEdge === "top" ? root.root.barOffset + 7 : 7
             anchors.right: parent.right

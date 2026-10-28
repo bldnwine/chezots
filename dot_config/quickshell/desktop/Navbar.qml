@@ -392,6 +392,12 @@ Item {
     readonly property bool btBusy: bluetoothService.busy
     readonly property string btActionText: bluetoothService.actionText
     readonly property string btError: bluetoothService.lastError
+    readonly property var btPrompt: bluetoothService.prompt
+    function btPairAnswer(accept, value) { return bluetoothService.answerPairing(accept, value); }
+    Connections {
+        target: bluetoothService
+        function onPairingPrompt() { if (!root.btVisible) root.openBluetooth(); }
+    }
     readonly property string btIcon: !btPowered ? root.icoBtOff : btCount > 0 ? root.icoBtConnected : root.icoBtOn
     function refreshBluetooth() { return bluetoothService.available; }
     function btConnect(mac) { return bluetoothService.connectDevice(mac); }
@@ -547,6 +553,7 @@ Item {
     function setDefaultSink(name, port) {
         if (!name) return;
         root.audioDefaultSink = name;
+        root._audioSinksSer = "";
         root._lastSinkChangeTime = Date.now();
         if (root.audioSinks && root.audioSinks.length > 0) {
             root.audioSinks = root.audioSinks.map(s => ({
@@ -555,21 +562,13 @@ Item {
                 isActive: s.id === name && (!port || s.port === port)
             }));
         }
-        audioSwitchProc.command = ["bash", "-c",
-            "if [ \"" + name + "\" = \"effect_input.eq\" ]; then "
-            + "  pactl set-default-sink effect_input.eq; "
-            + "else "
-            + "  pactl set-default-sink \"" + name + "\"; "
-            + (port ? "  pactl set-sink-port \"" + name + "\" \"" + port + "\"; " : "")
-            + "  eq_id=$(pactl list sink-inputs 2>/dev/null | awk '/^[[:space:]]*Sink Input #/{id=$3} /node\\.name = \"effect_output\\.eq\"/{sub(/^#/,\"\",id); print id; exit}'); "
-            + "  [ -n \"$eq_id\" ] && pactl move-sink-input \"$eq_id\" \"" + name + "\"; "
-            + "fi"];
-        audioSwitchProc.running = true;
+        audioDeviceService.selectDevice("sink", name, port);
     }
 
     function setDefaultSource(name, port) {
         if (!name) return;
         root.audioDefaultSource = name;
+        root._audioSourcesSer = "";
         root._lastSinkChangeTime = Date.now();
         if (root.audioSources && root.audioSources.length > 0) {
             root.audioSources = root.audioSources.map(s => ({
@@ -578,9 +577,7 @@ Item {
                 isActive: s.id === name && (!port || s.port === port)
             }));
         }
-        audioSwitchProc.command = ["bash", "-c", "pactl set-default-source \"" + name + "\""
-            + (port ? "; pactl set-source-port \"" + name + "\" \"" + port + "\"" : "")];
-        audioSwitchProc.running = true;
+        audioDeviceService.selectDevice("source", name, port);
     }
 
     function toggleAudioMute() {
@@ -1217,7 +1214,25 @@ Item {
     property real  warmthK: 6500
     property int   brightnessPct: 100
     property real  gammaPct: 100
-    property string monitorName: "eDP-1"
+    property string displayOutput: ""
+    property var brightnessByOutput: ({})
+    property var nightlightPreviousByOutput: ({})
+    property string nightlightOutput: ""
+    property var brightnessErrors: ({})
+    property var _pendingBrightnessRestore: ({})
+    property var _knownBrightnessOutputs: []
+    property var _brightnessTouched: ({})
+    property var _brightnessRestoreQueued: ({})
+    property bool _displayTouched: false
+    property bool _displayBaselinePending: false
+    readonly property bool brightnessAvailable: !!root.displayOutput && !root._displayBaselinePending
+        && root._knownBrightnessOutputs.indexOf(root.displayOutput) !== -1
+        && brightnessService.stateByOutput[root.displayOutput] !== undefined
+        && !root.brightnessErrors[root.displayOutput]
+    readonly property string brightnessError: !root.displayOutput ? "No focused display"
+        : root._knownBrightnessOutputs.indexOf(root.displayOutput) === -1 ? "Display disconnected"
+        : root.brightnessErrors[root.displayOutput] || ""
+    property string monitorName: ""
     property string monitorRes:  "2880x1800"
     property real  monitorRate:  60.0
     property real  monitorScale: 2.0
@@ -1245,12 +1260,9 @@ Item {
         + "      done; }; "
 
     // ---------- Display persistence ----------
-    // hyprsunset has no `get` and forgets temperature/gamma on reboot, so
-    // the last-set values are mirrored to display-state.json (same
-    // cat-reader + bash-writer scheme as bar-variant above — FileView's
-    // initial load races property assignment) and re-applied once at
-    // startup. Writes are debounced 400ms so slider drags (commit every
-    // 60ms) cost a single fork.
+    // hyprsunset forgets temperature/gamma on reboot. Restore those values
+    // and per-output backlights once, preserving any newer user input.
+    // Writes are atomic, serialized, and debounced 400ms.
     readonly property string displayStatePath:
         Quickshell.env("HOME") + "/.local/state/quickshell-desktop/display-state.json"
     property bool _displayRestored: false
@@ -1263,15 +1275,16 @@ Item {
         onTriggered: root.writeDisplayState()
     }
     function writeDisplayState() {
-        var data = JSON.stringify({ warmth: Math.round(root.warmthK), gamma: Math.round(root.gammaPct), bright: root.brightnessPct, preset: root.selectedPreset });
-        displayStateWriter.command = ["bash", "-c",
-            "mkdir -p " + JSON.stringify(root.displayStatePath.replace(/\/[^/]+$/, ""))
-            + " && printf '%s' " + JSON.stringify(data)
-            + " > " + JSON.stringify(root.displayStatePath)];
-        displayStateWriter.running = false;
-        displayStateWriter.running = true;
+        if (!root._displayRestored) { displaySaveTimer.restart(); return; }
+        const data = JSON.stringify({ warmth: Math.round(root.warmthK), gamma: Math.round(root.gammaPct),
+            bright: root.brightnessPct, preset: root.selectedPreset,
+            brightnessByOutput: root.brightnessByOutput, nightlightPreviousByOutput: root.nightlightPreviousByOutput,
+            nightlightOutput: root.nightlightOutput });
+        displayStateQueue.enqueue(["python3", Quickshell.shellDir + "/scripts/display-state-write.py",
+            root.displayStatePath, data], "state", {});
     }
-    Process { id: displayStateWriter; running: false }
+    CommandQueue { id: displayStateQueue; label: "display state" }
+
     Process {
         id: displayStateReader
         running: true
@@ -1279,7 +1292,10 @@ Item {
         stdout: StdioCollector {
             onStreamFinished: root.restoreDisplayState(this.text)
         }
-        onExited: function(code) { if (code !== 0) root._displayRestored = true; }
+        onExited: function(code) {
+            if (code !== 0) root._displayRestored = true;
+            Qt.callLater(root.syncBrightnessOutputs);
+        }
     }
     function restoreDisplayState(text) {
         if (root._displayRestored) return;
@@ -1291,20 +1307,50 @@ Item {
         var g = Math.max(50, Math.min(150, Math.round(parsed.gamma || 100)));
         var b = Math.max(1, Math.min(100, Math.round(parsed.bright || 100)));
         var p = Math.max(0, Math.min(root.displayPresets.length - 1, parseInt(parsed.preset) || 0));
-        if (w === 6500 && g === 100 && b === 100 && p === 0) return;
-        root.warmthK = w; root.gammaPct = g; root.brightnessPct = b; root.selectedPreset = p;
+        const saved = parsed.brightnessByOutput;
+        const values = Object.assign({}, root.brightnessByOutput);
+        if (saved && typeof saved === "object" && !Array.isArray(saved)) {
+            for (const output of Object.keys(saved)) {
+                if ((/^(eDP|LVDS|DSI)-/.test(output) || output === "legacy-internal")
+                        && !root._brightnessTouched[output] && typeof saved[output] === "number" && isFinite(saved[output]))
+                    values[output] = Math.max(1, Math.min(100, saved[output]));
+            }
+        } else if (typeof parsed.bright === "number") {
+            values["legacy-internal"] = b;
+        }
+        root.brightnessByOutput = Object.assign({}, values);
+        root._pendingBrightnessRestore = values;
+        if (!root._displayTouched) {
+            const previous = parsed.nightlightPreviousByOutput;
+            if (previous && typeof previous === "object" && !Array.isArray(previous)) {
+                const valid = {};
+                for (const output of Object.keys(previous)) {
+                    if (/^(eDP|LVDS|DSI)-/.test(output) && typeof previous[output] === "number" && isFinite(previous[output]))
+                        valid[output] = Math.max(1, Math.min(100, previous[output]));
+                }
+                root.nightlightPreviousByOutput = valid;
+            }
+            root.nightlightOutput = typeof parsed.nightlightOutput === "string" ? parsed.nightlightOutput : "";
+            brightnessService.rememberedByOutput = Object.assign({}, root.nightlightPreviousByOutput);
+        }
+        root.syncBrightnessOutputs();
+        if (root._displayTouched) return;
+        root.warmthK = w; root.gammaPct = g; root.selectedPreset = p;
+        if (w === 6500 && g === 100) return;
         var wcmd = (w >= 6500) ? "identity" : "temperature " + w;
         root.runCommand("display", root.ensureSunset
                  + "hyprctl hyprsunset " + wcmd
-                 + " && hyprctl hyprsunset gamma " + g
-                 + " && brightnessctl -q set " + b + "%");
+                 + " && hyprctl hyprsunset gamma " + g);
         root.sunsetReady = true;
     }
 
     function openDisplay() {
         if (root.displayAnchorItem) root.anchorPopupTo(root.displayAnchorItem);
-        savedWarmthK = warmthK; savedGammaPct = gammaPct; savedBrightnessPct = brightnessPct;
-        displayProbe.running = true;
+        root.savedWarmthK = root.warmthK; root.savedGammaPct = root.gammaPct;
+        root.displayOutput = root.focusedBrightnessOutput();
+        root._displayBaselinePending = !!root.displayOutput;
+        root.refreshDisplayMonitor();
+        if (root.displayOutput) brightnessService.refresh(root.displayOutput);
         root.displayRow = 0;
         root.displayVisible = true;
     }
@@ -1629,6 +1675,7 @@ Item {
     }
 
     function setWarmth(k) {
+        root._displayTouched = true;
         k = Math.max(1000, Math.min(6500, Math.round(k / 50) * 50));
         root.warmthK = k;
         // identity skips the GPU matrix entirely at full daylight.
@@ -1637,9 +1684,11 @@ Item {
     }
     function setBrightness(pct) {
         pct = Math.max(1, Math.min(100, Math.round(pct)));
-        root.brightnessPct = pct;
-        root.runCommand("display", "brightnessctl set " + pct + "%", "brightness");
-        root.saveDisplayState();
+        const output = root.displayVisible ? root.displayOutput : root.focusedBrightnessOutput();
+        if (output && (!root.displayVisible || root.brightnessAvailable)) {
+            root.touchBrightness(output);
+            brightnessService.setBrightness(output, pct);
+        }
     }
     function setVolume(pct) {
         pct = Math.max(0, Math.min(150, Math.round(pct)));
@@ -1654,21 +1703,23 @@ Item {
         root.refreshAudio();
     }
     function setGamma(pct) {
+        root._displayTouched = true;
         pct = Math.max(50, Math.min(150, Math.round(pct)));
         root.gammaPct = pct;
         root.runSunset("gamma " + pct);
         root.saveDisplayState();
     }
     function applyPreset(p) {
+        if (root.displayVisible && root._displayBaselinePending) return;
+        root._displayTouched = true;
         root.warmthK = p.warmth;
         root.gammaPct = p.gamma;
-        root.brightnessPct = p.bright;
         const w = (p.warmth >= 6500) ? "identity" : "temperature " + p.warmth;
         const prelude = root.sunsetReady ? "" : root.ensureSunset;
         root.runCommand("display", prelude
                  + "hyprctl hyprsunset " + w
-                 + " && hyprctl hyprsunset gamma " + p.gamma
-                 + " && brightnessctl set " + p.bright + "%");
+                 + " && hyprctl hyprsunset gamma " + p.gamma);
+        root.setBrightness(p.bright);
         root.sunsetReady = true;
         root.saveDisplayState();
     }
@@ -1679,41 +1730,119 @@ Item {
         root.displayVisible = false;
     }
     function resetDisplay() {
-        root.warmthK = savedWarmthK;
-        root.gammaPct = savedGammaPct;
-        root.brightnessPct = savedBrightnessPct;
-        const w = (savedWarmthK >= 6500) ? "identity" : "temperature " + savedWarmthK;
+        if (root._displayBaselinePending) return;
+        root._displayTouched = true;
+        root.warmthK = root.savedWarmthK;
+        root.gammaPct = root.savedGammaPct;
+        const w = (root.savedWarmthK >= 6500) ? "identity" : "temperature " + root.savedWarmthK;
         const prelude = root.sunsetReady ? "" : root.ensureSunset;
         root.runCommand("display", prelude
                  + "hyprctl hyprsunset " + w
-                 + " && hyprctl hyprsunset gamma " + savedGammaPct
-                 + " && brightnessctl set " + savedBrightnessPct + "%");
+                 + " && hyprctl hyprsunset gamma " + root.savedGammaPct);
+        if (!root._displayBaselinePending) root.setBrightness(root.savedBrightnessPct);
         root.sunsetReady = true;
         root.saveDisplayState();
     }
 
-    // ---------- Display probe ----------
-    Process {
-        id: displayProbe
-        running: false
-        command: ["bash", "-c",
-            "m=$(hyprctl monitors -j 2>/dev/null"
-            + " | jq -r '.[0] | [.name,(\"\\(.width)x\\(.height)\"),(.refreshRate|tostring),(.scale|tostring)] | join(\"|\")' 2>/dev/null);"
-            + " b=$(brightnessctl get 2>/dev/null);"
-            + " mb=$(brightnessctl max 2>/dev/null);"
-            + " pct=100;"
-            + " if [ -n \"$b\" ] && [ -n \"$mb\" ] && [ \"$mb\" -gt 0 ]; then pct=$(( b * 100 / mb )); fi;"
-            + " printf '%s|%d' \"$m\" \"$pct\""]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const p = this.text.trim().split("|");
-                if (p.length < 5) return;
-                root.monitorName   = p[0] || "eDP-1";
-                root.monitorRes    = p[1] || "2880x1800";
-                root.monitorRate   = parseFloat(p[2]) || 60.0;
-                root.monitorScale  = parseFloat(p[3]) || 1.0;
-                root.brightnessPct = parseInt(p[4]) || 100;
+    // The popup stays on its opening monitor; hardware keys capture focus separately.
+    function focusedBrightnessOutput() {
+        return Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
+    }
+    function refreshDisplayMonitor() {
+        const monitor = Hyprland.monitors.values.find(m => m.name === root.displayOutput);
+        root.monitorName = root.displayOutput;
+        root.monitorRes = monitor ? monitor.width + "x" + monitor.height : "Unavailable";
+        root.monitorRate = monitor ? Number(monitor.lastIpcObject.refreshRate || 0) : 0;
+        root.monitorScale = monitor ? monitor.scale : 1;
+    }
+    function touchBrightness(output) {
+        const touched = Object.assign({}, root._brightnessTouched);
+        touched[output] = true;
+        root._brightnessTouched = touched;
+        const pending = Object.assign({}, root._pendingBrightnessRestore);
+        delete pending[output];
+        root._pendingBrightnessRestore = pending;
+    }
+    function syncBrightnessOutputs() {
+        if (!root._displayRestored) return;
+        const outputs = Hyprland.monitors.values.map(m => m.name);
+        const queued = Object.assign({}, root._brightnessRestoreQueued);
+        for (const old of root._knownBrightnessOutputs) {
+            if (outputs.indexOf(old) === -1) {
+                brightnessService.cancelOutput(old);
+                delete queued[old];
             }
+        }
+        const saved = Object.assign({}, root._pendingBrightnessRestore);
+        if (saved["legacy-internal"] !== undefined) {
+            const internal = outputs.filter(name => /^(eDP|LVDS|DSI)-/.test(name));
+            if (internal.length === 1) {
+                if (!root._brightnessTouched[internal[0]]) saved[internal[0]] = saved["legacy-internal"];
+                delete saved["legacy-internal"];
+            }
+        }
+        for (const output of outputs) {
+            if (root._brightnessTouched[output]) delete saved[output];
+            if (saved[output] !== undefined && !queued[output]) {
+                queued[output] = true;
+                brightnessService.setBrightness(output, saved[output]);
+            } else if (root._knownBrightnessOutputs.indexOf(output) === -1 && /^(eDP|LVDS|DSI)-/.test(output)) {
+                brightnessService.refresh(output);
+            }
+        }
+        root._brightnessRestoreQueued = queued;
+        root._pendingBrightnessRestore = saved;
+        root._knownBrightnessOutputs = outputs;
+        if (root.displayVisible) root.refreshDisplayMonitor();
+    }
+    Connections {
+        target: Hyprland.monitors
+        function onValuesChanged() { root.syncBrightnessOutputs(); }
+    }
+    BrightnessService {
+        id: brightnessService
+        onBrightnessRemembered: function(output, percentage) {
+            const previous = Object.assign({}, root.nightlightPreviousByOutput);
+            previous[output] = percentage;
+            root.nightlightPreviousByOutput = previous;
+        }
+        onBrightnessChanged: function(output, percentage) {
+            if (root._brightnessRestoreQueued[output]) {
+                const queued = Object.assign({}, root._brightnessRestoreQueued);
+                delete queued[output];
+                root._brightnessRestoreQueued = queued;
+                const pending = Object.assign({}, root._pendingBrightnessRestore);
+                delete pending[output];
+                root._pendingBrightnessRestore = pending;
+            }
+            const errors = Object.assign({}, root.brightnessErrors);
+            delete errors[output];
+            root.brightnessErrors = errors;
+            if (output === (root.displayVisible ? root.displayOutput : root.focusedBrightnessOutput()))
+                root.brightnessPct = Math.round(percentage);
+            if (root.displayVisible && output === root.displayOutput && root._displayBaselinePending && current.kind === "refresh") {
+                root.savedBrightnessPct = Math.round(percentage);
+                root._displayBaselinePending = false;
+            }
+            if (current.kind !== "refresh") {
+                const saved = Object.assign({}, root.brightnessByOutput);
+                delete saved["legacy-internal"];
+                saved[output] = percentage;
+                root.brightnessByOutput = saved;
+                root.saveDisplayState();
+            }
+            if (current.kind === "step")
+                osdSurface.show("brightness", "", String(Math.round(percentage)), "100", "", "1200");
+        }
+        onActionFailed: function(output, message) {
+            const queued = Object.assign({}, root._brightnessRestoreQueued);
+            delete queued[output];
+            root._brightnessRestoreQueued = queued;
+            if (output === root.displayOutput) root._displayBaselinePending = false;
+            const errors = Object.assign({}, root.brightnessErrors);
+            errors[output] = message;
+            root.brightnessErrors = errors;
+            if (current.kind !== "refresh") osdSurface.show("brightness", message, "", "100", "", "2000");
         }
     }
 
@@ -2268,22 +2397,15 @@ Item {
         }
     }
 
-    // Runs a sink/source default switch to completion, THEN refreshes the
-    // volume/mute probe. Without the sequencing the refresh races the pactl
-    // command and can sample the old default's volume until the 2s tick.
-    Process {
-        id: audioSwitchProc
-        running: false
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.refreshAudio();
-                audioSinksProbe.running = false;
-                audioSinksProbe.running = true;
-                audioSourcesProbe.running = false;
-                audioSourcesProbe.running = true;
-            }
+    AudioDeviceService {
+        id: audioDeviceService
+        onBusyChanged: if (!busy) {
+            root._lastSinkChangeTime = 0;
+            root.refreshAudio();
+            root.refreshAudioSinks();
         }
     }
+    readonly property string audioDeviceError: audioDeviceService.lastError
 
     // ---------- Power-profile probe ----------
     // On-demand only: triggered once at startup so the Battery tile has
@@ -2569,7 +2691,10 @@ Item {
         if (root.btVisible) {
             btUnload.stop();
             if (!btLoader.item) btLoader.setSource("BluetoothPopup.qml", { root: root });
-        } else btUnload.restart();
+        } else {
+            bluetoothService.cancelPairing();
+            btUnload.restart();
+        }
     }
     Timer { id: btUnload; interval: 250; onTriggered: if (!root.btVisible) btLoader.source = "" }
 
@@ -2739,35 +2864,14 @@ Item {
     function toggleAudio() { if (root.audioVisible) root.audioVisible = false; else root.openAudio(); }
     function toggleBar() { root.barHidden = !root.barHidden; }
 
-    // ---------- In-shell brightness engine ----------
-    property int _brightPending: 0
-    Process {
-        id: brightWorker
-        running: false
-        onExited: {
-            if (root._brightPending !== 0) {
-                root._fireBrightness();
-            }
-        }
-    }
-
+    // All shortcuts and popup writes share the persistent hardware queue.
     function nudgeBrightness(delta) {
-        const target = Math.max(1, Math.min(100, root.brightnessPct + delta));
-        if (target === root.brightnessPct) return;
-        root.brightnessPct = target;
-        root.saveDisplayState();
-        osdSurface.show("brightness", "", String(target), "100", "", "1200");
-        root._brightPending = target;
-        if (!brightWorker.running) {
-            root._fireBrightness();
+        const output = root.focusedBrightnessOutput();
+        if (output) {
+            root.touchBrightness(output);
+            brightnessService.stepBrightness(output, delta);
         }
-    }
-
-    function _fireBrightness() {
-        const target = root._brightPending;
-        root._brightPending = 0;
-        brightWorker.command = ["brightnessctl", "-q", "set", target + "%"];
-        brightWorker.running = true;
+        else osdSurface.show("brightness", "No focused display", "", "100", "", "2000");
     }
 
     // ---------- Hyprland Global Shortcuts ----------
@@ -2994,27 +3098,22 @@ Item {
     IpcHandler {
         target: "nightlight"
         function toggle() {
-            if (root.warmthK < 6500) {
-                root.runCommand("display", "PREV=$(cat /tmp/nightlight-prev-bright 2>/dev/null || echo 100); "
-                    + root.ensureSunset
-                    + "hyprctl hyprsunset identity && hyprctl hyprsunset gamma 100"
-                    + " && brightnessctl set \"$PREV\"%");
-                root.sunsetReady = true;
-                root.warmthK = 6500;
-                root.gammaPct = 100;
-                root.brightnessPct = 100;
-                root.saveDisplayState();
-            } else {
-                root.runCommand("display", "echo $(( $(brightnessctl get) * 100 / $(brightnessctl max) )) > /tmp/nightlight-prev-bright; "
-                    + root.ensureSunset
-                    + "hyprctl hyprsunset temperature 3000 && hyprctl hyprsunset gamma 85"
-                    + " && brightnessctl set 30%");
-                root.sunsetReady = true;
-                root.warmthK = 3000;
-                root.gammaPct = 85;
-                root.brightnessPct = 30;
-                root.saveDisplayState();
+            root._displayTouched = true;
+            const enable = root.warmthK >= 6500;
+            const output = enable ? root.focusedBrightnessOutput() : root.nightlightOutput;
+            if (enable) root.nightlightOutput = output;
+            root.warmthK = enable ? 3000 : 6500;
+            root.gammaPct = enable ? 85 : 100;
+            root.runCommand("display", root.ensureSunset
+                + (enable ? "hyprctl hyprsunset temperature 3000 && hyprctl hyprsunset gamma 85"
+                          : "hyprctl hyprsunset identity && hyprctl hyprsunset gamma 100"));
+            root.sunsetReady = true;
+            if (output) {
+                root.touchBrightness(output);
+                if (enable) brightnessService.rememberAndSet(output, 30);
+                else brightnessService.restoreRemembered(output);
             }
+            root.saveDisplayState();
         }
     }
 
@@ -3293,21 +3392,24 @@ Item {
     function musicPrevSource() { musicService.cycleSource(-1); }
 
     function musicToggle() {
-        if (root.musicPlayer && root.musicPlayer.canTogglePlaying) root.musicPlayer.togglePlaying();
+        const player = musicService.playerForAction("toggle");
+        if (player) player.togglePlaying();
     }
     function musicNext() {
-        if (root.musicPlayer && root.musicPlayer.canGoNext) {
-            const wasPlaying = root.musicPlaying;
-            root.musicPlayer.next();
-            if (wasPlaying) root.ensureBrowserPlayback();
+        const player = musicService.playerForAction("next");
+        if (player) {
+            const wasPlaying = player.isPlaying;
+            player.next();
+            if (wasPlaying) root.ensureBrowserPlayback(player);
         }
     }
 
     function musicPrev() {
-        if (root.musicPlayer && root.musicPlayer.canGoPrevious) {
-            const wasPlaying = root.musicPlaying;
-            root.musicPlayer.previous();
-            if (wasPlaying) root.ensureBrowserPlayback();
+        const player = musicService.playerForAction("previous");
+        if (player) {
+            const wasPlaying = player.isPlaying;
+            player.previous();
+            if (wasPlaying) root.ensureBrowserPlayback(player);
         }
     }
 
@@ -3322,13 +3424,14 @@ Item {
         }
     }
 
-    function ensureBrowserPlayback() {
-        if (!root.musicPlayer) return;
-        const raw = (root.musicPlayer.dbusName || "").toLowerCase();
+    function ensureBrowserPlayback(player) {
+        const target = player || root.musicPlayer;
+        if (!target) return;
+        const raw = (target.dbusName || "").toLowerCase();
         if (raw.indexOf("firefox") >= 0 || raw.indexOf("zen") >= 0) {
             // A source can change during the delay; resume the browser
             // whose track was skipped, rather than the newly selected source.
-            browserAutoPlayTimer.player = root.musicPlayer;
+            browserAutoPlayTimer.player = target;
             browserAutoPlayTimer.restart();
         }
     }
