@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+from popup_test_support import write_card
 
 source = Path(__file__).resolve().parents[1]
 with tempfile.TemporaryDirectory(prefix='quickshell-adoption-') as directory:
@@ -47,9 +48,7 @@ with tempfile.TemporaryDirectory(prefix='quickshell-adoption-') as directory:
     popup=(source/'BluetoothPopup.qml').read_text().replace('    id: btpopup',
         '    id: btpopup\n    property alias testPairCode: pairCode.text\n    readonly property real testScrollY: deviceScroll.contentY\n    readonly property real testScrollHeight: deviceScroll.height',1)
     (root/'BluetoothPopup.qml').write_text(popup)
-    card=(source/'tests/NetworkPopupCardWindow.qml').read_text().replace('    id: card',
-        '    id: card\n    property var screen: ({height: 480})',1)
-    (root/'CardWindow.qml').write_text(card)
+    write_card(root)
     shutil.copy2(source/'QuickButton.qml',root/'QuickButton.qml')
     run('BluetoothPopupTest.qml')
 print('adoption lifecycle tests passed')

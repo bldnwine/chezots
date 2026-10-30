@@ -12,6 +12,8 @@ ShellRoot {
     width: 720
     height: 480
     property int phase: 0
+    property real originalHeight: 0
+    property real statsTop: 0
     property var nets: []
     property var captured: []
     property var rootModel: null
@@ -85,10 +87,13 @@ ShellRoot {
             if (!p && test.phase !== 7) return;
             switch (test.phase++) {
             case 0:
+                test.originalHeight = p.cardHeight;
                 test.nets = test.makeNets(14);
                 p.kbdIndex = 13;
                 break;
             case 1:
+                test.check(p.cardHeight === test.originalHeight, "network arrival resized card");
+                test.check(p.testBodyBottom < p.testFooterTop, "body overlaps footer");
                 test.check(p.visibleNets.length === 14, "all networks should be retained");
                 test.check(p.testScrollY > 0, "keyboard selection did not scroll list");
                 test.check(p.cardHeight <= 550 && p.cardWidth <= 390, "popup card was not capped");
@@ -123,6 +128,7 @@ ShellRoot {
                 test.check(p.passphraseSsid === "Network 0", "retry activation did not open editor");
                 break;
             case 2:
+                test.check(p.cardHeight === test.originalHeight, "passphrase resized card");
                 test.check(p.testInputFocused, "passphrase field did not receive focus");
                 test.check(p.testScrollY === 0, "editor did not scroll into view from the network list");
                 p.testSetInput("literal secret");
@@ -143,6 +149,7 @@ ShellRoot {
                              {ssid:"Enterprise",security:"8021x",known:false,inUse:false,signal:60}];
                 break;
             case 3:
+                test.check(p.cardHeight === test.originalHeight, "network removal resized card");
                 p._activateAt(2);
                 test.check(p.passphraseSsid === "New", "unknown PSK did not prompt immediately");
                 p._cancelPassphrase();
@@ -192,6 +199,42 @@ ShellRoot {
                 break;
             case 10:
                 test.check(p.testSelectionVisible(), "first row is clipped after scrolling back");
+                fakeRoot.testPanelHeight = 1000;
+                fakeRoot.wifiRadioOn = false;
+                break;
+            case 11:
+                test.check(p.cardHeight === 700 && p.testScrollHeight > 0, "preferred network height");
+                fakeRoot.netInfo = {iface:"wlan0",rx_bytes:1,tx_bytes:2,ip:"192.0.2.1",gateway:"192.0.2.2"};
+                fakeRoot.wifiRadioOn = true;
+                fakeRoot.wifiError = "Error";
+                break;
+            case 12:
+                test.check(p.cardHeight === 700, "connection details or error resized card");
+                test.check(p.testBodyBottom < p.testFooterTop, "details overlap footer");
+                test.check(Math.abs(p.testStatsBottom - p.bodyAvailableHeight) < 1, "stats are not pinned to bottom");
+                test.check(p.testScrollHeight <= p.testStatsTop - 10, "networks overlap stats");
+                test.statsTop = p.testStatsTop;
+                p.kbdIndex = p.kbdMax - 1;
+                break;
+            case 13:
+                test.check(p.testSelectionVisible() && p.testScrollY > 0, "network list cannot scroll above stats");
+                test.check(p.testStatsTop === test.statsTop, "network scrolling moved stats");
+                test.nets = test.makeNets(1);
+                break;
+            case 14:
+                test.check(p.testStatsTop === test.statsTop, "short network list moved stats");
+                fakeRoot.testPanelWidth = 300;
+                fakeRoot.testPanelHeight = 300;
+                p.kbdIndex = 2;
+                break;
+            case 15:
+                test.check(Math.abs(p.testStatsBottom - p.bodyAvailableHeight) < 1, "short-screen stats are not bottom-aligned");
+                test.check(p.testStatsContentHeight > p.testStatsHeight, "short-screen stats should scroll");
+                test.check(p.testSelectionVisible(), "stats squeezed network selection out of view");
+                fakeRoot.netInfo = {iface:""};
+                break;
+            case 16:
+                test.check(!p.testStatsVisible && p.testScrollHeight === p.bodyAvailableHeight, "hidden stats still reserve space");
                 console.log("network popup regression tests passed");
                 Qt.quit();
                 break;

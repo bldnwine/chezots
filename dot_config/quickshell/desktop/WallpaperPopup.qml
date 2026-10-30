@@ -13,11 +13,13 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "omarchy-wallpapers"
-    WlrLayershell.keyboardFocus: root.wallpapersVisible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    // Track application focus across workspaces without leaking panel keys.
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    PopupFocusGrab { window: wallpaperWindow }
 
     property real reveal: root.wallpapersVisible ? 1 : 0
     Behavior on reveal {
-        NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: root.wallpapersVisible ? 150 : 0; easing.type: Easing.OutCubic }
     }
 
     // State

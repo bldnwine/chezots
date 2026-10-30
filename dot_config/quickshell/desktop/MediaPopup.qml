@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import Quickshell.Services.Mpris
 import Quickshell
 import Quickshell.Io
@@ -203,6 +204,34 @@ CardWindow {
         mediaPopup.seekSent = false;
         mediaPopup.latchedLength = lengthKnown ? activePlayer.length : 0;
         syncBrowserLength();
+        schedulePlayerReveal();
+    }
+
+    onPlayerListChanged: schedulePlayerReveal()
+
+    function schedulePlayerReveal() {
+        Qt.callLater(revealActivePlayer);
+    }
+
+    function scrollPlayers(delta) {
+        playerScroll.contentX = Math.max(0, Math.min(
+            playerScroll.contentWidth - playerScroll.width,
+            playerScroll.contentX - delta));
+    }
+
+    function revealActivePlayer() {
+        const max = Math.max(0, playerScroll.contentWidth - playerScroll.width);
+        let x = Math.max(0, Math.min(max, playerScroll.contentX));
+        for (let i = 0; i < playerRepeater.count; ++i) {
+            const item = playerRepeater.itemAt(i);
+            if (!item || item.modelData !== activePlayer) continue;
+            if (item.width > playerScroll.width || item.x < x)
+                x = item.x;
+            else if (item.x + item.width > x + playerScroll.width)
+                x = item.x + item.width - playerScroll.width;
+            break;
+        }
+        playerScroll.contentX = Math.max(0, Math.min(max, x));
     }
 
     function formatTime(seconds) {
@@ -227,20 +256,63 @@ CardWindow {
         spacing: 12
 
         // Player source switcher chips row
-        Row {
+        Item {
             width: parent.width
-            spacing: 6
+            height: playerScroll.height + (playerScroll.contentWidth > playerScroll.width ? 8 : 0)
             visible: mediaPopup.playerList.length > 0
 
-            Repeater {
-                model: mediaPopup.playerList
-                delegate: QuickButton {
-                    required property var modelData
-                    required property int index
-                    root: mediaPopup.root
-                    label: (modelData.identity || modelData.desktopEntry || ("Player " + (index + 1))).toUpperCase()
-                    selected: mediaPopup.activePlayer === modelData
-                    onClicked: mediaPopup.root.selectMusicPlayer(modelData)
+            Flickable {
+                id: playerScroll
+                width: parent.width
+                height: 28
+                contentWidth: playerRow.implicitWidth
+                contentHeight: height
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: Flickable.HorizontalFlick
+                onWidthChanged: mediaPopup.schedulePlayerReveal()
+                onContentWidthChanged: mediaPopup.schedulePlayerReveal()
+
+                Row {
+                    id: playerRow
+                    spacing: 6
+                    Repeater {
+                        id: playerRepeater
+                        model: mediaPopup.playerList
+                        delegate: QuickButton {
+                            required property var modelData
+                            required property int index
+                            root: mediaPopup.root
+                            label: (modelData.identity || modelData.desktopEntry || ("Player " + (index + 1))).toUpperCase()
+                            selected: mediaPopup.activePlayer === modelData
+                            onClicked: mediaPopup.root.selectMusicPlayer(modelData)
+                        }
+                    }
+                }
+
+                WheelHandler {
+                    target: null
+                    enabled: playerScroll.contentWidth > playerScroll.width
+                    onWheel: function(event) {
+                        const delta = event.pixelDelta.x || event.pixelDelta.y
+                                      || event.angleDelta.x || event.angleDelta.y;
+                        mediaPopup.scrollPlayers(delta);
+                        event.accepted = true;
+                    }
+                }
+                ScrollBar.horizontal: ScrollBar {
+                    parent: playerScroll.parent
+                    anchors.left: playerScroll.left
+                    anchors.right: playerScroll.right
+                    anchors.top: playerScroll.bottom
+                    anchors.topMargin: 3
+                    policy: ScrollBar.AsNeeded
+                    visible: playerScroll.contentWidth > playerScroll.width
+                    implicitHeight: 5
+                    minimumSize: 0.08
+                    padding: 0
+                    contentItem: Rectangle { implicitHeight: 5; radius: 2; color: mediaPopup.root.seal }
+                    background: Rectangle { radius: 2; color: mediaPopup.root.sep }
                 }
             }
         }

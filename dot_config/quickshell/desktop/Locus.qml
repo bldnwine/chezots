@@ -937,7 +937,9 @@ Item {
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "locus-menu"
-        WlrLayershell.keyboardFocus: root.visible_ ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+        // Track application focus across workspaces without leaking panel keys.
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+        PopupFocusGrab { window: panel }
 
         property real reveal: root.visible_ ? 1 : 0
         // Open and close are both instant: SUPER+SPACE paints the palette on

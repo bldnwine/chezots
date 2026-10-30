@@ -11,11 +11,9 @@ CardWindow {
     revealed: root.networkVisible
     escDismiss: netpopup.passphraseSsid === ""
     cardWidth: Math.max(1, Math.min(390, width - 2 * anchorGap))
-    cardHeight: Math.max(1, Math.min(col.implicitHeight + chromeHeight
-        - Math.max(0, networkList.height - (8 * 32 + 7 * 10)), availableCardHeight))
-    readonly property real chromeHeight: 134
+    cardHeight: Math.min(700, availableCardHeight)
     readonly property real availableCardHeight: Math.max(1,
-        height - root.barOffset - 2 * anchorGap)
+        height - ((anchorEdge === "top" || anchorEdge === "bottom") ? root.barOffset : 0) - 2 * anchorGap)
     layerNamespace: "omarchy-network"
     title: "NETWORK"
     subtitle: {
@@ -62,10 +60,14 @@ CardWindow {
         Qt.callLater(netpopup.ensureSelectionVisible);
     }
     function ensureSelectionVisible() {
-        if (netpopup.passphraseSsid !== "") return;
+        if (netpopup.passphraseSsid !== "") {
+            bodyScroll.showItem(passInput);
+            return;
+        }
         const index = netpopup.kbdIndex - netpopup.headerCount;
         if (index >= 0 && index < netpopup.visibleNets.length) {
             Qt.callLater(function() {
+                networkList.forceLayout();
                 const row = networkList.itemAtIndex(index);
                 if (row) bodyScroll.showItem(row);
             });
@@ -145,7 +147,12 @@ CardWindow {
         bodyScroll.contentY = 0;
         passInput.text = "";
         passInput.forceActiveFocus();
-        Qt.callLater(function() { if (netpopup.revealed && netpopup.passphraseSsid) passInput.forceActiveFocus(); });
+        Qt.callLater(function() {
+            if (netpopup.revealed && netpopup.passphraseSsid) {
+                bodyScroll.showItem(passInput);
+                passInput.forceActiveFocus();
+            }
+        });
     }
     function _submitPassphrase() {
         if (!netpopup.passphraseSsid || root.wifiBusy) return;
@@ -223,326 +230,359 @@ CardWindow {
 
     component NetworkScrollBar: ScrollBar {
         policy: ScrollBar.AsNeeded
-        visible: bodyScroll.contentHeight > bodyScroll.height + 1
+        visible: size < 1
         minimumSize: 0.08
         implicitWidth: 5
         padding: 0
         contentItem: Rectangle { implicitWidth: 5; implicitHeight: 20; radius: 2; color: netpopup.root.seal }
         background: Rectangle { radius: 2; color: netpopup.root.sep }
     }
-    Flickable {
-        id: bodyScroll
+    Item {
         width: parent.width
-        height: Math.max(1, netpopup.cardHeight - netpopup.chromeHeight)
-        contentWidth: width
-        contentHeight: col.implicitHeight
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        flickableDirection: Flickable.VerticalFlick
-        ScrollBar.vertical: NetworkScrollBar {
-            parent: bodyScroll.parent
-            anchors.top: bodyScroll.top
-            anchors.bottom: bodyScroll.bottom
-            anchors.left: bodyScroll.right
-            anchors.leftMargin: 4
-        }
-        function showItem(item) {
-            const top = item.mapToItem(col, 0, 0).y;
-            const bottom = top + item.height;
-            if (top < contentY) contentY = top;
-            else if (bottom > contentY + height) contentY = Math.max(0, bottom - height);
-        }
-        onContentHeightChanged: contentY = Math.max(0, Math.min(contentY, contentHeight - height))
-        onHeightChanged: Qt.callLater(netpopup.ensureSelectionVisible)
-        Column {
-            id: col
+        height: netpopup.bodyAvailableHeight
+
+        Flickable {
+            id: bodyScroll
             width: parent.width
-            spacing: 10
-
-            Item {
-                width: parent.width
-                height: 28
-                Text {
-                    id: statusLine
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(0, wifiActions.x - 12)
-                    elide: Text.ElideRight
-                    text: root.wifiBusy ? root.wifiActionText
-                          : netpopup.statusText !== ""
-                          ? netpopup.statusText
-                          : root.wifiError ? root.wifiError
-                          : root.wifiRadioOn
-                            ? (root.wifiScanning ? "SCANNING…"
-                               : (root.wifiNetworks.length + " NETWORKS"))
-                            : "RADIO OFF"
-                    color: !root.wifiBusy && (netpopup.statusText || root.wifiError) ? root.warn : root.inkDeep
-                    font.family: root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 2
-                }
-                Row {
-                    id: wifiActions
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
-                    QuickButton {
-                        root: netpopup.root
-                        label: root.wifiRadioOn ? "RADIO OFF" : "RADIO ON"
-                        selected: netpopup.kbdIndex === 0
-                        onClicked: if (!root.wifiBusy) root.toggleWifiRadio()
-                    }
-                    QuickButton {
-                        root: netpopup.root
-                        glyph: root.icoRefresh
-                        label: root.wifiScanning ? "SCANNING…" : "SCAN"
-                        selected: netpopup.kbdIndex === 1
-                        onClicked: if (!root.wifiBusy) root.refreshWifi("popup")
-                    }
-                }
+            height: Math.max(0, parent.height - (statsScroll.visible ? statsScroll.height + 10 : 0))
+            contentWidth: width
+            contentHeight: col.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            flickableDirection: Flickable.VerticalFlick
+            ScrollBar.vertical: NetworkScrollBar {
+                parent: bodyScroll.parent
+                anchors.top: bodyScroll.top
+                anchors.bottom: bodyScroll.bottom
+                anchors.left: bodyScroll.right
+                anchors.leftMargin: 4
             }
-
-            Rectangle { width: parent.width; height: 1; color: root.sep }
-
+            function showItem(item) {
+                const top = item.mapToItem(col, 0, 0).y;
+                const bottom = top + item.height;
+                if (top < contentY) contentY = top;
+                else if (bottom > contentY + height) contentY = Math.max(0, bottom - height);
+            }
+            onContentHeightChanged: contentY = Math.max(0, Math.min(contentY, contentHeight - height))
+            onHeightChanged: Qt.callLater(netpopup.ensureSelectionVisible)
             Column {
+                id: col
                 width: parent.width
-                visible: netpopup.passphraseSsid !== ""
-                spacing: 6
-                Text {
+                spacing: 10
+
+                Item {
                     width: parent.width
-                    text: "PASSPHRASE · " + netpopup.passphraseSsid
-                    elide: Text.ElideRight
+                    height: 28
+                    Text {
+                        id: statusLine
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(0, wifiActions.x - 12)
+                        elide: Text.ElideRight
+                        text: root.wifiBusy ? root.wifiActionText
+                              : netpopup.statusText !== ""
+                              ? netpopup.statusText
+                              : root.wifiError ? root.wifiError
+                              : root.wifiRadioOn
+                                ? (root.wifiScanning ? "SCANNING…"
+                                   : (root.wifiNetworks.length + " NETWORKS"))
+                                : "RADIO OFF"
+                        color: !root.wifiBusy && (netpopup.statusText || root.wifiError) ? root.warn : root.inkDeep
+                        font.family: root.mono
+                        font.pixelSize: 10
+                        font.letterSpacing: 2
+                    }
+                    Row {
+                        id: wifiActions
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 8
+                        QuickButton {
+                            root: netpopup.root
+                            label: root.wifiRadioOn ? "RADIO OFF" : "RADIO ON"
+                            selected: netpopup.kbdIndex === 0
+                            onClicked: if (!root.wifiBusy) root.toggleWifiRadio()
+                        }
+                        QuickButton {
+                            root: netpopup.root
+                            glyph: root.icoRefresh
+                            label: root.wifiScanning ? "SCANNING…" : "SCAN"
+                            selected: netpopup.kbdIndex === 1
+                            onClicked: if (!root.wifiBusy) root.refreshWifi("popup")
+                        }
+                    }
+                }
+
+                Rectangle { width: parent.width; height: 1; color: root.sep }
+
+                Column {
+                    width: parent.width
+                    visible: netpopup.passphraseSsid !== ""
+                    spacing: 6
+                    Text {
+                        width: parent.width
+                        text: "PASSPHRASE · " + netpopup.passphraseSsid
+                        elide: Text.ElideRight
+                        color: root.inkDeep
+                        font.family: root.mono
+                        font.pixelSize: 10
+                    }
+                    Rectangle {
+                        width: parent.width
+                        height: 30
+                        radius: root.cornerRadius
+                        color: root.rowHi
+                        border.color: root.seal
+                        clip: true
+                        TextInput {
+                            id: passInput
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            echoMode: TextInput.Password
+                            inputMethodHints: Qt.ImhHiddenText | Qt.ImhNoPredictiveText
+                            color: root.fg
+                            font.family: root.mono
+                            font.pixelSize: 12
+                            selectByMouse: true
+                            onTextChanged: netpopup.passphraseText = text
+                            Keys.onReturnPressed: (event) => { netpopup._submitPassphrase(); event.accepted = true; }
+                            Keys.onEnterPressed: (event) => { netpopup._submitPassphrase(); event.accepted = true; }
+                            Keys.onEscapePressed: (event) => { netpopup._cancelPassphrase(); event.accepted = true; }
+                        }
+                    }
+                }
+                QuickButton {
+                    id: retryButton
+                    root: netpopup.root
+                    visible: netpopup.retrySsid !== "" && netpopup.passphraseSsid === "" && !root.wifiBusy
+                    label: "RETRY WITH PASSWORD"
+                    selected: netpopup.kbdIndex === netpopup.kbdMax - 1
+                    onClicked: if (!root.wifiBusy) netpopup._openPassphrase(netpopup.retrySsid)
+                }
+
+                ListView {
+                    id: networkList
+                    width: col.width
+                    height: contentHeight
+                    clip: true
+                    spacing: 10
+                    interactive: false
+                    onContentHeightChanged: Qt.callLater(netpopup.ensureSelectionVisible)
+                    model: netpopup.visibleNets
+                    delegate: Rectangle {
+                        required property var modelData
+                        required property int index
+                        readonly property bool kbdFocused: netpopup.kbdIndex === (index + netpopup.headerCount)
+                        readonly property bool dimmed: !modelData.known && !modelData.inUse
+                        width: networkList.width
+                        height: 32
+                        radius: root.cornerRadius
+                        color: modelData.inUse || kbdFocused
+                                 ? root.rowSel
+                                 : netMouse.containsMouse
+                                   ? root.rowHi
+                                   : "transparent"
+                        border.color: modelData.inUse || kbdFocused ? root.seal : root.sep
+                        border.width: kbdFocused ? 2 : 1
+                        Behavior on color        { ColorAnimation { duration: 120 } }
+                        Behavior on border.color { ColorAnimation { duration: 120 } }
+                        Behavior on border.width { NumberAnimation { duration: 120 } }
+
+                        // Normal row content; dims for networks iwd hasn't saved yet.
+                        Item {
+                            anchors.fill: parent
+                            opacity: dimmed ? 0.55 : 1
+
+                            Text {
+                                id: barsIcon
+                                anchors.left: parent.left
+                                anchors.leftMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.wifiBarsGlyph(modelData.signal)
+                                color: modelData.inUse ? root.seal : root.ink
+                                font.family: root.mono
+                                font.pixelSize: 14
+                            }
+                            Text {
+                                anchors.left: barsIcon.right
+                                anchors.right: secTag.left
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.ssid
+                                elide: Text.ElideRight
+                                color: modelData.inUse ? root.ink : root.fg
+                                font.family: root.mono
+                                font.pixelSize: 11
+                                font.weight: modelData.inUse ? Font.Medium : Font.Normal
+                            }
+                            Text {
+                                id: secTag
+                                anchors.right: sigText.left
+                                anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: netpopup._isProtected(modelData.security) ? "󰌾" : ""
+                                color: root.inkDeep
+                                font.family: root.mono
+                                font.pixelSize: 11
+                            }
+                            Text {
+                                id: sigText
+                                anchors.right: parent.right
+                                anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.signal + "%"
+                                color: root.inkDeep
+                                font.family: root.mono
+                                font.pixelSize: 10
+                                font.letterSpacing: 1
+                            }
+                        }
+
+                        MouseArea {
+                            id: netMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: (mouse) => {
+                                if (netpopup.passphraseSsid !== "" || root.wifiBusy) return;
+                                if (mouse.button === Qt.RightButton) {
+                                    if (modelData.known && !modelData.inUse)
+                                        root.forgetWifi(modelData.ssid);
+                                    return;
+                                }
+                                netpopup._activateAt(index + netpopup.headerCount);
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    visible: root.wifiRadioOn && netpopup.visibleNets.length === 0 && root.wifiScanning
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    text: "SCANNING FOR NETWORKS…"
                     color: root.inkDeep
                     font.family: root.mono
                     font.pixelSize: 10
+                    font.letterSpacing: 2
+                    opacity: 0.6
                 }
-                Rectangle {
+
+                Text {
+                    visible: root.wifiRadioOn && netpopup.visibleNets.length === 0 && !root.wifiScanning
                     width: parent.width
-                    height: 30
-                    radius: root.cornerRadius
-                    color: root.rowHi
-                    border.color: root.seal
-                    clip: true
-                    TextInput {
-                        id: passInput
-                        anchors.fill: parent
-                        anchors.margins: 6
-                        echoMode: TextInput.Password
-                        inputMethodHints: Qt.ImhHiddenText | Qt.ImhNoPredictiveText
-                        color: root.fg
-                        font.family: root.mono
-                        font.pixelSize: 12
-                        selectByMouse: true
-                        onTextChanged: netpopup.passphraseText = text
-                        Keys.onReturnPressed: (event) => { netpopup._submitPassphrase(); event.accepted = true; }
-                        Keys.onEnterPressed: (event) => { netpopup._submitPassphrase(); event.accepted = true; }
-                        Keys.onEscapePressed: (event) => { netpopup._cancelPassphrase(); event.accepted = true; }
-                    }
+                    horizontalAlignment: Text.AlignHCenter
+                    text: "NO NETWORKS FOUND"
+                    color: root.inkDeep
+                    font.family: root.mono
+                    font.pixelSize: 10
+                    font.letterSpacing: 2
+                    opacity: 0.6
                 }
             }
-            QuickButton {
-                id: retryButton
-                root: netpopup.root
-                visible: netpopup.retrySsid !== "" && netpopup.passphraseSsid === "" && !root.wifiBusy
-                label: "RETRY WITH PASSWORD"
-                selected: netpopup.kbdIndex === netpopup.kbdMax - 1
-                onClicked: if (!root.wifiBusy) netpopup._openPassphrase(netpopup.retrySsid)
-            }
+        }
 
-            ListView {
-                id: networkList
-                width: col.width
-                height: contentHeight
-                clip: true
-                spacing: 10
-                interactive: false
-                onContentHeightChanged: Qt.callLater(netpopup.ensureSelectionVisible)
-                model: netpopup.visibleNets
-                delegate: Rectangle {
-                    required property var modelData
-                    required property int index
-                    readonly property bool kbdFocused: netpopup.kbdIndex === (index + netpopup.headerCount)
-                    readonly property bool dimmed: !modelData.known && !modelData.inUse
-                    width: networkList.width
-                    height: 32
-                    radius: root.cornerRadius
-                    color: modelData.inUse || kbdFocused
-                             ? root.rowSel
-                             : netMouse.containsMouse
-                               ? root.rowHi
-                               : "transparent"
-                    border.color: modelData.inUse || kbdFocused ? root.seal : root.sep
-                    border.width: kbdFocused ? 2 : 1
-                    Behavior on color        { ColorAnimation { duration: 120 } }
-                    Behavior on border.color { ColorAnimation { duration: 120 } }
-                    Behavior on border.width { NumberAnimation { duration: 120 } }
-
-                    // Normal row content; dims for networks iwd hasn't saved yet.
-                    Item {
-                        anchors.fill: parent
-                        opacity: dimmed ? 0.55 : 1
-
-                        Text {
-                            id: barsIcon
-                            anchors.left: parent.left
-                            anchors.leftMargin: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: root.wifiBarsGlyph(modelData.signal)
-                            color: modelData.inUse ? root.seal : root.ink
-                            font.family: root.mono
-                            font.pixelSize: 14
-                        }
-                        Text {
-                            anchors.left: barsIcon.right
-                            anchors.right: secTag.left
-                            anchors.leftMargin: 10
-                            anchors.rightMargin: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.ssid
-                            elide: Text.ElideRight
-                            color: modelData.inUse ? root.ink : root.fg
-                            font.family: root.mono
-                            font.pixelSize: 11
-                            font.weight: modelData.inUse ? Font.Medium : Font.Normal
-                        }
-                        Text {
-                            id: secTag
-                            anchors.right: sigText.left
-                            anchors.rightMargin: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: netpopup._isProtected(modelData.security) ? "󰌾" : ""
-                            color: root.inkDeep
-                            font.family: root.mono
-                            font.pixelSize: 11
-                        }
-                        Text {
-                            id: sigText
-                            anchors.right: parent.right
-                            anchors.rightMargin: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.signal + "%"
-                            color: root.inkDeep
-                            font.family: root.mono
-                            font.pixelSize: 10
-                            font.letterSpacing: 1
-                        }
-                    }
-
-                    MouseArea {
-                        id: netMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: (mouse) => {
-                            if (netpopup.passphraseSsid !== "" || root.wifiBusy) return;
-                            if (mouse.button === Qt.RightButton) {
-                                if (modelData.known && !modelData.inUse)
-                                    root.forgetWifi(modelData.ssid);
-                                return;
-                            }
-                            netpopup._activateAt(index + netpopup.headerCount);
-                        }
-                    }
-                }
-            }
-
-            Text {
-                visible: root.wifiRadioOn && netpopup.visibleNets.length === 0 && root.wifiScanning
-                width: parent.width
-                horizontalAlignment: Text.AlignHCenter
-                text: "SCANNING FOR NETWORKS…"
-                color: root.inkDeep
-                font.family: root.mono
-                font.pixelSize: 10
-                font.letterSpacing: 2
-                opacity: 0.6
-            }
-
-            Text {
-                visible: root.wifiRadioOn && netpopup.visibleNets.length === 0 && !root.wifiScanning
-                width: parent.width
-                horizontalAlignment: Text.AlignHCenter
-                text: "NO NETWORKS FOUND"
-                color: root.inkDeep
-                font.family: root.mono
-                font.pixelSize: 10
-                font.letterSpacing: 2
-                opacity: 0.6
-            }
-
-            Text {
-                width: parent.width
-                visible: !!root.netDetailsError
-                text: root.netDetailsError
-                wrapMode: Text.WordWrap
-                color: root.warn
-                font.family: root.mono
-                font.pixelSize: 10
-            }
-
-            // ---------- Connection details ----------
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: root.sep
-                visible: !!root.netInfo.iface
+        // Connection stats stay at the bottom while networks scroll above them.
+        // On short screens the stats can also scroll, preserving room for controls.
+        Flickable {
+            id: statsScroll
+            anchors.bottom: parent.bottom
+            width: parent.width
+            visible: !!root.netInfo.iface || !!root.netDetailsError
+            height: visible ? Math.min(statsColumn.implicitHeight,
+                Math.max(0, parent.height - Math.min(100, parent.height / 2) - 10)) : 0
+            contentWidth: width
+            contentHeight: statsColumn.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            flickableDirection: Flickable.VerticalFlick
+            onContentHeightChanged: contentY = Math.max(0, Math.min(contentY, Math.max(0, contentHeight - height)))
+            ScrollBar.vertical: NetworkScrollBar {
+                parent: statsScroll.parent
+                anchors.top: statsScroll.top
+                anchors.bottom: statsScroll.bottom
+                anchors.left: statsScroll.right
+                anchors.leftMargin: 4
             }
             Column {
-                visible: !!root.netInfo.iface
+                id: statsColumn
                 width: parent.width
-                spacing: 4
+                spacing: 10
+                Text {
+                    width: parent.width
+                    visible: !!root.netDetailsError
+                    text: root.netDetailsError
+                    wrapMode: Text.WordWrap
+                    color: root.warn
+                    font.family: root.mono
+                    font.pixelSize: 10
+                }
 
-                Repeater {
-                    model: netpopup._detailRows
-                    delegate: Item {
-                        required property var modelData
-                        readonly property string _val: {
-                            switch (modelData.kind) {
-                                case "ping":   return root.fmtPing(root.netInternetPing);
-                                case "loss":   return root.fmtLoss(root.netPacketLoss);
-                                case "rxrate": return root.fmtRate(root.netDownloadRate);
-                                case "txrate": return root.fmtRate(root.netUploadRate);
-                                case "rx":     return root.fmtBytes(root.netInfo.rx_bytes);
-                                case "tx":     return root.fmtBytes(root.netInfo.tx_bytes);
-                                case "ip":     return root.netInfo.ip || "—";
-                                case "gw":     return root.netInfo.gateway || "—";
+                // ---------- Connection details ----------
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: root.sep
+                    visible: !!root.netInfo.iface
+                }
+                Column {
+                    visible: !!root.netInfo.iface
+                    width: parent.width
+                    spacing: 4
+
+                    Repeater {
+                        model: netpopup._detailRows
+                        delegate: Item {
+                            required property var modelData
+                            readonly property string _val: {
+                                switch (modelData.kind) {
+                                    case "ping":   return root.fmtPing(root.netInternetPing);
+                                    case "loss":   return root.fmtLoss(root.netPacketLoss);
+                                    case "rxrate": return root.fmtRate(root.netDownloadRate);
+                                    case "txrate": return root.fmtRate(root.netUploadRate);
+                                    case "rx":     return root.fmtBytes(root.netInfo.rx_bytes);
+                                    case "tx":     return root.fmtBytes(root.netInfo.tx_bytes);
+                                    case "ip":     return root.netInfo.ip || "—";
+                                    case "gw":     return root.netInfo.gateway || "—";
+                                }
+                                return "";
                             }
-                            return "";
-                        }
-                        readonly property bool _warn: (modelData.kind === "ping"
-                                                       || modelData.kind === "loss")
-                                                      && (root.netPacketLoss > 0 || _val === "TIMEOUT")
-                        readonly property bool _copy: modelData.copy && _val !== "—"
-                        width: parent.width
-                        height: 20
+                            readonly property bool _warn: (modelData.kind === "ping"
+                                                           || modelData.kind === "loss")
+                                                          && (root.netPacketLoss > 0 || _val === "TIMEOUT")
+                            readonly property bool _copy: modelData.copy && _val !== "—"
+                            width: parent.width
+                            height: 20
 
-                        Text {
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.l
-                            color: root.inkDeep
-                            font.family: root.mono
-                            font.pixelSize: 9
-                            font.letterSpacing: 1.5
-                            opacity: 0.7
-                        }
-                        Text {
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: parent._val
-                            color: parent._warn ? root.warn : root.ink
-                            font.family: root.mono
-                            font.pixelSize: 10
-                            font.letterSpacing: 1
-                            font.weight: Font.Medium
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            visible: parent._copy
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: netpopup._copy(parent._val)
+                            Text {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.l
+                                color: root.inkDeep
+                                font.family: root.mono
+                                font.pixelSize: 9
+                                font.letterSpacing: 1.5
+                                opacity: 0.7
+                            }
+                            Text {
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: parent._val
+                                color: parent._warn ? root.warn : root.ink
+                                font.family: root.mono
+                                font.pixelSize: 10
+                                font.letterSpacing: 1
+                                font.weight: Font.Medium
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                visible: parent._copy
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: netpopup._copy(parent._val)
+                            }
                         }
                     }
                 }

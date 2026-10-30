@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+from popup_test_support import write_card
 
 source = Path(__file__).resolve().parents[1]
 with tempfile.TemporaryDirectory(prefix="qs-network-popup-test-") as directory:
@@ -15,6 +16,11 @@ with tempfile.TemporaryDirectory(prefix="qs-network-popup-test-") as directory:
     readonly property bool testInputFocused: passInput.activeFocus
     readonly property string testInputText: passInput.text
     readonly property string testStatusText: statusLine.text
+    readonly property real testStatsTop: statsScroll.y
+    readonly property real testStatsBottom: statsScroll.y + statsScroll.height
+    readonly property real testStatsHeight: statsScroll.height
+    readonly property real testStatsContentHeight: statsScroll.contentHeight
+    readonly property bool testStatsVisible: statsScroll.visible
     function testSetInput(value) { passInput.text = value; }
     function testSelectionVisible() {
         const row = networkList.itemAtIndex(kbdIndex - headerCount);
@@ -26,7 +32,7 @@ with tempfile.TemporaryDirectory(prefix="qs-network-popup-test-") as directory:
     (root / "NetworkPopup.qml").write_text(popup.replace("    id: netpopup", "    id: netpopup" + hooks, 1))
     shutil.copy2(source / "QuickButton.qml", root / "QuickButton.qml")
     shutil.copy2(source / "tests/NetworkPopupTest.qml", root / "shell.qml")
-    shutil.copy2(source / "tests/NetworkPopupCardWindow.qml", root / "CardWindow.qml")
+    write_card(root)
     env = dict(os.environ, QT_QPA_PLATFORM="offscreen", QT_QUICK_BACKEND="software",
                QT_NO_XDG_DESKTOP_PORTAL="1")
     try:

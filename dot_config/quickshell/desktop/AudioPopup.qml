@@ -11,7 +11,10 @@ CardWindow {
 
     theme: root
     revealed: root.audioVisible
-    cardWidth: eqExpanded ? 890 : 390
+    cardWidth: Math.max(1, Math.min(eqExpanded ? 890 : 390, width - 2 * anchorGap
+        - ((anchorEdge === "left" || anchorEdge === "right") ? root.barOffset : 0)))
+    cardHeight: Math.max(1, Math.min(760, height - 2 * anchorGap
+        - ((anchorEdge === "top" || anchorEdge === "bottom") ? root.barOffset : 0)))
     layerNamespace: "omarchy-audio"
     title: eqExpanded ? "AUDIO & EQUALIZER" : "AUDIO"
     subtitle: root.audioMuted
@@ -48,9 +51,8 @@ CardWindow {
         return role !== "event" && role !== "notification"
             && !props["event.id"] && !n.name.startsWith("effect_");
     }).sort((a, b) => a.id - b.id)
-    // Keep long device/stream lists compact while still fitting smaller screens.
-    readonly property real maxDeckHeight: Math.max(100, Math.min(480,
-        audioPopup.height - audioPopup.root.barOffset - 2 * audioPopup.anchorGap - 210))
+    // Reserve the hero, divider and two gaps above the fixed scrolling deck.
+    readonly property real maxDeckHeight: Math.max(0, bodyAvailableHeight - 30 - 1 - 2 * 8)
 
     component AudioScrollBar: ScrollBar {
         id: audioScrollBar
@@ -249,7 +251,7 @@ CardWindow {
 
         Flickable {
             id: controlsScroll
-            implicitHeight: Math.min(controlsColumn.implicitHeight, audioPopup.maxDeckHeight)
+            implicitHeight: audioPopup.maxDeckHeight
             height: implicitHeight
             contentWidth: width
             contentHeight: controlsColumn.implicitHeight
@@ -706,9 +708,7 @@ CardWindow {
         // ---------- Content Deck (Single Column vs 2-Column Split when EQ Expanded) ----------
         Item {
             width: parent.width
-            height: audioPopup.eqExpanded
-                    ? Math.max(eqScroll.implicitHeight, rightDeck.implicitHeight)
-                    : normalDeck.implicitHeight
+            height: audioPopup.maxDeckHeight
 
             // Expanded Mode: Split Row
             Row {
@@ -727,7 +727,7 @@ CardWindow {
                     id: eqScroll
                     width: splitRow.leftPaneW
                     height: parent.height
-                    implicitHeight: Math.min(eqDeck.implicitHeight, audioPopup.maxDeckHeight)
+                    implicitHeight: audioPopup.maxDeckHeight
                     contentWidth: width
                     contentHeight: eqDeck.implicitHeight
                     clip: true
@@ -753,6 +753,7 @@ CardWindow {
                     id: rightDeck
                     active: audioPopup.eqExpanded
                     width: splitRow.rightPaneW
+                    height: parent.height
                     sourceComponent: audioControlsComponent
                     onLoaded: Qt.callLater(audioPopup.ensureFocusVisible)
                 }

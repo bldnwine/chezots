@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# hyprlock-recover: Emergency lockscreen recovery for Hyprland
+# Can be run via Hyprland locked keybind, from a TTY (Ctrl+Alt+F3), or over SSH.
+
+set -euo pipefail
+
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
+LOG_FILE="$LOG_DIR/hyprlock-recover.log"
+
+log() {
+  local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+  mkdir -p "$LOG_DIR" 2>/dev/null || true
+  echo "$msg" >> "$LOG_FILE" 2>/dev/null || true
+  if [[ -t 1 || -t 2 ]]; then
+    echo "$msg" >&2
+  fi
+}
+
+# 1. Resolve Hyprland signature if executed from a TTY or SSH
+if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+  runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$UID}/hypr"
+  if [[ -d $runtime_dir ]]; then
+    hypr_dir=$(find "$runtime_dir" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -n 1 | cut -d' ' -f2-)
+    [[ -n $hypr_dir ]] && export HYPRLAND_INSTANCE_SIGNATURE=${hypr_dir##*/}
+  fi
+fi
+
+# Resolve WAYLAND_DISPLAY if missing (e.g. TTY fallback)
+if [[ -z ${WAYLAND_DISPLAY:-} ]]; then
+  wl_sock=$(find "${XDG_RUNTIME_DIR:-/run/user/$UID}" -maxdepth 1 -name "wayland-*" -type s -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -n 1 | cut -d' ' -f2-)
+  [[ -n $wl_sock ]] && export WAYLAND_DISPLAY=${wl_sock##*/}
+fi
+
+# 2. Check for hyprctl availability and Hyprland communication
+if ! command -v hyprctl >/dev/null 2>&1; then
+  log "ERROR: hyprctl command not found."
+  exit 1
+fi
+
+if ! hyprctl version >/dev/null 2>&1; then
+  log "ERROR: Cannot communicate with Hyprland instance (signature: ${HYPRLAND_INSTANCE_SIGNATURE:-none})."
+  exit 1
+fi
+
+# Handle --check / --dry-run
+if [[ "${1:-}" == "--check" || "${1:-}" == "--dry-run" ]]; then
+  is_locked=$(hyprctl -j locked 2>/dev/null | jq -r '.locked // false' 2>/dev/null || echo "false")
+  restore_opt=$(hyprctl getoption misc:allow_session_lock_restore 2>/dev/null | awk '/bool:/ {print $2}')
+  hyprlock_pid=$(pidof hyprlock || true)
+  echo "Hyprland Instance : ${HYPRLAND_INSTANCE_SIGNATURE:-unknown}"
+  echo "Wayland Display   : ${WAYLAND_DISPLAY:-unknown}"
+  echo "Compositor Locked : $is_locked"
+  echo "Lock Restore Opt  : ${restore_opt:-unknown}"
+  echo "Hyprlock Running  : ${hyprlock_pid:-none}"
+  exit 0
+fi
+
+log "Initiating lock recovery (Compositor: ${HYPRLAND_INSTANCE_SIGNATURE:-active})."
+
+# 3. Defensively ensure allow_session_lock_restore is enabled in compositor
+hyprctl eval 'hl.config({ misc = { allow_session_lock_restore = true } })' >/dev/null 2>&1 || true
+
+# 4. Clean up any frozen, dead, or stuck hyprlock instances
+if pidof hyprlock >/dev/null 2>&1; then
+  log "Terminating stuck hyprlock process..."
+  killall -9 hyprlock 2>/dev/null || true
+  for (( i = 0; i < 20; i++ )); do
+    pidof hyprlock >/dev/null 2>&1 || break
+    sleep 0.05
+  done
+fi
+
+# 5. Dispatch fresh hyprlock inside compositor environment
+hyprctl dispatch 'hl.dsp.exec_cmd("hyprlock")' >/dev/null 2>&1
+
+# 6. Verify hyprlock started
+restored=0
+for (( i = 0; i < 30; i++ )); do
+  if pidof hyprlock >/dev/null 2>&1; then
+    restored=1
+    break
+  fi
+  sleep 0.1
+done
+
+if (( restored )); then
+  log "SUCCESS: hyprlock active with PID $(pidof hyprlock)."
+  exit 0
+else
+  log "ERROR: hyprlock did not start within 3 seconds."
+  exit 1
+fi

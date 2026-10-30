@@ -43,10 +43,17 @@ desc = "Set as wallpaper"
 
 [open]
 prepend_rules = [
-    { mime = "image/png", use = [ "web-screenshot", "image_playlist", "set_wallpaper" ] },
+    { mime = "image/png", use = [ "image_playlist", "web-screenshot", "set_wallpaper" ] },
     { mime = "image/*", use = [ "image_playlist", "set_wallpaper" ] },
     { url = "*.{jpg,jpeg,png,webp,avif,jxl,gif,bmp,svg}", use = [ "image_playlist", "set_wallpaper" ] },
     { mime = "video/*", use = [ "video_playlist" ] },
     { mime = "audio/*", use = [ "video_playlist" ] },
     { url = "*.{mp4,mkv,webm,flv,avi,mov,mp3,m4a,flac,wav,opus}", use = [ "video_playlist" ] }
 ]
+
+# Resolve known local file types without reading their contents.
+[[plugin.prepend_fetchers]]
+url = "local://*"
+run = "mime-ext.local"
+prio = "high"
+group = "mime"

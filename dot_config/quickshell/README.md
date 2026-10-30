@@ -124,7 +124,11 @@ This configuration runs a complete, unified desktop shell environment inside a *
 | **Polkit** | `PolkitAgent.qml` | Handles native PolicyKit auth popups with shake animation. Privileged operations must use `pkexec`. |
 | **Terminal** | `uwsm-app -- kitty` (`SUPER + Return`) | Direct instantaneous launch (<5ms) without subshell lookups. |
 
-AudioPopup's Output, Playback, and Input sections share a scroll area capped at 480px (or less on smaller screens), with a visible scrollbar. The expanded equalizer scrolls independently alongside it.
+Network, Bluetooth, and Audio popups have fixed preferred outer heights of 700, 540, and 760 logical pixels, respectively, capped by the available screen height. Their contents scroll without resizing the card when devices, errors, passphrase fields, or pairing prompts change. `CardWindow.bodyAvailableHeight` measures the space remaining after headers, footers, padding, and spacing. Audio's Output, Playback, and Input sections share that remaining space below the master controls; the expanded equalizer scrolls independently alongside them and retains the same outer height.
+
+Network connection stats stay pinned above the footer while the network list scrolls independently above them, leaving spare space between the list and stats. On short screens, stats also scroll within their bottom viewport.
+
+MediaPopup keeps player buttons in a clipped horizontal strip with wheel scrolling and a scrollbar. Changing the selected source brings its button into view while track metadata and playback controls stay stationary. Polkit command details wrap as plain text inside a scroll area capped at 180 logical pixels, with the authentication row kept below it; long multiline commands cannot overlap the password field.
 
 The Zen bar shows a plain rotated song title on vertical edges (bottom-to-top on the left, top-to-bottom on the right), retaining the title pill on horizontal edges. Media selection follows the player that most recently starts or resumes playback. Scrolling or selecting a popup source overrides selection until another player starts or the selected source disappears. Distinct sources are identified by D-Bus name, and `playerctld` proxies are excluded.
 
@@ -172,6 +176,7 @@ When editing or creating QML files in this repository, strictly adhere to these 
    Qt 6 QML parser rejects `: void` return type annotations (e.g. `function hide(): void` fails `qmllint` with syntax errors). Use plain `function hide()`.
 4. **CardWindow Focus Stealing**:
    `CardWindow.qml` grabs focus upon opening. If a subcomponent (like a `TextInput`) loses focus, restore it using `refocus()`.
+   Interactive panels use fixed `OnDemand` keyboard interactivity with `PopupFocusGrab.qml`, releasing focus by unmapping. `PopupFocusStack.js` gives input to the most recently mapped panel and suspends popup grabs during authentication. Switching to `None` before unmapping or using exclusive layer focus can make Hyprland restore a window on an old workspace.
 5. **MouseArea Event Bubbling**:
    Child `MouseArea`s suppress parent hover events. Use compound checks:
    ```qml
@@ -230,6 +235,10 @@ Additional regression checks:
 python3 desktop/tests/network_helper_test.py
 python3 desktop/tests/network_service_lifecycle_test.py
 python3 desktop/tests/network_popup_test.py
+python3 desktop/tests/audio_popup_test.py
+python3 desktop/tests/media_popup_test.py
+python3 desktop/tests/polkit_geometry_test.py
+node desktop/tests/popup-focus.test.js
 node desktop/tests/model.test.js
 node desktop/tests/performance-model.test.js
 node desktop/tests/telemetry-model.test.js

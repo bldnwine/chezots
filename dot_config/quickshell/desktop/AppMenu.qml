@@ -74,7 +74,9 @@ Item {
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "appmenu"
-        WlrLayershell.keyboardFocus: navbar.appMenuVisible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+        // Track application focus across workspaces without leaking panel keys.
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+        PopupFocusGrab { window: panel }
 
         property real _reveal: navbar.appMenuVisible ? 1 : 0
 

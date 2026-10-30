@@ -9,7 +9,10 @@ CardWindow {
     theme: root
     plain: true
     revealed: root.btVisible
-    cardWidth: 390
+    cardWidth: Math.max(1, Math.min(390, width - 2 * anchorGap
+        - ((anchorEdge === "left" || anchorEdge === "right") ? root.barOffset : 0)))
+    cardHeight: Math.max(1, Math.min(540, height - 2 * anchorGap
+        - ((anchorEdge === "top" || anchorEdge === "bottom") ? root.barOffset : 0)))
     layerNamespace: "omarchy-bluetooth"
     title: "BLUETOOTH"
     subtitle: root.btPowered
@@ -41,12 +44,16 @@ CardWindow {
     function syncMac() {
         const d = btpopup.visibleDevs[btpopup.kbdIndex - btpopup.headerCount];
         btpopup.kbdMac = d ? d.mac : "";
-        if (d && deviceScroll) {
-            const top = (btpopup.kbdIndex - btpopup.headerCount) * 38;
-            if (top < deviceScroll.contentY) deviceScroll.contentY = top;
-            else if (top + 32 > deviceScroll.contentY + deviceScroll.height)
-                deviceScroll.contentY = top + 32 - deviceScroll.height;
-        }
+        if (d && !root.btPrompt.kind)
+            deviceScroll.showItem(deviceRows.itemAt(btpopup.kbdIndex - btpopup.headerCount));
+        else if (!root.btPrompt.kind && btpopup.kbdIndex < btpopup.headerCount)
+            deviceScroll.contentY = 0;
+    }
+
+    function focusPairCode() {
+        if (!btpopup.revealed) return;
+        deviceScroll.showItem(pairCode);
+        pairCode.forceActiveFocus();
     }
 
     function rehome() {
@@ -115,7 +122,7 @@ CardWindow {
     Component.onCompleted: {
         root.refreshBluetooth(); Qt.callLater(btpopup.syncMac);
         if (root.btPrompt.kind === "pin" || root.btPrompt.kind === "passkey")
-            Qt.callLater(function() { if (btpopup.revealed) pairCode.forceActiveFocus(); });
+            Qt.callLater(btpopup.focusPairCode);
     }
 
     onDismiss: root.btVisible = false
@@ -123,118 +130,140 @@ CardWindow {
         target: root
         function onBtPromptChanged() {
             pairCode.text = "";
+            deviceScroll.contentY = 0;
             if (root.btPrompt.kind === "pin" || root.btPrompt.kind === "passkey")
-                Qt.callLater(function() { if (btpopup.revealed) pairCode.forceActiveFocus(); });
-            else if (btpopup.revealed) btpopup.refocus();
+                Qt.callLater(btpopup.focusPairCode);
+            else if (btpopup.revealed) {
+                btpopup.refocus();
+                Qt.callLater(btpopup.syncMac);
+            }
         }
     }
     onKeyPressed: (event) => {
         if (btpopup.kbdHandle(event)) event.accepted = true;
     }
 
-    Column {
-        id: col
+    Flickable {
+        id: deviceScroll
         width: parent.width
-        spacing: 10
-
-        Item {
-            visible: !root.btPrompt.kind
-            width: parent.width
-            height: visible ? 28 : 0
-            Text {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                text: !root.btAvailable ? "NO ADAPTER" : !root.btPowered ? "POWER OFF"
-                      : (root.btDevices.length + " DEVICES"
-                         + (root.btCount > 0
-                            ? "  ·  " + root.btCount + " CONN"
-                            : "")
-                                      )
-                color: root.inkDeep
-                font.family: root.mono
-                font.pixelSize: 10
-                font.letterSpacing: 2
-            }
-            Row {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 8
-                QuickButton {
-                    root: btpopup.root
-                    label: root.btPowered ? "POWER OFF" : "POWER ON"
-                    selected: btpopup.kbdIndex === 0
-                    onClicked: root.btTogglePower()
-                }
-                QuickButton {
-                    root: btpopup.root
-                    label: root.btScanning ? "STOP SCAN" : "SCAN"
-                    selected: btpopup.kbdIndex === 1 || root.btScanning
-                    onClicked: root.btToggleScan()
-                }
-            }
+        height: btpopup.bodyAvailableHeight
+        contentWidth: width
+        contentHeight: col.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        flickableDirection: Flickable.VerticalFlick
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+        function showItem(item) {
+            if (!item) return;
+            const top = item.mapToItem(col, 0, 0).y;
+            let target = contentY;
+            if (top < target) target = top;
+            else if (top + item.height > target + height) target = top + item.height - height;
+            contentY = Math.max(0, Math.min(Math.max(0, contentHeight - height), target));
+        }
+        onContentHeightChanged: {
+            contentY = Math.max(0, Math.min(contentY, Math.max(0, contentHeight - height)));
+            Qt.callLater(btpopup.syncMac);
+        }
+        onHeightChanged: {
+            if (root.btPrompt.kind === "pin" || root.btPrompt.kind === "passkey")
+                Qt.callLater(btpopup.focusPairCode);
+            else Qt.callLater(btpopup.syncMac);
         }
 
         Column {
-            width: parent.width
-            visible: !!root.btPrompt.kind
+            id: col
+            width: deviceScroll.width - 12
             spacing: 10
-            Text {
-                width: parent.width; wrapMode: Text.Wrap
-                color: root.ink; font.family: root.mono; font.pixelSize: 11
-                text: root.btPrompt.kind === "display" ? "ENTER THIS CODE ON YOUR DEVICE"
-                    : root.btPrompt.kind === "confirm" ? "CONFIRM THIS CODE MATCHES YOUR DEVICE"
-                    : root.btPrompt.kind === "authorize" ? "ALLOW THIS DEVICE TO PAIR?"
-                    : "ENTER THE CODE SHOWN ON YOUR DEVICE"
-            }
-            Text {
-                visible: root.btPrompt.kind === "display" || root.btPrompt.kind === "confirm"
-                text: root.btPrompt.code || ""; color: root.seal; font.family: root.mono; font.pixelSize: 22
-            }
-            TextInput {
-                id: pairCode
-                visible: root.btPrompt.kind === "pin" || root.btPrompt.kind === "passkey"
-                width: parent.width; height: 30; color: root.ink; font.family: root.mono; font.pixelSize: 14
-                maximumLength: root.btPrompt.kind === "pin" ? 16 : 6
-                clip: true
-                Keys.onReturnPressed: event => { root.btPairAnswer(true, text); event.accepted = true; }
-                Keys.onEnterPressed: event => { root.btPairAnswer(true, text); event.accepted = true; }
-                Keys.onEscapePressed: event => { root.btVisible = false; event.accepted = true; }
-            }
-            Row {
-                spacing: 8
-                QuickButton { root: btpopup.root; label: "CANCEL"; onClicked: root.btVisible = false }
-                QuickButton { root: btpopup.root; visible: root.btPrompt.kind !== "display"; label: "CONFIRM"; onClicked: root.btPairAnswer(true, pairCode.text) }
-            }
-        }
-        Rectangle { width: parent.width; height: 1; color: root.sep }
 
-        Text {
-            width: parent.width
-            visible: !root.btPrompt.kind && text.length > 0
-            text: root.btError || root.btActionText
-            wrapMode: Text.Wrap
-            color: root.btError ? root.seal : root.inkDeep
-            font.family: root.mono
-            font.pixelSize: 10
-        }
+            Item {
+                visible: !root.btPrompt.kind
+                width: parent.width
+                height: visible ? 28 : 0
+                Text {
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: !root.btAvailable ? "NO ADAPTER" : !root.btPowered ? "POWER OFF"
+                          : (root.btDevices.length + " DEVICES"
+                             + (root.btCount > 0
+                                ? "  ·  " + root.btCount + " CONN"
+                                : "")
+                                          )
+                    color: root.inkDeep
+                    font.family: root.mono
+                    font.pixelSize: 10
+                    font.letterSpacing: 2
+                }
+                Row {
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+                    QuickButton {
+                        root: btpopup.root
+                        label: root.btPowered ? "POWER OFF" : "POWER ON"
+                        selected: btpopup.kbdIndex === 0
+                        onClicked: root.btTogglePower()
+                    }
+                    QuickButton {
+                        root: btpopup.root
+                        label: root.btScanning ? "STOP SCAN" : "SCAN"
+                        selected: btpopup.kbdIndex === 1 || root.btScanning
+                        onClicked: root.btToggleScan()
+                    }
+                }
+            }
 
-        Flickable {
-            id: deviceScroll
-            visible: !root.btPrompt.kind
-            width: col.width
-            height: visible ? Math.min(deviceCol.height, Math.max(64, Math.min(360, (btpopup.screen ? btpopup.screen.height : btpopup.height) - 260))) : 0
-            contentWidth: width
-            contentHeight: deviceCol.height
-            onContentHeightChanged: Qt.callLater(btpopup.syncMac)
-            onHeightChanged: Qt.callLater(btpopup.syncMac)
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+            Column {
+                width: parent.width
+                visible: !!root.btPrompt.kind
+                spacing: 10
+                Text {
+                    width: parent.width; wrapMode: Text.Wrap
+                    color: root.ink; font.family: root.mono; font.pixelSize: 11
+                    text: root.btPrompt.kind === "display" ? "ENTER THIS CODE ON YOUR DEVICE"
+                        : root.btPrompt.kind === "confirm" ? "CONFIRM THIS CODE MATCHES YOUR DEVICE"
+                        : root.btPrompt.kind === "authorize" ? "ALLOW THIS DEVICE TO PAIR?"
+                        : "ENTER THE CODE SHOWN ON YOUR DEVICE"
+                }
+                Text {
+                    visible: root.btPrompt.kind === "display" || root.btPrompt.kind === "confirm"
+                    text: root.btPrompt.code || ""; color: root.seal; font.family: root.mono; font.pixelSize: 22
+                }
+                TextInput {
+                    id: pairCode
+                    visible: root.btPrompt.kind === "pin" || root.btPrompt.kind === "passkey"
+                    width: parent.width; height: 30; color: root.ink; font.family: root.mono; font.pixelSize: 14
+                    maximumLength: root.btPrompt.kind === "pin" ? 16 : 6
+                    clip: true
+                    Keys.onReturnPressed: event => { root.btPairAnswer(true, text); event.accepted = true; }
+                    Keys.onEnterPressed: event => { root.btPairAnswer(true, text); event.accepted = true; }
+                    Keys.onEscapePressed: event => { root.btVisible = false; event.accepted = true; }
+                }
+                Row {
+                    spacing: 8
+                    QuickButton { root: btpopup.root; label: "CANCEL"; onClicked: root.btVisible = false }
+                    QuickButton { root: btpopup.root; visible: root.btPrompt.kind !== "display"; label: "CONFIRM"; onClicked: root.btPairAnswer(true, pairCode.text) }
+                }
+            }
+            Rectangle { width: parent.width; height: 1; color: root.sep }
+
+            Text {
+                width: parent.width
+                visible: !root.btPrompt.kind && text.length > 0
+                text: root.btError || root.btActionText
+                wrapMode: Text.Wrap
+                color: root.btError ? root.seal : root.inkDeep
+                font.family: root.mono
+                font.pixelSize: 10
+            }
+
             Column {
                 id: deviceCol
-                width: deviceScroll.width
+                visible: !root.btPrompt.kind
+                width: col.width
                 spacing: 6
                 Repeater {
+                    id: deviceRows
                     model: btpopup.visibleDevs
                     delegate: Rectangle {
                         required property var modelData
@@ -315,18 +344,18 @@ CardWindow {
                 }
 
             }
-        }
 
-        Text {
-            visible: !root.btPrompt.kind && root.btPowered && root.btDevices.length === 0
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            text: "NO DEVICES — TAP SCAN"
-            color: root.inkDeep
-            font.family: root.mono
-            font.pixelSize: 10
-            font.letterSpacing: 2
-            opacity: 0.6
+            Text {
+                visible: !root.btPrompt.kind && root.btPowered && root.btDevices.length === 0
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                text: "NO DEVICES — TAP SCAN"
+                color: root.inkDeep
+                font.family: root.mono
+                font.pixelSize: 10
+                font.letterSpacing: 2
+                opacity: 0.6
+            }
         }
     }
 }

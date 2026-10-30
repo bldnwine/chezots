@@ -197,7 +197,7 @@ Item {
             onClicked: editorCard.forceActiveFocus()
         }
 
-        focus: true
+        focus: editor.active
         Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Escape) {
                 editor.close();

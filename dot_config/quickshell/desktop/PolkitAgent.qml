@@ -1,10 +1,11 @@
 import QtQuick
-import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Polkit
 import Quickshell.Wayland
 import "PolkitModel.js" as PolkitModel
+import "PopupFocusStack.js" as PopupFocusStack
 
 Item {
     id: root
@@ -21,8 +22,10 @@ Item {
     readonly property color scrim: Qt.rgba(theme.paper.r, theme.paper.g, theme.paper.b, 0.65)
     readonly property int cornerRadius: theme.cornerRadius
 
-    readonly property int cardWidth: 380
-    readonly property int cardHeight: root.extractedCommand !== "" ? 82 : 52
+    readonly property real cardWidth: Math.max(0, Math.min(380, panel.width - 32))
+    readonly property real commandHeight: root.extractedCommand === "" ? 0
+        : Math.min(180, Math.max(0, panel.height - 32 - 52), Math.max(30, commandText.implicitHeight + 16))
+    readonly property real cardHeight: 52 + commandHeight
 
     property bool closing: false
     property bool submitted: false
@@ -37,7 +40,12 @@ Item {
     property bool fingerprintFirst: false
     property int shakeOffset: 0
 
+    onExtractedCommandChanged: commandViewport.contentY = 0
+
     readonly property bool dialogVisible: polkitAgent.isActive || closing
+    onDialogVisibleChanged: PopupFocusStack.setBlocked(dialogVisible)
+    Component.onCompleted: PopupFocusStack.setBlocked(dialogVisible)
+    Component.onDestruction: PopupFocusStack.setBlocked(false)
     readonly property bool fingerprintWaiting: dialogVisible && !responseRequired && !submitted && (fingerprintFirst || promptLooksFingerprint(currentPrompt + " " + currentSupplementary))
 
     function promptLooksFingerprint(text) {
@@ -268,33 +276,40 @@ Item {
                 Rectangle {
                     visible: root.extractedCommand !== ""
                     width: parent.width
-                    height: 30
+                    height: root.commandHeight
                     color: root.theme.rowHi
 
-                    RowLayout {
+                    Flickable {
+                        id: commandViewport
                         anchors.fill: parent
-                        anchors.leftMargin: 16
-                        anchors.rightMargin: 16
-                        spacing: 8
+                        clip: true
+                        contentWidth: width
+                        contentHeight: commandText.height + 16
+                        boundsBehavior: Flickable.StopAtBounds
+                        flickableDirection: Flickable.VerticalFlick
+                        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
                         Text {
+                            x: 16
+                            y: 8
                             text: "$"
                             color: root.accent
                             font.family: root.fontFamily
                             font.pixelSize: 12
                             font.bold: true
-                            Layout.alignment: Qt.AlignVCenter
                         }
-
                         Text {
+                            id: commandText
+                            x: 32
+                            y: 8
+                            width: Math.max(0, commandViewport.width - 48)
                             text: root.extractedCommand
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
                             color: root.foreground
                             font.family: root.fontFamily
                             font.pixelSize: 11
                             font.weight: Font.Medium
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignVCenter
-                            elide: Text.ElideMiddle
                         }
                     }
 

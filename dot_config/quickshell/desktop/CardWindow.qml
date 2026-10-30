@@ -41,6 +41,17 @@ PanelWindow {
     // means ids declared in the popup file are reachable from inside.
     property Component headerRight: null
 
+    // Fixed-height cards allocate their body after measuring the actual chrome,
+    // including wrapped footer text. Auto-sized cards keep their existing layout.
+    readonly property bool _hasHeader: title.length > 0 || subtitle.length > 0 || headerRight !== null
+    readonly property bool _hasHeaderRule: title.length > 0 || subtitle.length > 0
+    readonly property bool _hasFooter: footer.length > 0
+    readonly property real bodyAvailableHeight: Math.max(0, surface.height
+        - 2 * (plain ? 14 : 17)
+        - (_hasHeader ? 43 : 0) - (_hasHeaderRule ? 1 : 0)
+        - (_hasFooter ? 1 + footerLabel.implicitHeight : 0)
+        - bodyCol.spacing * (Number(_hasHeader) + Number(_hasHeaderRule) + 2 * Number(_hasFooter)))
+
     // Anchored placement. anchorEdge "" (default) centres the card; "top"/
     // "bottom"/"left"/"right" hugs the bar's inner edge and centres on
     // (anchorBarX, anchorBarY) along the parallel axis, clamped on-screen.
@@ -68,7 +79,10 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: layerNamespace
-    WlrLayershell.keyboardFocus: revealed ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    // Track the current workspace's application focus while the grab keeps
+    // keyboard input in the panel. Release focus by unmapping, not with None.
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    PopupFocusGrab { window: card }
 
     property real _reveal: revealed ? 1 : 0
     Behavior on _reveal {
@@ -208,6 +222,7 @@ PanelWindow {
             }
 
             Text {
+                id: footerLabel
                 visible: card.footer.length > 0
                 width: parent.width
                 text: card.footer

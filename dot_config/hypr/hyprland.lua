@@ -19,7 +19,7 @@ hl.monitor({
 	output = "eDP-1",
 	mode = "preferred",
 	position = "auto",
-	scale = "1",
+	scale = "1.5",
 })
 
 hl.monitor({
@@ -207,6 +207,8 @@ hl.config({
 	misc = {
 		force_default_wallpaper = -1,
 		disable_hyprland_logo = true,
+		-- disable_scale_notification = true,
+		allow_session_lock_restore = true,
 	},
 
 	dwindle = {
@@ -360,6 +362,7 @@ hl.bind(mainMod .. " + G", hl.dsp.global("quickshell:hyprland-toggle"))
 hl.bind(mainMod .. " + CONTROL + 6", hl.dsp.global("quickshell:media-next"), { locked = true })
 hl.bind(mainMod .. " + CONTROL + 5", hl.dsp.global("quickshell:media-play-pause"), { locked = true })
 hl.bind(mainMod .. " + CONTROL + 4", hl.dsp.global("quickshell:media-prev"), { locked = true })
+hl.bind(mainMod .. " + CONTROL + SHIFT + L", hl.dsp.exec_cmd("hyprlock-recover"), { locked = true })
 
 hl.bind(mainMod .. " + mouse:276", hl.dsp.global("quickshell:audio-vol-up"), { repeating = true })
 hl.bind(mainMod .. " + mouse:275", hl.dsp.global("quickshell:audio-vol-down"), { repeating = true })
@@ -531,7 +534,7 @@ hl.window_rule({
 	match = { class = "zen", title = "Zen Browser" },
 	float = true,
 	center = true,
-	size = { 1837, 922 }, --  1460, 912 / 1447, 1009 / 1875, 917
+	size = { 1600, 957 }, --  1460, 912 / 1447, 1009 / 1875, 917
 })
 hl.window_rule({
 	name = "Brave Origin",

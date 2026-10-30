@@ -3,5 +3,10 @@ use = "terrakok/split-tabs"
 rev = "da25bc0"
 hash = "108ee3048ba3a0d1ba77df7c41bcb7fe"
 
+[[plugin.deps]]
+use = "yazi-rs/plugins:mime-ext"
+rev = "896fa5a"
+hash = "7d3b7f99e600fd7e77ebc5eb8423a897"
+
 [flavor]
 deps = []
