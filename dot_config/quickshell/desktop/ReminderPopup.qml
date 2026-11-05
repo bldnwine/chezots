@@ -221,20 +221,20 @@ CardWindow {
     Column {
         id: col
         width: parent.width
-        spacing: 12
+        spacing: 12 * reminderPopup.panelScale
 
         // Section: Presets
         Text {
             text: "QUICK PRESETS"
             color: root.inkDeep
             font.family: root.mono
-            font.pixelSize: 10
-            font.letterSpacing: 2
+            font.pixelSize: 10 * reminderPopup.fontScale
+            font.letterSpacing: 2 * reminderPopup.fontScale
         }
 
         Row {
             width: parent.width
-            spacing: 6
+            spacing: 6 * reminderPopup.panelScale
 
             Repeater {
                 model: [
@@ -251,7 +251,7 @@ CardWindow {
                     readonly property bool focused: reminderPopup.kbdIndex === index
 
                     width: (col.width - 24) / 5
-                    height: 28
+                    height: 28 * reminderPopup.rowScale
                     radius: root.cornerRadius
                     color: focused || presetMouse.containsMouse ? root.rowHi : root.rowSel
                     border.color: focused || presetMouse.containsMouse ? root.seal : root.sep
@@ -262,7 +262,7 @@ CardWindow {
                         text: modelData.label
                         color: focused ? root.seal : root.ink
                         font.family: root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * reminderPopup.fontScale
                         font.weight: Font.Medium
                     }
 
@@ -287,18 +287,18 @@ CardWindow {
             text: "SET TIME OR TIMER"
             color: root.inkDeep
             font.family: root.mono
-            font.pixelSize: 10
-            font.letterSpacing: 2
+            font.pixelSize: 10 * reminderPopup.fontScale
+            font.letterSpacing: 2 * reminderPopup.fontScale
         }
 
         Row {
             width: parent.width
-            spacing: 8
+            spacing: 8 * reminderPopup.panelScale
 
             // Time / Duration Input Box
             Rectangle {
-                width: 88
-                height: 32
+                width: 88 * reminderPopup.panelScale
+                height: 32 * reminderPopup.rowScale
                 radius: root.cornerRadius
                 color: reminderPopup.kbdIndex === 5 ? root.rowHi : "transparent"
                 border.color: reminderPopup.kbdIndex === 5 ? root.seal : root.sep
@@ -307,13 +307,13 @@ CardWindow {
                 TextInput {
                     id: timeInput
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.margins: 6 * reminderPopup.panelScale
                     focus: reminderPopup.kbdIndex === 5
                     activeFocusOnTab: true
                     text: reminderPopup.timeTargetText
                     color: root.ink
                     font.family: root.mono
-                    font.pixelSize: 11
+                    font.pixelSize: 11 * reminderPopup.fontScale
                     verticalAlignment: TextInput.AlignVCenter
                     horizontalAlignment: TextInput.AlignHCenter
                     selectByMouse: true
@@ -330,7 +330,7 @@ CardWindow {
                         text: "5m/18:30"
                         color: root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 10
+                        font.pixelSize: 10 * reminderPopup.fontScale
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -340,7 +340,7 @@ CardWindow {
             // Note / Message Input Box
             Rectangle {
                 width: parent.width - 88 - 8 - 60 - 8
-                height: 32
+                height: 32 * reminderPopup.rowScale
                 radius: root.cornerRadius
                 color: reminderPopup.kbdIndex === 6 ? root.rowHi : "transparent"
                 border.color: reminderPopup.kbdIndex === 6 ? root.seal : root.sep
@@ -349,13 +349,13 @@ CardWindow {
                 TextInput {
                     id: noteInput
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.margins: 6 * reminderPopup.panelScale
                     focus: reminderPopup.kbdIndex === 6
                     activeFocusOnTab: true
                     text: reminderPopup.noteText
                     color: root.ink
                     font.family: root.mono
-                    font.pixelSize: 11
+                    font.pixelSize: 11 * reminderPopup.fontScale
                     verticalAlignment: TextInput.AlignVCenter
                     selectByMouse: true
                     onTextChanged: reminderPopup.noteText = text
@@ -371,7 +371,7 @@ CardWindow {
                         text: "Note (optional)..."
                         color: root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * reminderPopup.fontScale
                         verticalAlignment: Text.AlignVCenter
                     }
                 }
@@ -379,8 +379,8 @@ CardWindow {
 
             // Set Button
             Rectangle {
-                width: 60
-                height: 32
+                width: 60 * reminderPopup.panelScale
+                height: 32 * reminderPopup.rowScale
                 radius: root.cornerRadius
                 color: reminderPopup.kbdIndex === 7 || setBtnMouse.containsMouse ? root.rowHi : root.rowSel
                 border.color: root.seal
@@ -391,7 +391,7 @@ CardWindow {
                     text: "SET"
                     color: root.seal
                     font.family: root.mono
-                    font.pixelSize: 11
+                    font.pixelSize: 11 * reminderPopup.fontScale
                     font.weight: Font.Bold
                 }
 
@@ -413,7 +413,7 @@ CardWindow {
         // Section: Active Reminders Header
         Item {
             width: parent.width
-            height: 20
+            height: 20 * reminderPopup.rowScale
 
             Text {
                 anchors.left: parent.left
@@ -421,8 +421,8 @@ CardWindow {
                 text: "ACTIVE REMINDERS (" + reminderPopup.activeReminders.length + ")"
                 color: root.inkDeep
                 font.family: root.mono
-                font.pixelSize: 10
-                font.letterSpacing: 2
+                font.pixelSize: 10 * reminderPopup.fontScale
+                font.letterSpacing: 2 * reminderPopup.fontScale
             }
 
             Text {
@@ -432,8 +432,8 @@ CardWindow {
                 text: "CLEAR ALL"
                 color: clearAllMouse.containsMouse ? root.seal : root.inkDeep
                 font.family: root.mono
-                font.pixelSize: 10
-                font.letterSpacing: 1
+                font.pixelSize: 10 * reminderPopup.fontScale
+                font.letterSpacing: 1 * reminderPopup.fontScale
 
                 MouseArea {
                     id: clearAllMouse
@@ -455,7 +455,7 @@ CardWindow {
                 readonly property bool focused: reminderPopup.kbdIndex === (8 + index)
 
                 width: col.width
-                height: 34
+                height: 34 * reminderPopup.rowScale
                 radius: root.cornerRadius
                 color: focused || rowMouse.containsMouse || delMouse.containsMouse ? root.rowHi : "transparent"
                 border.color: focused ? root.seal : root.sep
@@ -472,16 +472,16 @@ CardWindow {
                     anchors.left: parent.left
                     anchors.right: delBtn.left
                     anchors.verticalCenter: parent.verticalCenter
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 8
-                    spacing: 8
+                    anchors.leftMargin: 8 * reminderPopup.panelScale
+                    anchors.rightMargin: 8 * reminderPopup.panelScale
+                    spacing: 8 * reminderPopup.panelScale
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "󰔛"
                         color: root.seal
                         font.family: root.mono
-                        font.pixelSize: 12
+                        font.pixelSize: 12 * reminderPopup.fontScale
                     }
 
                     Text {
@@ -489,7 +489,7 @@ CardWindow {
                         text: modelData.label
                         color: root.ink
                         font.family: root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * reminderPopup.fontScale
                         elide: Text.ElideRight
                         width: parent.width - 20 - 70 - 16
                     }
@@ -499,7 +499,7 @@ CardWindow {
                         text: modelData.remaining
                         color: root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 10
+                        font.pixelSize: 10 * reminderPopup.fontScale
                         font.weight: Font.Medium
                     }
                 }
@@ -507,10 +507,10 @@ CardWindow {
                 Rectangle {
                     id: delBtn
                     anchors.right: parent.right
-                    anchors.rightMargin: 4
+                    anchors.rightMargin: 4 * reminderPopup.panelScale
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 24
-                    height: 24
+                    width: 24 * reminderPopup.panelScale
+                    height: 24 * reminderPopup.rowScale
                     radius: root.cornerRadius
                     color: delMouse.containsMouse ? root.rowHi : "transparent"
 
@@ -518,7 +518,7 @@ CardWindow {
                         anchors.centerIn: parent
                         text: "✕"
                         color: delMouse.containsMouse ? root.seal : root.inkDeep
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * reminderPopup.fontScale
                     }
 
                     MouseArea {
@@ -539,8 +539,8 @@ CardWindow {
             text: "NO PENDING REMINDERS"
             color: root.inkDeep
             font.family: root.mono
-            font.pixelSize: 10
-            font.letterSpacing: 2
+            font.pixelSize: 10 * reminderPopup.fontScale
+            font.letterSpacing: 2 * reminderPopup.fontScale
         }
     }
 }

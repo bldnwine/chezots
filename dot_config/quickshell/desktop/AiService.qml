@@ -28,9 +28,14 @@ Item {
     // (popup open, manual) still run; an in-flight scan may finish.
     property bool pollingEnabled: true
     property double _lastQuotaRefreshMs: 0
+    property bool _workerStarted: false
+    property bool _quotaRequested: false
+    onPollingEnabledChanged: {
+        if (!pollingEnabled && !refreshing) scanProcess.running = false;
+    }
     onAgentRunningChanged: _lastQuotaRefreshMs = 0
 
-    readonly property string scannerScript:
+    property string scannerScript:
         Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/antigravity_usage_scanner.py"
 
     readonly property string statusText: {
@@ -60,15 +65,17 @@ Item {
     }
 
     function refresh(force) {
-        if (scanProcess.running) return;
+        if (root.refreshing) return;
         root.refreshing = true;
-        scanProcess.command = ["python3", root.scannerScript];
-        if (force || Date.now() - root._lastQuotaRefreshMs >= 60000) {
-            root._lastQuotaRefreshMs = Date.now();
-        } else {
-            scanProcess.command = ["python3", root.scannerScript, "--skip-quota"];
-        }
-        scanProcess.running = true;
+        scanDeadline.restart();
+        root._quotaRequested = !!force || Date.now() - root._lastQuotaRefreshMs >= 60000;
+        if (root._workerStarted) root.sendScan();
+        else scanProcess.running = true;
+    }
+
+    function sendScan() {
+        scanProcess.write(JSON.stringify({quota: root._quotaRequested}) + "\n");
+        scanDeadline.restart();
     }
 
     function applyData(jsonText) {
@@ -108,12 +115,32 @@ Item {
     Process {
         id: scanProcess
         running: false
-        command: []
-        stdout: StdioCollector {
-            waitForEnd: true
-            onStreamFinished: root.applyData(text)
+        command: ["python3", root.scannerScript, "--serve"]
+        stdinEnabled: true
+        onStarted: {
+            root._workerStarted = true;
+            root.sendScan();
         }
-        onExited: root.refreshing = false
+        stdout: SplitParser {
+            onRead: function(line) {
+                scanDeadline.stop();
+                root.applyData(line);
+                if (root._quotaRequested) root._lastQuotaRefreshMs = Date.now();
+                root.refreshing = false;
+                if (!root.pollingEnabled) scanProcess.running = false;
+            }
+        }
+        onExited: {
+            scanDeadline.stop();
+            root._workerStarted = false;
+            root.refreshing = false;
+        }
+    }
+
+    Timer {
+        id: scanDeadline
+        interval: 15000
+        onTriggered: scanProcess.running = false
     }
 
     // Polling timer when active

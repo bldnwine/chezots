@@ -203,11 +203,11 @@ CardWindow {
 
     Item {
         width: parent.width
-        height: 440
+        height: 440 * popup.rowScale
 
         Row {
             anchors.fill: parent
-            spacing: 0
+            spacing: 0 * popup.panelScale
 
             Item {
                 width: parent.width / 2
@@ -217,10 +217,10 @@ CardWindow {
                 ListView {
                     id: resultList
                     anchors.fill: parent
-                    anchors.rightMargin: 8
+                    anchors.rightMargin: 8 * popup.panelScale
                     model: displayModel
                     clip: true
-                    spacing: 4
+                    spacing: 4 * popup.panelScale
                     boundsBehavior: Flickable.StopAtBounds
 
                     delegate: Rectangle {
@@ -234,18 +234,18 @@ CardWindow {
                         readonly property bool hasCursor: popup.cursorActive && index === popup.selectedIndex
 
                         width: ListView.view.width
-                        height: 48
+                        height: 48 * popup.rowScale
                         radius: root.cornerRadius
                         clip: true
                         color: hasCursor ? root.rowSel : "transparent"
 
                         Row {
                             anchors.fill: parent
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 12
-                            anchors.topMargin: 7
-                            anchors.bottomMargin: 7
-                            spacing: 10
+                            anchors.leftMargin: 12 * popup.panelScale
+                            anchors.rightMargin: 12 * popup.panelScale
+                            anchors.topMargin: 7 * popup.panelScale
+                            anchors.bottomMargin: 7 * popup.panelScale
+                            spacing: 10 * popup.panelScale
 
                             SizedImage {
                                 visible: parent.parent.previewImage.length > 0
@@ -262,7 +262,7 @@ CardWindow {
                                 textFormat: Text.PlainText
                                 color: parent.parent.hasCursor ? root.ink : root.fg
                                 font.family: root.mono
-                                font.pixelSize: 13
+                                font.pixelSize: 13 * popup.fontScale
                                 opacity: parent.parent.entryType === "image" || parent.parent.entryType === "file" ? 0.72 : 1.0
                                 elide: Text.ElideRight
                                 wrapMode: Text.NoWrap
@@ -296,20 +296,20 @@ CardWindow {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: 1
+                    width: 1 * popup.panelScale
                     color: Qt.rgba(root.sep.r, root.sep.g, root.sep.b, 0.6)
                 }
 
                 Text {
                     visible: parent.activeRow && !parent.activeRow.previewImage
                     anchors.fill: parent
-                    anchors.leftMargin: 14
-                    anchors.topMargin: 2
+                    anchors.leftMargin: 14 * popup.panelScale
+                    anchors.topMargin: 2 * popup.panelScale
                     text: parent.activeRow ? parent.activeRow.fullText : ""
                     textFormat: Text.PlainText
                     color: root.inkDeep
                     font.family: root.mono
-                    font.pixelSize: 12
+                    font.pixelSize: 12 * popup.fontScale
                     wrapMode: Text.WrapAnywhere
                     elide: Text.ElideRight
                     verticalAlignment: Text.AlignTop
@@ -318,8 +318,8 @@ CardWindow {
                 SizedImage {
                     visible: parent.activeRow && parent.activeRow.previewImage
                     anchors.fill: parent
-                    anchors.leftMargin: 14
-                    anchors.topMargin: 2
+                    anchors.leftMargin: 14 * popup.panelScale
+                    anchors.topMargin: 2 * popup.panelScale
                     url: parent.activeRow ? parent.activeRow.previewImage : ""
                     verticalAlignment: Image.AlignTop
                     asynchronous: true
@@ -329,14 +329,14 @@ CardWindow {
 
         Column {
             anchors.centerIn: parent
-            spacing: 8
+            spacing: 8 * popup.panelScale
             visible: displayModel.count === 0
 
             Text {
                 text: "󰅌"
                 color: root.rowSel
                 font.family: root.mono
-                font.pixelSize: 44
+                font.pixelSize: 44 * popup.fontScale
                 horizontalAlignment: Text.AlignHCenter
                 width: parent.width
             }
@@ -346,7 +346,7 @@ CardWindow {
                 color: root.inkDeep
                 opacity: 0.7
                 font.family: root.mono
-                font.pixelSize: 12
+                font.pixelSize: 12 * popup.fontScale
                 horizontalAlignment: Text.AlignHCenter
                 width: parent.width
             }

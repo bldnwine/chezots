@@ -5,6 +5,10 @@ import QtQuick
 Item {
     id: presetsMenu
     required property var root
+    property real panelScale: 1
+    property real panelTextScale: 1
+    readonly property real fontScale: panelScale * panelTextScale
+    readonly property real rowScale: panelScale * Math.max(1, panelTextScale)
 
     property string activePreset: "Flat"
     property var presetList: ["Flat"]
@@ -15,8 +19,8 @@ Item {
     signal saveRequested(string name)
     signal deleteRequested(string name)
 
-    implicitWidth: 360
-    implicitHeight: 28
+    implicitWidth: 360 * presetsMenu.panelScale
+    implicitHeight: 28 * presetsMenu.rowScale
 
     function cleanDisplayName(name) {
         if (!name) return "Flat";
@@ -26,12 +30,12 @@ Item {
 
     Row {
         anchors.fill: parent
-        spacing: 6
+        spacing: 6 * presetsMenu.panelScale
 
         // Dropdown Trigger Button
         Rectangle {
             id: triggerBtn
-            width: 140
+            width: 140 * presetsMenu.panelScale
             height: parent.height
             radius: presetsMenu.root.cornerRadius
             color: triggerMouse.containsMouse || presetsMenu.menuOpen ? presetsMenu.root.rowHi : "transparent"
@@ -43,15 +47,15 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.leftMargin: 8
-                anchors.rightMargin: 8
-                spacing: 6
+                anchors.leftMargin: 8 * presetsMenu.panelScale
+                anchors.rightMargin: 8 * presetsMenu.panelScale
+                spacing: 6 * presetsMenu.panelScale
 
                 Text {
                     text: "󰓃"
                     color: presetsMenu.root.seal
                     font.family: presetsMenu.root.mono
-                    font.pixelSize: 10
+                    font.pixelSize: 10 * presetsMenu.fontScale
                 }
 
                 Text {
@@ -62,16 +66,16 @@ Item {
                     clip: true
                     color: presetsMenu.root.ink
                     font.family: presetsMenu.root.mono
-                    font.pixelSize: 10
+                    font.pixelSize: 10 * presetsMenu.fontScale
                     font.weight: Font.Medium
-                    font.letterSpacing: 1
+                    font.letterSpacing: 1 * presetsMenu.fontScale
                 }
 
                 Text {
                     text: presetsMenu.menuOpen ? "󰅃" : "󰅀"
                     color: presetsMenu.root.inkDeep
                     font.family: presetsMenu.root.mono
-                    font.pixelSize: 10
+                    font.pixelSize: 10 * presetsMenu.fontScale
                 }
             }
 
@@ -97,11 +101,11 @@ Item {
             TextInput {
                 id: nameInput
                 anchors.fill: parent
-                anchors.margins: 6
+                anchors.margins: 6 * presetsMenu.panelScale
                 text: presetsMenu.newPresetName
                 color: presetsMenu.root.ink
                 font.family: presetsMenu.root.mono
-                font.pixelSize: 10
+                font.pixelSize: 10 * presetsMenu.fontScale
                 verticalAlignment: TextInput.AlignVCenter
                 selectByMouse: true
                 maximumLength: 32
@@ -127,7 +131,7 @@ Item {
                     text: "Preset name..."
                     color: presetsMenu.root.inkDeep
                     font.family: presetsMenu.root.mono
-                    font.pixelSize: 9
+                    font.pixelSize: 9 * presetsMenu.fontScale
                     verticalAlignment: Text.AlignVCenter
                     maximumLineCount: 1
                 }
@@ -136,7 +140,7 @@ Item {
 
         // Save Button
         Rectangle {
-            width: 50
+            width: 50 * presetsMenu.panelScale
             height: parent.height
             radius: presetsMenu.root.cornerRadius
             color: saveMouse.containsMouse ? presetsMenu.root.seal : presetsMenu.root.rowHi
@@ -148,8 +152,8 @@ Item {
                 text: "SAVE"
                 color: saveMouse.containsMouse ? presetsMenu.root.bg : presetsMenu.root.ink
                 font.family: presetsMenu.root.mono
-                font.pixelSize: 9
-                font.letterSpacing: 1
+                font.pixelSize: 9 * presetsMenu.fontScale
+                font.letterSpacing: 1 * presetsMenu.fontScale
                 font.weight: Font.Medium
             }
 
@@ -176,9 +180,9 @@ Item {
         visible: presetsMenu.menuOpen
         z: 100
         anchors.bottom: parent.top
-        anchors.bottomMargin: 4
+        anchors.bottomMargin: 4 * presetsMenu.panelScale
         anchors.left: parent.left
-        width: 190
+        width: 190 * presetsMenu.panelScale
         height: Math.min(180, menuCol.implicitHeight + 16)
         radius: presetsMenu.root.cornerRadius
         color: presetsMenu.root.bg
@@ -189,15 +193,15 @@ Item {
         Column {
             id: menuCol
             anchors.fill: parent
-            anchors.margins: 8
-            spacing: 6
+            anchors.margins: 8 * presetsMenu.panelScale
+            spacing: 6 * presetsMenu.panelScale
 
             Text {
                 text: "SAVED PRESETS"
                 color: presetsMenu.root.inkDeep
                 font.family: presetsMenu.root.mono
-                font.pixelSize: 9
-                font.letterSpacing: 1.5
+                font.pixelSize: 9 * presetsMenu.fontScale
+                font.letterSpacing: 1.5 * presetsMenu.fontScale
                 maximumLineCount: 1
             }
 
@@ -212,7 +216,7 @@ Item {
                 Column {
                     id: listCol
                     width: parent.width
-                    spacing: 2
+                    spacing: 2 * presetsMenu.panelScale
 
                     Repeater {
                         model: presetsMenu.presetList
@@ -222,7 +226,7 @@ Item {
 
                             readonly property bool isCurrent: presetsMenu.activePreset === modelData
                             width: parent.width
-                            height: 24
+                            height: 24 * presetsMenu.rowScale
                             radius: presetsMenu.root.cornerRadius
                             color: isCurrent
                                    ? presetsMenu.root.rowSel
@@ -233,15 +237,15 @@ Item {
                                 anchors.left: parent.left
                                 anchors.right: delBtn.left
                                 anchors.verticalCenter: parent.verticalCenter
-                                anchors.leftMargin: 6
-                                anchors.rightMargin: 4
-                                spacing: 6
+                                anchors.leftMargin: 6 * presetsMenu.panelScale
+                                anchors.rightMargin: 4 * presetsMenu.panelScale
+                                spacing: 6 * presetsMenu.panelScale
 
                                 Text {
                                     text: isCurrent ? "󰄬" : " "
                                     color: presetsMenu.root.seal
                                     font.family: presetsMenu.root.mono
-                                    font.pixelSize: 10
+                                    font.pixelSize: 10 * presetsMenu.fontScale
                                 }
 
                                 Text {
@@ -252,7 +256,7 @@ Item {
                                     width: parent.width - 20
                                     color: isCurrent ? presetsMenu.root.ink : presetsMenu.root.fg
                                     font.family: presetsMenu.root.mono
-                                    font.pixelSize: 10
+                                    font.pixelSize: 10 * presetsMenu.fontScale
                                     font.weight: isCurrent ? Font.Medium : Font.Normal
                                 }
                             }
@@ -262,17 +266,17 @@ Item {
                                 id: delBtn
                                 visible: modelData !== "Flat"
                                 anchors.right: parent.right
-                                anchors.rightMargin: 4
+                                anchors.rightMargin: 4 * presetsMenu.panelScale
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: 18
-                                height: 18
+                                width: 18 * presetsMenu.panelScale
+                                height: 18 * presetsMenu.rowScale
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: "󰆴"
                                     color: delMouse.containsMouse ? presetsMenu.root.seal : presetsMenu.root.inkDeep
                                     font.family: presetsMenu.root.mono
-                                    font.pixelSize: 10
+                                    font.pixelSize: 10 * presetsMenu.fontScale
                                 }
 
                                 MouseArea {

@@ -63,14 +63,14 @@ CardWindow {
 
     headerRight: Component {
         Row {
-            spacing: 8
+            spacing: 8 * aipopup.panelScale
             anchors.verticalCenter: parent ? parent.verticalCenter : undefined
 
             // Status indicator pill for currently selected session
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 radius: aipopup.root.cornerRadius
-                height: 20
+                height: 20 * aipopup.rowScale
                 width: stateLabel.implicitWidth + 12
 
                 readonly property string curState: (ai && ai.agentRunning && selectedSession) ? selectedSession.state : "idle"
@@ -108,17 +108,17 @@ CardWindow {
                         return aipopup.root.seal;
                     }
                     font.family: aipopup.root.mono
-                    font.pixelSize: 9
+                    font.pixelSize: 9 * aipopup.fontScale
                     font.weight: Font.Medium
-                    font.letterSpacing: 1
+                    font.letterSpacing: 1 * aipopup.fontScale
                 }
             }
 
             // Refresh button
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
-                width: 22
-                height: 20
+                width: 22 * aipopup.panelScale
+                height: 20 * aipopup.rowScale
                 radius: aipopup.root.cornerRadius
                 color: refreshMouse.containsMouse ? Qt.rgba(aipopup.root.ink.r, aipopup.root.ink.g, aipopup.root.ink.b, 0.1) : "transparent"
                 border.color: aipopup.root.sep
@@ -128,7 +128,7 @@ CardWindow {
                     text: "󰑐"
                     color: ai && ai.refreshing ? aipopup.root.accent : aipopup.root.ink
                     font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: 11
+                    font.pixelSize: 11 * aipopup.fontScale
                 }
 
                 MouseArea {
@@ -180,7 +180,7 @@ CardWindow {
     Column {
         id: contentCol
         width: parent.width
-        spacing: 12
+        spacing: 12 * aipopup.panelScale
 
         // Inactive notice if no agent is running
         Rectangle {
@@ -194,13 +194,13 @@ CardWindow {
             Column {
                 id: inactCol
                 anchors.centerIn: parent
-                spacing: 3
+                spacing: 3 * aipopup.panelScale
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "No active Antigravity session"
                     color: aipopup.root.ink
                     font.family: aipopup.root.mono
-                    font.pixelSize: 11
+                    font.pixelSize: 11 * aipopup.fontScale
                     font.weight: Font.Medium
                 }
                 Text {
@@ -208,7 +208,7 @@ CardWindow {
                     text: "Start agy in a terminal to track status & quotas"
                     color: aipopup.root.inkDeep
                     font.family: aipopup.root.mono
-                    font.pixelSize: 9
+                    font.pixelSize: 9 * aipopup.fontScale
                 }
             }
         }
@@ -217,7 +217,7 @@ CardWindow {
         Row {
             visible: currentSessions.length > 1
             width: parent.width
-            spacing: 6
+            spacing: 6 * aipopup.panelScale
 
             Repeater {
                 model: currentSessions
@@ -227,7 +227,7 @@ CardWindow {
 
                     readonly property bool isSelected: aipopup.selectedSessionIndex === index
                     width: Math.min(140, (parent.width - (currentSessions.length - 1) * 6) / currentSessions.length)
-                    height: 24
+                    height: 24 * aipopup.rowScale
                     radius: aipopup.root.cornerRadius
                     color: isSelected
                         ? Qt.rgba(aipopup.root.accent.r, aipopup.root.accent.g, aipopup.root.accent.b, 0.18)
@@ -236,14 +236,14 @@ CardWindow {
 
                     Row {
                         anchors.centerIn: parent
-                        spacing: 5
+                        spacing: 5 * aipopup.panelScale
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: modelData.state === "action_needed" ? "!" : (modelData.state === "finished" ? "✓" : "●")
                             color: modelData.state === "action_needed" ? aipopup.root.warn : (modelData.state === "working" ? aipopup.root.accent : aipopup.root.seal)
                             font.family: aipopup.root.mono
-                            font.pixelSize: 8
+                            font.pixelSize: 8 * aipopup.fontScale
                             font.bold: true
                         }
 
@@ -252,7 +252,7 @@ CardWindow {
                             text: modelData.workspaceName || ("Session " + (index + 1))
                             color: isSelected ? aipopup.root.ink : aipopup.root.inkDeep
                             font.family: aipopup.root.mono
-                            font.pixelSize: 10
+                            font.pixelSize: 10 * aipopup.fontScale
                             font.weight: isSelected ? Font.Medium : Font.Normal
                             elide: Text.ElideRight
                             width: Math.min(implicitWidth, 90)
@@ -284,30 +284,30 @@ CardWindow {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                anchors.margins: 7
-                spacing: 3
+                anchors.margins: 7 * aipopup.panelScale
+                spacing: 3 * aipopup.panelScale
 
                 Row {
                     width: parent.width
-                    spacing: 6
+                    spacing: 6 * aipopup.panelScale
                     Text {
                         text: "WORKSPACE"
                         color: aipopup.root.inkDeep
                         font.family: aipopup.root.mono
-                        font.pixelSize: 9
-                        font.letterSpacing: 2
+                        font.pixelSize: 9 * aipopup.fontScale
+                        font.letterSpacing: 2 * aipopup.fontScale
                         font.weight: Font.Medium
                     }
                     Text {
                         text: "·"
                         color: aipopup.root.inkDeep
-                        font.pixelSize: 9
+                        font.pixelSize: 9 * aipopup.fontScale
                     }
                     Text {
                         text: selectedSession ? selectedSession.workspaceName : ""
                         color: aipopup.root.accent
                         font.family: aipopup.root.mono
-                        font.pixelSize: 10
+                        font.pixelSize: 10 * aipopup.fontScale
                         font.weight: Font.Medium
                         elide: Text.ElideRight
                     }
@@ -319,7 +319,7 @@ CardWindow {
                     text: selectedSession ? selectedSession.title : ""
                     color: aipopup.root.ink
                     font.family: aipopup.root.mono
-                    font.pixelSize: 10
+                    font.pixelSize: 10 * aipopup.fontScale
                     elide: Text.ElideRight
                     maximumLineCount: 2
                     wrapMode: Text.Wrap
@@ -333,19 +333,19 @@ CardWindow {
             delegate: Column {
                 required property var modelData
                 width: parent.width
-                spacing: 6
+                spacing: 6 * aipopup.panelScale
 
                 // Group Header
                 Column {
                     width: parent.width
-                    spacing: 1
+                    spacing: 1 * aipopup.panelScale
 
                     Text {
                         text: modelData.groupName.toUpperCase()
                         color: aipopup.root.ink
                         font.family: aipopup.root.mono
-                        font.pixelSize: 10
-                        font.letterSpacing: 2
+                        font.pixelSize: 10 * aipopup.fontScale
+                        font.letterSpacing: 2 * aipopup.fontScale
                         font.weight: Font.Medium
                     }
                     Text {
@@ -353,7 +353,7 @@ CardWindow {
                         text: modelData.description
                         color: aipopup.root.inkDeep
                         font.family: aipopup.root.mono
-                        font.pixelSize: 9
+                        font.pixelSize: 9 * aipopup.fontScale
                         elide: Text.ElideRight
                     }
                 }
@@ -374,8 +374,8 @@ CardWindow {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: parent.top
-                            anchors.margins: 6
-                            spacing: 4
+                            anchors.margins: 6 * aipopup.panelScale
+                            spacing: 4 * aipopup.panelScale
 
                             // Title & Remaining Percentage
                             Item {
@@ -386,12 +386,12 @@ CardWindow {
                                     id: bucketTitle
                                     anchors.left: parent.left
                                     anchors.right: bucketPct.left
-                                    anchors.rightMargin: 6
+                                    anchors.rightMargin: 6 * aipopup.panelScale
                                     elide: Text.ElideRight
                                     text: modelData.displayName
                                     color: aipopup.root.ink
                                     font.family: aipopup.root.mono
-                                    font.pixelSize: 11
+                                    font.pixelSize: 11 * aipopup.fontScale
                                     font.weight: Font.Medium
                                 }
                                 Text {
@@ -400,7 +400,7 @@ CardWindow {
                                     text: modelData.remainingPercent.toFixed(2) + "%"
                                     color: modelData.remainingPercent < 20 ? aipopup.root.warn : aipopup.root.ink
                                     font.family: aipopup.root.mono
-                                    font.pixelSize: 10
+                                    font.pixelSize: 10 * aipopup.fontScale
                                     font.weight: Font.Medium
                                 }
                             }
@@ -408,8 +408,8 @@ CardWindow {
                             // Quota Bar (shows remaining green portion like in CLI)
                             Rectangle {
                                 width: parent.width
-                                height: 6
-                                radius: 3
+                                height: 6 * aipopup.rowScale
+                                radius: 3 * aipopup.panelScale
                                 color: Qt.rgba(aipopup.root.ink.r, aipopup.root.ink.g, aipopup.root.ink.b, 0.12)
                                 clip: true
 
@@ -420,7 +420,7 @@ CardWindow {
                                     anchors.top: parent.top
                                     anchors.bottom: parent.bottom
                                     width: parent.width * parent.frac
-                                    radius: 3
+                                    radius: 3 * aipopup.panelScale
                                     color: parent.frac < 0.20 ? aipopup.root.warn : "#87a987"
                                     Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
                                 }
@@ -443,7 +443,7 @@ CardWindow {
                                     }
                                     color: aipopup.root.inkDeep
                                     font.family: aipopup.root.mono
-                                    font.pixelSize: 9
+                                    font.pixelSize: 9 * aipopup.fontScale
                                 }
                             }
                         }

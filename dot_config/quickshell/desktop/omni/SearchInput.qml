@@ -9,7 +9,8 @@ Item {
 
     visible: !omni.quickMode
     width: parent ? parent.width : 0
-    height: visible ? 34 : 0
+    clip: true
+    height: visible ? Math.max(34 * omni.layoutScale, queryText.implicitHeight + 12 * omni.layoutScale) : 0
 
     Text {
         id: searchPrompt
@@ -28,7 +29,7 @@ Item {
     Text {
         id: queryText
         anchors.left: searchPrompt.right
-        anchors.leftMargin: 10
+        anchors.leftMargin: 10 * input.omni.layoutScale
         anchors.verticalCenter: parent.verticalCenter
         text: {
             const o = input.omni;
@@ -50,7 +51,7 @@ Item {
     Rectangle {
         id: caret
         width: 2
-        height: 16
+        height: 16 * input.omni.fontScale
         color: input.omni.seal
         anchors.verticalCenter: parent.verticalCenter
         x: input.omni.query.length === 0

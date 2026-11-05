@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
@@ -6,6 +7,11 @@ import Quickshell.Io
 PanelWindow {
     id: wallpaperWindow
     required property var root
+
+    readonly property real panelScale: root.panelScale !== undefined ? root.panelScale : 1
+    readonly property real fontScale: panelScale * (root.panelTextScale !== undefined ? root.panelTextScale : 1)
+    readonly property real rowScale: panelScale * Math.max(1, root.panelTextScale !== undefined ? root.panelTextScale : 1)
+    readonly property color panelBackground: wallpaperEffects.fill
 
     visible: root.wallpapersVisible || reveal > 0.001
     color: "transparent"
@@ -16,6 +22,18 @@ PanelWindow {
     // Track application focus across workspaces without leaking panel keys.
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     PopupFocusGrab { window: wallpaperWindow }
+    BackgroundEffect.blurRegion: wallpaperEffects.blurRegion
+
+    SurfaceEffects {
+        id: wallpaperEffects
+        targetSurface: wallpaperWindow.editorActive ? wallpaperEditor.effectSurface : surface
+        background: wallpaperWindow.root.bg
+        opacityOverride: wallpaperWindow.root.panelOpacity !== undefined ? wallpaperWindow.root.panelOpacity : null
+        blurEnabled: wallpaperWindow.root.panelBlur !== undefined ? wallpaperWindow.root.panelBlur : false
+        shown: wallpaperWindow.visible
+        cornerRadius: wallpaperWindow.root.cornerRadius
+        translation: Qt.point(0, wallpaperWindow.editorActive ? 0 : shelfRevealTranslate.y)
+    }
 
     property real reveal: root.wallpapersVisible ? 1 : 0
     Behavior on reveal {
@@ -23,7 +41,9 @@ PanelWindow {
     }
 
     // State
-    property var allWallpapers: []
+    readonly property var wallpaperService: root.wallpaperService !== undefined ? root.wallpaperService : null
+    readonly property var allWallpapers: wallpaperService ? wallpaperService.wallpapers : []
+    property var sortedWallpapers: []
     property var filteredWallpapers: []
     property int selectedIndex: 0
     property string currentWallpaperPath: ""
@@ -176,8 +196,7 @@ PanelWindow {
     function refresh() {
         currentBgProc.running = false;
         currentBgProc.running = true;
-        scanProc.running = false;
-        scanProc.running = true;
+        if (wallpaperService) wallpaperService.requestRefresh(true);
     }
 
     function applyWallpaper(entry) {
@@ -204,16 +223,16 @@ PanelWindow {
 
     function rebuildList() {
         const q = query.trim().toLowerCase();
+        let list = sortedWallpapers;
+        if (favOnlyMode) list = list.filter(item => !!favoritesMap[item.path]);
+        if (q.length > 0) list = list.filter(item => item.name.toLowerCase().includes(q));
+        filteredWallpapers = list;
+        if (selectedIndex >= list.length) selectedIndex = Math.max(0, list.length - 1);
+        if (list.length > 0 && selectedIndex < 0) selectedIndex = 0;
+    }
+
+    function rebuildSortedList() {
         let list = allWallpapers.slice();
-
-        if (favOnlyMode) {
-            list = list.filter(item => !!favoritesMap[item.path]);
-        }
-
-        if (q.length > 0) {
-            list = list.filter(item => item.name.toLowerCase().includes(q));
-        }
-
         const natCompare = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
         switch (sortMode) {
@@ -252,13 +271,8 @@ PanelWindow {
                 break;
         }
 
-        filteredWallpapers = list;
-        if (selectedIndex >= list.length) {
-            selectedIndex = Math.max(0, list.length - 1);
-        }
-        if (list.length > 0 && selectedIndex < 0) {
-            selectedIndex = 0;
-        }
+        sortedWallpapers = list;
+        rebuildList();
     }
 
     function setSort(mode) {
@@ -267,7 +281,7 @@ PanelWindow {
         appliedToast = sortToast(mode);
         toastTimer.restart();
         selectedIndex = 0;
-        rebuildList();
+        rebuildSortedList();
         Qt.callLater(() => {
             if (carousel && filteredWallpapers.length > 0) {
                 carousel.positionViewAtIndex(0, ListView.Beginning);
@@ -285,20 +299,11 @@ PanelWindow {
     }
 
     // Probes
-    Process {
-        id: scanProc
-        command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/desktop/scripts/wallpaper-scan.py"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const data = JSON.parse(this.text || "[]");
-                    wallpaperWindow.allWallpapers = data;
-                    wallpaperWindow.rebuildList();
-                    wallpaperWindow.focusCurrentWallpaper();
-                } catch(e) {
-                    console.warn("wallpaper scan parse error:", e);
-                }
-            }
+    Connections {
+        target: wallpaperWindow.wallpaperService
+        function onWallpapersChanged() {
+            wallpaperWindow.rebuildSortedList();
+            wallpaperWindow.focusCurrentWallpaper();
         }
     }
 
@@ -358,13 +363,9 @@ PanelWindow {
             if (root.wallpapersVisible) {
                 wallpaperWindow.currentBgProc.running = false;
                 wallpaperWindow.currentBgProc.running = true;
-                if (wallpaperWindow.allWallpapers.length === 0) {
-                    wallpaperWindow.scanProc.running = false;
-                    wallpaperWindow.scanProc.running = true;
-                } else {
-                    wallpaperWindow.rebuildList();
-                    wallpaperWindow.focusCurrentWallpaper();
-                }
+                if (wallpaperWindow.wallpaperService) wallpaperWindow.wallpaperService.enter();
+                wallpaperWindow.rebuildList();
+                wallpaperWindow.focusCurrentWallpaper();
                 wallpaperWindow.searchActive = false;
                 wallpaperWindow.query = "";
                 wallpaperWindow.pendingSortPrefix = false;
@@ -384,7 +385,11 @@ PanelWindow {
             sortMode = root.pendingWallpaperSort;
             root.pendingWallpaperSort = "";
         }
-        refresh();
+        rebuildSortedList();
+        if (root.wallpapersVisible) {
+            currentBgProc.running = true;
+            if (wallpaperService) wallpaperService.enter();
+        }
         Qt.callLater(() => surface.forceActiveFocus());
     }
 
@@ -408,19 +413,20 @@ PanelWindow {
         id: surface
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: root.barEdge === "bottom" ? (root.barOffset + 14) : 18
-        width: Math.min(parent.width - 40, 1380)
-        height: wallpaperWindow.searchActive ? 304 : 260
+        anchors.bottomMargin: Math.min(Math.max(0, parent.height - height), root.barEdge === "bottom" ? (root.barOffset + 14) : 18)
+        width: Math.max(1, Math.min(parent.width - 40, 1380 * wallpaperWindow.panelScale))
+        height: Math.max(1, Math.min(parent.height - 36, (wallpaperWindow.searchActive ? 304 : 260) * wallpaperWindow.rowScale))
         Behavior on height {
             NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
         }
-        color: root.bg
+        color: wallpaperWindow.panelBackground
         border.color: root.sep
         border.width: 1
         radius: root.cornerRadius
         clip: true
 
         transform: Translate {
+            id: shelfRevealTranslate
             y: (1 - wallpaperWindow.reveal) * 50
         }
         opacity: wallpaperWindow.reveal
@@ -626,15 +632,26 @@ PanelWindow {
             }
         }
 
-        Column {
+        Flickable {
             anchors.fill: parent
-            spacing: 0
+            contentWidth: width
+            contentHeight: shelfColumn.implicitHeight
+            flickableDirection: Flickable.VerticalFlick
+            boundsBehavior: Flickable.StopAtBounds
+            clip: true
+            interactive: contentHeight > height
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+            Column {
+            id: shelfColumn
+            width: parent.width
+            spacing: 0 * wallpaperWindow.panelScale
 
             // Search Row (only appears when search mode is invoked via /)
             Item {
                 id: searchRow
                 width: parent.width
-                height: wallpaperWindow.searchActive ? 42 : 0
+                height: wallpaperWindow.searchActive ? 42 * wallpaperWindow.rowScale : 0
                 visible: height > 0
                 clip: true
 
@@ -645,10 +662,10 @@ PanelWindow {
                 Rectangle {
                     id: searchPill
                     anchors.left: parent.left
-                    anchors.leftMargin: 16
+                    anchors.leftMargin: 16 * wallpaperWindow.panelScale
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 320
-                    height: 32
+                    width: Math.max(1, Math.min(320 * wallpaperWindow.fontScale, parent.width - 32 * wallpaperWindow.panelScale))
+                    height: 32 * wallpaperWindow.rowScale
                     radius: root.cornerRadius > 0 ? 16 : 0
                     color: Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.08)
                     border.color: root.seal
@@ -656,16 +673,16 @@ PanelWindow {
 
                     Row {
                         anchors.fill: parent
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
-                        spacing: 8
+                        anchors.leftMargin: 10 * wallpaperWindow.panelScale
+                        anchors.rightMargin: 10 * wallpaperWindow.panelScale
+                        spacing: 8 * wallpaperWindow.panelScale
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "󰍉"
                             color: root.seal
                             font.family: root.mono
-                            font.pixelSize: 14
+                            font.pixelSize: 14 * wallpaperWindow.fontScale
                         }
 
                         Text {
@@ -676,14 +693,14 @@ PanelWindow {
                             color: wallpaperWindow.query.length > 0 ? root.ink : root.inkDeep
                             opacity: wallpaperWindow.query.length > 0 ? 1.0 : 0.5
                             font.family: root.mono
-                            font.pixelSize: 12
+                            font.pixelSize: 12 * wallpaperWindow.fontScale
                             elide: Text.ElideRight
                         }
 
                         // Blinking Caret
                         Rectangle {
-                            width: 2
-                            height: 14
+                            width: 2 * wallpaperWindow.panelScale
+                            height: 14 * wallpaperWindow.rowScale
                             color: root.seal
                             anchors.verticalCenter: parent.verticalCenter
                             visible: wallpaperWindow.searchActive
@@ -702,7 +719,7 @@ PanelWindow {
                             text: "✕"
                             color: root.inkDeep
                             font.family: root.mono
-                            font.pixelSize: 11
+                            font.pixelSize: 11 * wallpaperWindow.fontScale
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
@@ -718,21 +735,22 @@ PanelWindow {
                 // Filter count on right of search row
                 Text {
                     anchors.right: parent.right
-                    anchors.rightMargin: 16
+                    anchors.rightMargin: 16 * wallpaperWindow.panelScale
                     anchors.verticalCenter: parent.verticalCenter
+                    visible: parent.width >= 600 * wallpaperWindow.fontScale
                     text: wallpaperWindow.favOnlyMode
                           ? (wallpaperWindow.filteredWallpapers.length + " / " + wallpaperWindow.favoritesList.length + " FAVORITES")
                           : (wallpaperWindow.filteredWallpapers.length + " / " + wallpaperWindow.allWallpapers.length + " WALLPAPERS")
                     color: wallpaperWindow.favOnlyMode ? root.seal : root.inkDeep
                     font.family: root.mono
-                    font.pixelSize: 11
-                    font.letterSpacing: 2
+                    font.pixelSize: 11 * wallpaperWindow.fontScale
+                    font.letterSpacing: 2 * wallpaperWindow.fontScale
                 }
             }
 
             Rectangle {
                 width: parent.width
-                height: 1
+                height: 1 * wallpaperWindow.rowScale
                 color: root.sep
                 visible: searchRow.visible
             }
@@ -740,28 +758,31 @@ PanelWindow {
             // Main Carousel Area
             Item {
                 width: parent.width
-                height: 232
+                height: 232 * wallpaperWindow.rowScale
 
                 Text {
                     anchors.centerIn: parent
                     visible: wallpaperWindow.filteredWallpapers.length === 0
                     text: wallpaperWindow.allWallpapers.length === 0
-                          ? "Scanning wallpapers..."
+                          ? (wallpaperWindow.wallpaperService && wallpaperWindow.wallpaperService.error
+                             ? wallpaperWindow.wallpaperService.error
+                             : (wallpaperWindow.wallpaperService && wallpaperWindow.wallpaperService.hasIndex
+                                ? "No wallpapers found" : "Scanning wallpapers..."))
                           : (wallpaperWindow.favOnlyMode
                              ? "No favorite wallpapers yet (Ctrl+S to star)"
                              : "No matching wallpapers")
                     color: root.inkDeep
                     font.family: root.mono
-                    font.pixelSize: 12
-                    font.letterSpacing: 2
+                    font.pixelSize: 12 * wallpaperWindow.fontScale
+                    font.letterSpacing: 2 * wallpaperWindow.fontScale
                 }
 
                 ListView {
                     id: carousel
                     anchors.fill: parent
-                    anchors.margins: 10
+                    anchors.margins: 10 * wallpaperWindow.panelScale
                     orientation: ListView.Horizontal
-                    spacing: 12
+                    spacing: 12 * wallpaperWindow.panelScale
                     boundsBehavior: Flickable.StopAtBounds
                     clip: true
                     model: wallpaperWindow.filteredWallpapers
@@ -780,7 +801,7 @@ PanelWindow {
                         readonly property bool isActive: modelData && modelData.path === wallpaperWindow.currentWallpaperPath
 
                         // Compute responsive width: ~4.2 cards visible across the carousel
-                        width: Math.max(260, Math.min(340, (carousel.width - 4 * 12) / 4.2))
+                        width: Math.max(260 * wallpaperWindow.panelScale, Math.min(340 * wallpaperWindow.panelScale, (carousel.width - 4 * 12 * wallpaperWindow.panelScale) / 4.2))
                         height: carousel.height
 
                         Rectangle {
@@ -815,9 +836,9 @@ PanelWindow {
                                 id: favBadge
                                 anchors.top: parent.top
                                 anchors.left: parent.left
-                                anchors.margins: 6
-                                height: 20
-                                width: 22
+                                anchors.margins: 6 * wallpaperWindow.panelScale
+                                height: 20 * wallpaperWindow.rowScale
+                                width: 22 * wallpaperWindow.panelScale
                                 radius: root.cornerRadius > 0 ? 10 : 0
                                 color: isFavorited ? root.seal : Qt.rgba(root.paper.r, root.paper.g, root.paper.b, 0.75)
                                 border.color: isFavorited ? root.seal : root.sep
@@ -831,7 +852,7 @@ PanelWindow {
                                     text: "󰓎"
                                     color: favBadge.isFavorited ? root.paper : root.inkDeep
                                     font.family: root.mono
-                                    font.pixelSize: 11
+                                    font.pixelSize: 11 * wallpaperWindow.fontScale
                                     font.weight: Font.Bold
                                 }
 
@@ -850,8 +871,8 @@ PanelWindow {
                                 visible: cardItem.isActive
                                 anchors.top: parent.top
                                 anchors.right: parent.right
-                                anchors.margins: 6
-                                height: 20
+                                anchors.margins: 6 * wallpaperWindow.panelScale
+                                height: 20 * wallpaperWindow.rowScale
                                 width: activeBadgeRow.width + 12
                                 radius: root.cornerRadius > 0 ? 10 : 0
                                 color: root.seal
@@ -859,20 +880,20 @@ PanelWindow {
                                 Row {
                                     id: activeBadgeRow
                                     anchors.centerIn: parent
-                                    spacing: 4
+                                    spacing: 4 * wallpaperWindow.panelScale
                                     Text {
                                         text: "󰄬"
                                         color: root.paper
                                         font.family: root.mono
-                                        font.pixelSize: 11
+                                        font.pixelSize: 11 * wallpaperWindow.fontScale
                                         font.weight: Font.Bold
                                     }
                                     Text {
                                         text: "ACTIVE"
                                         color: root.paper
                                         font.family: root.mono
-                                        font.pixelSize: 9
-                                        font.letterSpacing: 1
+                                        font.pixelSize: 9 * wallpaperWindow.fontScale
+                                        font.letterSpacing: 1 * wallpaperWindow.fontScale
                                         font.weight: Font.Bold
                                     }
                                 }
@@ -883,43 +904,43 @@ PanelWindow {
                                 anchors.bottom: parent.bottom
                                 anchors.left: parent.left
                                 anchors.right: parent.right
-                                height: 38
+                                height: 38 * wallpaperWindow.rowScale
                                 color: Qt.rgba(root.paper.r, root.paper.g, root.paper.b, 0.88)
                                 border.color: root.sep
                                 border.width: 1
 
                                 Column {
                                     anchors.fill: parent
-                                    anchors.leftMargin: 8
-                                    anchors.rightMargin: 8
+                                    anchors.leftMargin: 8 * wallpaperWindow.panelScale
+                                    anchors.rightMargin: 8 * wallpaperWindow.panelScale
                                     anchors.verticalCenter: parent.verticalCenter
-                                    spacing: 1
+                                    spacing: 1 * wallpaperWindow.panelScale
 
                                     Text {
                                         width: parent.width
                                         text: modelData.name
                                         color: cardItem.isSelected ? root.seal : root.ink
                                         font.family: root.mono
-                                        font.pixelSize: 11
+                                        font.pixelSize: 11 * wallpaperWindow.fontScale
                                         font.weight: Font.Medium
                                         elide: Text.ElideRight
                                         maximumLineCount: 1
                                     }
 
                                     Row {
-                                        spacing: 8
+                                        spacing: 8 * wallpaperWindow.panelScale
                                         Text {
                                             text: wallpaperWindow.formatSize(modelData.size)
                                             color: root.inkDeep
                                             font.family: root.mono
-                                            font.pixelSize: 9
+                                            font.pixelSize: 9 * wallpaperWindow.fontScale
                                         }
                                         Text {
                                             visible: !!wallpaperWindow.favoritesMap[modelData.path]
                                             text: "󰓎 FAV"
                                             color: root.seal
                                             font.family: root.mono
-                                            font.pixelSize: 9
+                                            font.pixelSize: 9 * wallpaperWindow.fontScale
                                             font.weight: Font.Bold
                                         }
                                     }
@@ -955,21 +976,21 @@ PanelWindow {
 
             Rectangle {
                 width: parent.width
-                height: 1
+                height: 1 * wallpaperWindow.rowScale
                 color: root.sep
             }
 
             // Footer Tooltip / Shortcut Hints Row
             Item {
                 width: parent.width
-                height: 28
+                height: 28 * wallpaperWindow.rowScale
 
                 // Leftmost corner: sorting indicator and favorites category toggle
                 Row {
                     anchors.left: parent.left
-                    anchors.leftMargin: 16
+                    anchors.leftMargin: 16 * wallpaperWindow.panelScale
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
+                    spacing: 8 * wallpaperWindow.panelScale
 
                     // Sort indicator letter
                     Item {
@@ -982,7 +1003,7 @@ PanelWindow {
                             text: wallpaperWindow.pendingSortPrefix ? "," : wallpaperWindow.sortMode
                             color: root.seal
                             font.family: root.mono
-                            font.pixelSize: 12
+                            font.pixelSize: 12 * wallpaperWindow.fontScale
                             font.weight: Font.Bold
                         }
 
@@ -1010,7 +1031,7 @@ PanelWindow {
                             color: wallpaperWindow.favOnlyMode ? root.seal : root.inkDeep
                             opacity: wallpaperWindow.favOnlyMode ? 1.0 : 0.35
                             font.family: root.mono
-                            font.pixelSize: 12
+                            font.pixelSize: 12 * wallpaperWindow.fontScale
                         }
 
                         MouseArea {
@@ -1034,8 +1055,8 @@ PanelWindow {
                              : "h/l: Navigate  ·  R-Click/e: Crop & Rotate  ·  M/m: Mod  ·  ^S: Star  ·  ^F: " + (wallpaperWindow.favOnlyMode ? "All" : "Favs") + "  ·  /: Search  ·  ↵: Apply")
                     color: wallpaperWindow.appliedToast.length > 0 || wallpaperWindow.pendingSortPrefix ? root.seal : root.inkDeep
                     font.family: root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 1
+                    font.pixelSize: 10 * wallpaperWindow.fontScale
+                    font.letterSpacing: 1 * wallpaperWindow.fontScale
                     opacity: wallpaperWindow.appliedToast.length > 0 || wallpaperWindow.pendingSortPrefix ? 1.0 : 0.75
                     Behavior on color { ColorAnimation { duration: 140 } }
                 }
@@ -1043,7 +1064,7 @@ PanelWindow {
                 // Rightmost corner: wallpaper count (clickable to toggle favorites category)
                 Text {
                     anchors.right: parent.right
-                    anchors.rightMargin: 16
+                    anchors.rightMargin: 16 * wallpaperWindow.panelScale
                     anchors.verticalCenter: parent.verticalCenter
                     text: wallpaperWindow.favOnlyMode
                           ? ("󰓎 " + wallpaperWindow.filteredWallpapers.length + " FAVORITES")
@@ -1052,8 +1073,8 @@ PanelWindow {
                              : (wallpaperWindow.filteredWallpapers.length + " WALLPAPERS"))
                     color: wallpaperWindow.favOnlyMode ? root.seal : root.inkDeep
                     font.family: root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 1
+                    font.pixelSize: 10 * wallpaperWindow.fontScale
+                    font.letterSpacing: 1 * wallpaperWindow.fontScale
                     opacity: wallpaperWindow.favOnlyMode ? 1.0 : 0.6
 
                     MouseArea {
@@ -1065,6 +1086,7 @@ PanelWindow {
                         }
                     }
                 }
+            }
             }
         }
     }

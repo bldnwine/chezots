@@ -32,7 +32,7 @@ Item {
             required property var modelData
             required property int index
             width: ListView.view.width
-            height: 38
+            height: 38 * rl.omni.rowScale
             readonly property bool isSelected: rl.omni.selectedIndex === index
 
             Rectangle {
@@ -57,10 +57,10 @@ Item {
             Item {
                 id: iconText
                 anchors.left: parent.left
-                anchors.leftMargin: 14
+                anchors.leftMargin: 14 * rl.omni.layoutScale
                 anchors.verticalCenter: parent.verticalCenter
-                width: 22
-                height: 22
+                width: 22 * rl.omni.layoutScale
+                height: 22 * rl.omni.layoutScale
 
                 readonly property string iconUrl: rl.omni.resolveIconUrl(row.modelData.rawIcon)
                 readonly property bool hasImageIcon: appImg.status === Image.Ready && iconUrl !== ""
@@ -78,8 +78,8 @@ Item {
                 Image {
                     id: appImg
                     anchors.centerIn: parent
-                    width: 18
-                    height: 18
+                    width: 18 * rl.omni.layoutScale
+                    height: 18 * rl.omni.layoutScale
                     visible: iconText.hasImageIcon
                     source: iconText.iconUrl
                     sourceSize.width: 36
@@ -96,7 +96,7 @@ Item {
             Text {
                 id: titleText
                 anchors.left: iconText.right
-                anchors.leftMargin: 12
+                anchors.leftMargin: 12 * rl.omni.layoutScale
                 anchors.verticalCenter: parent.verticalCenter
                 // Trailing chevron flags drill-in rows so you can tell
                 // at a glance which Enters drill in vs. which Enters
@@ -110,7 +110,7 @@ Item {
                 font.weight: row.isSelected ? Font.Medium : Font.Light
                 font.letterSpacing: 1
                 elide: Text.ElideRight
-                width: row.width - iconText.width - catText.implicitWidth - 60
+                width: Math.max(0, row.width - iconText.width - catText.width - 60 * rl.omni.layoutScale)
             }
             Text {
                 id: starText
@@ -126,7 +126,7 @@ Item {
             Text {
                 id: catText
                 anchors.right: parent.right
-                anchors.rightMargin: 14
+                anchors.rightMargin: 14 * rl.omni.layoutScale
                 anchors.verticalCenter: parent.verticalCenter
                 // File rows show the dirname here, which shouldn't be
                 // uppercased or letter-spaced. Cap the width so a deep
@@ -143,7 +143,7 @@ Item {
                 horizontalAlignment: Text.AlignRight
                 width: row.modelData.rawCategory
                        ? Math.min(implicitWidth, row.width * 0.45)
-                       : implicitWidth
+                       : Math.min(implicitWidth, row.width * 0.35)
             }
 
             MouseArea {

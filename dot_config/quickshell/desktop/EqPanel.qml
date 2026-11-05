@@ -7,6 +7,10 @@ import Quickshell.Io
 Item {
     id: eqPanel
     required property var root
+    property real panelScale: 1
+    property real panelTextScale: 1
+    readonly property real fontScale: panelScale * panelTextScale
+    readonly property real rowScale: panelScale * Math.max(1, panelTextScale)
 
     property bool eqEnabled: true
     property real preamp: 0.0
@@ -21,7 +25,7 @@ Item {
     property string importText: ""
     property string statusMsg: ""
 
-    implicitWidth: 360
+    implicitWidth: 360 * eqPanel.panelScale
     implicitHeight: mainCol.implicitHeight
 
     readonly property int maxBands: 32
@@ -312,25 +316,25 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        spacing: 8
+        spacing: 8 * eqPanel.panelScale
 
         // Top Header: Title + ON/BYPASS Switch + Dynamic Band Controls
         Item {
             width: parent.width
-            height: 24
+            height: 24 * eqPanel.rowScale
 
             Row {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 8
+                spacing: 8 * eqPanel.panelScale
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "EQUALIZER"
                     color: eqPanel.root.ink
                     font.family: eqPanel.root.mono
-                    font.pixelSize: 11
-                    font.letterSpacing: 2
+                    font.pixelSize: 11 * eqPanel.fontScale
+                    font.letterSpacing: 2 * eqPanel.fontScale
                     font.weight: Font.Medium
                 }
 
@@ -339,20 +343,20 @@ Item {
                     text: eqPanel.bands.length + " BANDS"
                     color: eqPanel.root.inkDeep
                     font.family: eqPanel.root.mono
-                    font.pixelSize: 9
-                    font.letterSpacing: 1.5
+                    font.pixelSize: 9 * eqPanel.fontScale
+                    font.letterSpacing: 1.5 * eqPanel.fontScale
                 }
             }
 
             Row {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 4
+                spacing: 4 * eqPanel.panelScale
 
                 // ON / BYPASS Switch
                 Rectangle {
-                    width: 44
-                    height: 22
+                    width: 44 * eqPanel.panelScale
+                    height: 22 * eqPanel.rowScale
                     radius: eqPanel.root.cornerRadius
                     color: eqPanel.eqEnabled ? eqPanel.root.rowSel : eqPanel.root.rowHi
                     border.color: eqPanel.eqEnabled ? eqPanel.root.seal : eqPanel.root.sep
@@ -363,8 +367,8 @@ Item {
                         text: eqPanel.eqEnabled ? "ON" : "OFF"
                         color: eqPanel.eqEnabled ? eqPanel.root.seal : eqPanel.root.inkDeep
                         font.family: eqPanel.root.mono
-                        font.pixelSize: 9
-                        font.letterSpacing: 1
+                        font.pixelSize: 9 * eqPanel.fontScale
+                        font.letterSpacing: 1 * eqPanel.fontScale
                         font.weight: Font.Medium
                     }
 
@@ -379,8 +383,8 @@ Item {
 
                 // Add Band button
                 Rectangle {
-                    width: 22
-                    height: 22
+                    width: 22 * eqPanel.panelScale
+                    height: 22 * eqPanel.rowScale
                     radius: eqPanel.root.cornerRadius
                     color: addMouse.containsMouse && eqPanel.bands.length < eqPanel.maxBands ? eqPanel.root.rowHi : "transparent"
                     border.color: eqPanel.root.sep
@@ -392,7 +396,7 @@ Item {
                         text: "+"
                         color: eqPanel.root.ink
                         font.family: eqPanel.root.mono
-                        font.pixelSize: 12
+                        font.pixelSize: 12 * eqPanel.fontScale
                         font.weight: Font.Medium
                     }
 
@@ -407,8 +411,8 @@ Item {
 
                 // Remove Band button
                 Rectangle {
-                    width: 22
-                    height: 22
+                    width: 22 * eqPanel.panelScale
+                    height: 22 * eqPanel.rowScale
                     radius: eqPanel.root.cornerRadius
                     color: subMouse.containsMouse && eqPanel.bands.length > 1 ? eqPanel.root.rowHi : "transparent"
                     border.color: eqPanel.root.sep
@@ -420,7 +424,7 @@ Item {
                         text: "-"
                         color: eqPanel.root.ink
                         font.family: eqPanel.root.mono
-                        font.pixelSize: 12
+                        font.pixelSize: 12 * eqPanel.fontScale
                         font.weight: Font.Medium
                     }
 
@@ -435,8 +439,8 @@ Item {
 
                 // Flat button
                 Rectangle {
-                    width: 38
-                    height: 22
+                    width: 38 * eqPanel.panelScale
+                    height: 22 * eqPanel.rowScale
                     radius: eqPanel.root.cornerRadius
                     color: flatMouse.containsMouse ? eqPanel.root.rowHi : "transparent"
                     border.color: eqPanel.root.sep
@@ -447,8 +451,8 @@ Item {
                         text: "FLAT"
                         color: eqPanel.root.ink
                         font.family: eqPanel.root.mono
-                        font.pixelSize: 9
-                        font.letterSpacing: 1
+                        font.pixelSize: 9 * eqPanel.fontScale
+                        font.letterSpacing: 1 * eqPanel.fontScale
                     }
 
                     MouseArea {
@@ -465,26 +469,26 @@ Item {
         // Preamp Slider Bar with AUTO button
         Item {
             width: parent.width
-            height: 22
+            height: 22 * eqPanel.rowScale
 
             Row {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 6
+                spacing: 6 * eqPanel.panelScale
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "PREAMP"
                     color: eqPanel.root.ink
                     font.family: eqPanel.root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 1.2
+                    font.pixelSize: 10 * eqPanel.fontScale
+                    font.letterSpacing: 1.2 * eqPanel.fontScale
                 }
 
                 // Auto-Preamp button
                 Rectangle {
-                    width: 36
-                    height: 18
+                    width: 36 * eqPanel.panelScale
+                    height: 18 * eqPanel.rowScale
                     radius: eqPanel.root.cornerRadius
                     color: autoMouse.containsMouse ? eqPanel.root.seal : eqPanel.root.rowHi
                     border.color: eqPanel.root.sep
@@ -495,8 +499,8 @@ Item {
                         text: "AUTO"
                         color: autoMouse.containsMouse ? eqPanel.root.bg : eqPanel.root.ink
                         font.family: eqPanel.root.mono
-                        font.pixelSize: 8
-                        font.letterSpacing: 1
+                        font.pixelSize: 8 * eqPanel.fontScale
+                        font.letterSpacing: 1 * eqPanel.fontScale
                         font.weight: Font.Medium
                     }
 
@@ -512,12 +516,12 @@ Item {
 
             Text {
                 anchors.right: preampTrack.left
-                anchors.rightMargin: 8
+                anchors.rightMargin: 8 * eqPanel.panelScale
                 anchors.verticalCenter: parent.verticalCenter
                 text: (eqPanel.preamp > 0 ? "+" : "") + eqPanel.preamp.toFixed(1) + " dB"
                 color: Math.abs(eqPanel.preamp) > 0.05 ? eqPanel.root.seal : eqPanel.root.inkDeep
                 font.family: eqPanel.root.mono
-                font.pixelSize: 10
+                font.pixelSize: 10 * eqPanel.fontScale
                 font.weight: Font.Medium
             }
 
@@ -525,8 +529,8 @@ Item {
                 id: preampTrack
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                width: 160
-                height: 4
+                width: 160 * eqPanel.panelScale
+                height: 4 * eqPanel.rowScale
                 radius: 1
                 color: Qt.rgba(eqPanel.root.ink.r, eqPanel.root.ink.g, eqPanel.root.ink.b, 0.14)
 
@@ -534,8 +538,8 @@ Item {
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 1
-                    height: 8
+                    width: 1 * eqPanel.panelScale
+                    height: 8 * eqPanel.rowScale
                     color: eqPanel.root.sep
                 }
 
@@ -556,8 +560,8 @@ Item {
                     readonly property real norm: Math.max(0, Math.min(1, (eqPanel.preamp - (-12.0)) / 24.0))
                     x: Math.max(0, Math.min(parent.width - width, parent.width * norm - width / 2))
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 6
-                    height: 12
+                    width: 6 * eqPanel.panelScale
+                    height: 12 * eqPanel.rowScale
                     radius: 1
                     color: preampMouse.containsMouse || preampMouse.pressed ? eqPanel.root.ink : eqPanel.root.seal
                 }
@@ -598,7 +602,7 @@ Item {
         Rectangle {
             id: sliderDeck
             width: parent.width
-            height: 175
+            height: 175 * eqPanel.rowScale
             radius: eqPanel.root.cornerRadius
             color: Qt.rgba(eqPanel.root.ink.r, eqPanel.root.ink.g, eqPanel.root.ink.b, 0.04)
             border.color: eqPanel.root.sep
@@ -626,9 +630,9 @@ Item {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.bottom: sliderDeck.isScrollable ? scrollTrackContainer.top : parent.bottom
-                anchors.leftMargin: 8
-                anchors.rightMargin: 8
-                anchors.topMargin: 8
+                anchors.leftMargin: 8 * eqPanel.panelScale
+                anchors.rightMargin: 8 * eqPanel.panelScale
+                anchors.topMargin: 8 * eqPanel.panelScale
                 anchors.bottomMargin: sliderDeck.isScrollable ? 2 : 8
                 contentWidth: Math.max(width, sliderDeck.totalRowW)
                 contentHeight: height
@@ -645,6 +649,8 @@ Item {
                     Repeater {
                         model: eqPanel.bands
                         delegate: EqSlider {
+                            panelScale: eqPanel.panelScale
+                            panelTextScale: eqPanel.panelTextScale
                             required property var modelData
                             required property int index
 
@@ -669,10 +675,10 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                anchors.leftMargin: 8
-                anchors.rightMargin: 8
-                anchors.bottomMargin: 3
-                height: 3
+                anchors.leftMargin: 8 * eqPanel.panelScale
+                anchors.rightMargin: 8 * eqPanel.panelScale
+                anchors.bottomMargin: 3 * eqPanel.panelScale
+                height: 3 * eqPanel.rowScale
 
                 Rectangle {
                     anchors.fill: parent
@@ -686,7 +692,7 @@ Item {
                     readonly property real maxScroll: Math.max(1, sliderFlick.contentWidth - sliderFlick.width)
                     readonly property real ratio: Math.min(1.0, sliderFlick.width / Math.max(1, sliderFlick.contentWidth))
                     width: Math.max(24, Math.round(trackW * ratio))
-                    height: 3
+                    height: 3 * eqPanel.rowScale
                     radius: 1.5
                     x: Math.max(0, Math.min(trackW - width, Math.round((sliderFlick.contentX / maxScroll) * (trackW - width))))
                     color: scrollThumbMouse.containsMouse || scrollThumbMouse.drag.active ? eqPanel.root.ink : eqPanel.root.seal
@@ -752,12 +758,12 @@ Item {
         // Inline Import Box (Collapsible)
         Column {
             width: parent.width
-            spacing: 6
+            spacing: 6 * eqPanel.panelScale
             visible: eqPanel.importOpen
 
             Rectangle {
                 width: parent.width
-                height: 48
+                height: 48 * eqPanel.rowScale
                 radius: eqPanel.root.cornerRadius
                 color: eqPanel.root.rowHi
                 border.color: eqPanel.root.seal
@@ -766,11 +772,11 @@ Item {
                 TextInput {
                     id: importInput
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.margins: 6 * eqPanel.panelScale
                     text: eqPanel.importText
                     color: eqPanel.root.ink
                     font.family: eqPanel.root.mono
-                    font.pixelSize: 10
+                    font.pixelSize: 10 * eqPanel.fontScale
                     selectByMouse: true
                     onTextChanged: eqPanel.importText = text
 
@@ -780,7 +786,7 @@ Item {
                         text: "Paste AutoEQ filter block or file path here..."
                         color: eqPanel.root.inkDeep
                         font.family: eqPanel.root.mono
-                        font.pixelSize: 9
+                        font.pixelSize: 9 * eqPanel.fontScale
                         wrapMode: Text.WordWrap
                     }
                 }
@@ -788,11 +794,11 @@ Item {
 
             Row {
                 anchors.right: parent.right
-                spacing: 6
+                spacing: 6 * eqPanel.panelScale
 
                 Rectangle {
-                    width: 60
-                    height: 22
+                    width: 60 * eqPanel.panelScale
+                    height: 22 * eqPanel.rowScale
                     radius: eqPanel.root.cornerRadius
                     color: cancelImportMouse.containsMouse ? eqPanel.root.rowHi : "transparent"
                     border.color: eqPanel.root.sep
@@ -803,7 +809,7 @@ Item {
                         text: "CANCEL"
                         color: eqPanel.root.inkDeep
                         font.family: eqPanel.root.mono
-                        font.pixelSize: 9
+                        font.pixelSize: 9 * eqPanel.fontScale
                     }
 
                     MouseArea {
@@ -819,8 +825,8 @@ Item {
                 }
 
                 Rectangle {
-                    width: 70
-                    height: 22
+                    width: 70 * eqPanel.panelScale
+                    height: 22 * eqPanel.rowScale
                     radius: eqPanel.root.cornerRadius
                     color: loadImportMouse.containsMouse ? eqPanel.root.seal : eqPanel.root.rowSel
                     border.color: eqPanel.root.seal
@@ -831,7 +837,7 @@ Item {
                         text: "LOAD"
                         color: loadImportMouse.containsMouse ? eqPanel.root.bg : eqPanel.root.ink
                         font.family: eqPanel.root.mono
-                        font.pixelSize: 9
+                        font.pixelSize: 9 * eqPanel.fontScale
                         font.weight: Font.Medium
                     }
 
@@ -849,8 +855,8 @@ Item {
         // Action Row: APPLY + IMPORT + EXPORT
         Row {
             width: parent.width
-            height: 28
-            spacing: 6
+            height: 28 * eqPanel.rowScale
+            spacing: 6 * eqPanel.panelScale
 
             // Apply Button
             Rectangle {
@@ -863,21 +869,21 @@ Item {
 
                 Row {
                     anchors.centerIn: parent
-                    spacing: 6
+                    spacing: 6 * eqPanel.panelScale
 
                     Text {
                         text: "󰄬"
                         color: applyMouse.containsMouse || !eqPanel.isApplied ? eqPanel.root.bg : eqPanel.root.ink
                         font.family: eqPanel.root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * eqPanel.fontScale
                     }
 
                     Text {
                         text: eqPanel.statusMsg.length > 0 ? eqPanel.statusMsg : "APPLY"
                         color: applyMouse.containsMouse || !eqPanel.isApplied ? eqPanel.root.bg : eqPanel.root.ink
                         font.family: eqPanel.root.mono
-                        font.pixelSize: 10
-                        font.letterSpacing: 2
+                        font.pixelSize: 10 * eqPanel.fontScale
+                        font.letterSpacing: 2 * eqPanel.fontScale
                         font.weight: Font.Medium
                     }
                 }
@@ -893,7 +899,7 @@ Item {
 
             // Import Button
             Rectangle {
-                width: 60
+                width: 60 * eqPanel.panelScale
                 height: parent.height
                 radius: eqPanel.root.cornerRadius
                 color: importMouse.containsMouse || eqPanel.importOpen ? eqPanel.root.rowHi : "transparent"
@@ -905,8 +911,8 @@ Item {
                     text: "IMPORT"
                     color: eqPanel.root.ink
                     font.family: eqPanel.root.mono
-                    font.pixelSize: 9
-                    font.letterSpacing: 1
+                    font.pixelSize: 9 * eqPanel.fontScale
+                    font.letterSpacing: 1 * eqPanel.fontScale
                 }
 
                 MouseArea {
@@ -922,7 +928,7 @@ Item {
 
             // Export Button
             Rectangle {
-                width: 58
+                width: 58 * eqPanel.panelScale
                 height: parent.height
                 radius: eqPanel.root.cornerRadius
                 color: exportMouse.containsMouse ? eqPanel.root.rowHi : "transparent"
@@ -934,8 +940,8 @@ Item {
                     text: "EXPORT"
                     color: eqPanel.root.ink
                     font.family: eqPanel.root.mono
-                    font.pixelSize: 9
-                    font.letterSpacing: 1
+                    font.pixelSize: 9 * eqPanel.fontScale
+                    font.letterSpacing: 1 * eqPanel.fontScale
                 }
 
                 MouseArea {
@@ -954,12 +960,14 @@ Item {
             text: eqPanel.service.lastError
             color: eqPanel.root.seal
             font.family: eqPanel.root.mono
-            font.pixelSize: 10
+            font.pixelSize: 10 * eqPanel.fontScale
             wrapMode: Text.Wrap
         }
 
         // Presets Manager Row (Placed BELOW APPLY Button)
         EqPresetsMenu {
+            panelScale: eqPanel.panelScale
+            panelTextScale: eqPanel.panelTextScale
             id: presetsDropdown
             width: parent.width
             root: eqPanel.root

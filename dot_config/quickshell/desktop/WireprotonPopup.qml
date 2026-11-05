@@ -57,8 +57,8 @@ CardWindow {
 
     Column {
         width: parent.width
-        spacing: 8
-        padding: 4
+        spacing: 8 * popup.panelScale
+        padding: 4 * popup.panelScale
 
         QuickButton {
             root: popup.root
@@ -71,8 +71,8 @@ CardWindow {
         Grid {
             width: parent.width
             columns: 1
-            rowSpacing: 6
-            columnSpacing: 6
+            rowSpacing: 6 * popup.panelScale
+            columnSpacing: 6 * popup.panelScale
             visible: root.wireprotonActiveIface.length === 0
 
             Repeater {

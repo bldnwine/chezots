@@ -163,7 +163,7 @@ CardWindow {
     Column {
         id: col
         width: parent.width
-        spacing: 10
+        spacing: 10 * warppopup.panelScale
 
         // Status & Attention Banner (Start Daemon / Needs TOS / Register)
         Rectangle {
@@ -182,8 +182,8 @@ CardWindow {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: 8
-                spacing: 6
+                anchors.margins: 8 * warppopup.panelScale
+                spacing: 6 * warppopup.panelScale
 
                 RowLayout {
                     width: parent.width
@@ -196,8 +196,8 @@ CardWindow {
                               : ("󰑓  " + warp.actionStatus)
                         color: warp && warp.lastError !== "" ? root.warn : root.ink
                         font.family: root.mono
-                        font.pixelSize: 10
-                        font.letterSpacing: 1
+                        font.pixelSize: 10 * warppopup.fontScale
+                        font.letterSpacing: 1 * warppopup.fontScale
                         Layout.fillWidth: true
                         elide: Text.ElideRight
                     }
@@ -222,7 +222,7 @@ CardWindow {
         // Hero Row: Icon + Account/Status + Toggle Button
         Rectangle {
             width: col.width
-            height: 48
+            height: 48 * warppopup.rowScale
             radius: root.cornerRadius
             color: warppopup.focusSection === "header" && !warp.daemonDown ? root.rowSel : root.rowHi
             border.color: warppopup.focusSection === "header" && !warp.daemonDown ? root.seal : root.sep
@@ -230,9 +230,9 @@ CardWindow {
 
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                spacing: 10
+                anchors.leftMargin: 12 * warppopup.panelScale
+                anchors.rightMargin: 12 * warppopup.panelScale
+                spacing: 10 * warppopup.panelScale
 
                 WarpIcon {
                     iconSize: 22
@@ -246,15 +246,15 @@ CardWindow {
                 Column {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignVCenter
-                    spacing: 1
+                    spacing: 1 * warppopup.panelScale
 
                     Text {
                         text: warp && warp.accountLabel !== "" ? warp.accountLabel : "Cloudflare WARP"
                         color: root.ink
                         font.family: root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * warppopup.fontScale
                         font.weight: Font.Medium
-                        font.letterSpacing: 1.5
+                        font.letterSpacing: 1.5 * warppopup.fontScale
                         elide: Text.ElideRight
                     }
 
@@ -266,8 +266,8 @@ CardWindow {
                               : warp ? warp.displayStatusText : "Checking…"
                         color: warp && warp.active ? root.seal : root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 9
-                        font.letterSpacing: 1
+                        font.pixelSize: 9 * warppopup.fontScale
+                        font.letterSpacing: 1 * warppopup.fontScale
                         elide: Text.ElideRight
                     }
                 }
@@ -305,7 +305,7 @@ CardWindow {
         Column {
             visible: warp && warp.detailsReady
             width: col.width
-            spacing: 4
+            spacing: 4 * warppopup.panelScale
 
             readonly property var detailRows: [
                 { l: "STATUS",    v: warp ? warp.statusText : "—", copy: false },
@@ -322,7 +322,7 @@ CardWindow {
                 delegate: Item {
                     required property var modelData
                     width: col.width
-                    height: 18
+                    height: 18 * warppopup.rowScale
                     visible: modelData.v !== "" && modelData.v !== "—"
 
                     Text {
@@ -331,8 +331,8 @@ CardWindow {
                         text: modelData.l
                         color: root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 9
-                        font.letterSpacing: 1.5
+                        font.pixelSize: 9 * warppopup.fontScale
+                        font.letterSpacing: 1.5 * warppopup.fontScale
                         opacity: 0.75
                     }
 
@@ -342,8 +342,8 @@ CardWindow {
                         text: modelData.v
                         color: modelData.copy && devIdMouse.containsMouse ? root.seal : root.ink
                         font.family: root.mono
-                        font.pixelSize: 10
-                        font.letterSpacing: 1
+                        font.pixelSize: 10 * warppopup.fontScale
+                        font.letterSpacing: 1 * warppopup.fontScale
                         font.weight: Font.Medium
                     }
 
@@ -365,20 +365,20 @@ CardWindow {
         Column {
             visible: warp && warp.detailsReady
             width: col.width
-            spacing: 6
+            spacing: 6 * warppopup.panelScale
 
             Text {
                 text: "OPERATING MODE"
                 color: root.inkDeep
                 font.family: root.mono
-                font.pixelSize: 9
-                font.letterSpacing: 2
+                font.pixelSize: 9 * warppopup.fontScale
+                font.letterSpacing: 2 * warppopup.fontScale
                 font.weight: Font.Medium
             }
 
             Column {
                 width: col.width
-                spacing: 3
+                spacing: 3 * warppopup.panelScale
 
                 Repeater {
                     model: warppopup.modeRows
@@ -390,7 +390,7 @@ CardWindow {
                         readonly property bool isSwitching: warp && warp.settingMode === String(modelData.id || "")
 
                         width: col.width
-                        height: 34
+                        height: 34 * warppopup.rowScale
                         radius: root.cornerRadius
                         color: isCurrent || isFocused ? root.rowSel : modeMouse.containsMouse ? root.rowHi : "transparent"
                         border.color: isCurrent || isFocused ? root.seal : root.sep
@@ -398,30 +398,30 @@ CardWindow {
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: 10
-                            anchors.rightMargin: 10
-                            spacing: 8
+                            anchors.leftMargin: 10 * warppopup.panelScale
+                            anchors.rightMargin: 10 * warppopup.panelScale
+                            spacing: 8 * warppopup.panelScale
 
                             Text {
                                 text: isCurrent ? "󰄲" : (modelData.tunnel ? "󰖂" : "󰇖")
                                 color: isCurrent ? root.seal : root.inkDeep
                                 font.family: root.mono
-                                font.pixelSize: 12
+                                font.pixelSize: 12 * warppopup.fontScale
                                 Layout.alignment: Qt.AlignVCenter
                             }
 
                             Column {
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
-                                spacing: 1
+                                spacing: 1 * warppopup.panelScale
 
                                 Text {
                                     text: modelData.label + (modelData.id === "tunnel_only" ? " (Quad9 DNS)" : "")
                                     color: isCurrent ? root.ink : root.fg
                                     font.family: root.mono
-                                    font.pixelSize: 10
+                                    font.pixelSize: 10 * warppopup.fontScale
                                     font.weight: isCurrent ? Font.Medium : Font.Normal
-                                    font.letterSpacing: 1
+                                    font.letterSpacing: 1 * warppopup.fontScale
                                     elide: Text.ElideRight
                                 }
 
@@ -429,8 +429,8 @@ CardWindow {
                                     text: modelData.description
                                     color: root.inkDeep
                                     font.family: root.mono
-                                    font.pixelSize: 8
-                                    font.letterSpacing: 0.8
+                                    font.pixelSize: 8 * warppopup.fontScale
+                                    font.letterSpacing: 0.8 * warppopup.fontScale
                                     elide: Text.ElideRight
                                 }
                             }
@@ -440,8 +440,8 @@ CardWindow {
                                 text: isSwitching ? "SWITCHING…" : "ACTIVE"
                                 color: root.seal
                                 font.family: root.mono
-                                font.pixelSize: 8
-                                font.letterSpacing: 1.5
+                                font.pixelSize: 8 * warppopup.fontScale
+                                font.letterSpacing: 1.5 * warppopup.fontScale
                                 font.weight: Font.Medium
                             }
                         }
@@ -465,7 +465,7 @@ CardWindow {
         // Split Tunnel Section
         Rectangle {
             width: col.width
-            height: 1
+            height: 1 * warppopup.rowScale
             color: root.sep
             visible: warp && warp.detailsReady && warp.splitTunnelEntries.length > 0
         }
@@ -473,11 +473,11 @@ CardWindow {
         Column {
             visible: warp && warp.detailsReady && warp.splitTunnelEntries.length > 0
             width: col.width
-            spacing: 4
+            spacing: 4 * warppopup.panelScale
 
             Rectangle {
                 width: col.width
-                height: 28
+                height: 28 * warppopup.rowScale
                 radius: root.cornerRadius
                 color: warppopup.focusSection === "split" && warppopup.splitIndex === 0 ? root.rowSel : splitMouse.containsMouse ? root.rowHi : "transparent"
                 border.color: warppopup.focusSection === "split" && warppopup.splitIndex === 0 ? root.seal : root.sep
@@ -485,22 +485,22 @@ CardWindow {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 8
+                    anchors.leftMargin: 8 * warppopup.panelScale
+                    anchors.rightMargin: 8 * warppopup.panelScale
 
                     Text {
                         text: warppopup.splitExpanded ? "󰅀" : "󰅂"
                         color: root.ink
                         font.family: root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * warppopup.fontScale
                     }
 
                     Text {
                         text: warp.splitTunnelSummary !== "" ? warp.splitTunnelSummary.toUpperCase() : "SPLIT TUNNEL"
                         color: root.ink
                         font.family: root.mono
-                        font.pixelSize: 9
-                        font.letterSpacing: 1.5
+                        font.pixelSize: 9 * warppopup.fontScale
+                        font.letterSpacing: 1.5 * warppopup.fontScale
                         Layout.fillWidth: true
                     }
 
@@ -508,8 +508,8 @@ CardWindow {
                         text: warppopup.splitExpanded ? "COLLAPSE" : "INSPECT"
                         color: root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 8
-                        font.letterSpacing: 1
+                        font.pixelSize: 8 * warppopup.fontScale
+                        font.letterSpacing: 1 * warppopup.fontScale
                     }
                 }
 
@@ -529,7 +529,7 @@ CardWindow {
             Column {
                 visible: warppopup.splitExpanded
                 width: col.width
-                spacing: 2
+                spacing: 2 * warppopup.panelScale
 
                 Repeater {
                     model: warppopup.splitRows
@@ -538,7 +538,7 @@ CardWindow {
                         required property int index
                         readonly property bool isFocused: warppopup.focusSection === "split" && warppopup.splitIndex === index + 1
                         width: col.width
-                        height: 24
+                        height: 24 * warppopup.rowScale
                         radius: root.cornerRadius
                         color: isFocused ? root.rowSel : itemMouse.containsMouse ? root.rowHi : "transparent"
                         border.color: isFocused ? root.seal : root.sep
@@ -546,21 +546,21 @@ CardWindow {
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: 8
-                            anchors.rightMargin: 8
+                            anchors.leftMargin: 8 * warppopup.panelScale
+                            anchors.rightMargin: 8 * warppopup.panelScale
 
                             Text {
                                 text: modelData.kind === "host" ? "󰇆" : "󰩟"
                                 color: root.inkDeep
                                 font.family: root.mono
-                                font.pixelSize: 10
+                                font.pixelSize: 10 * warppopup.fontScale
                             }
 
                             Text {
                                 text: modelData.value
                                 color: root.fg
                                 font.family: root.mono
-                                font.pixelSize: 9
+                                font.pixelSize: 9 * warppopup.fontScale
                                 Layout.fillWidth: true
                                 elide: Text.ElideRight
                             }
@@ -569,7 +569,7 @@ CardWindow {
                                 text: modelData.description || (modelData.kind === "host" ? "HOST" : "IP")
                                 color: root.inkDeep
                                 font.family: root.mono
-                                font.pixelSize: 8
+                                font.pixelSize: 8 * warppopup.fontScale
                             }
                         }
 

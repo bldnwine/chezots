@@ -4,16 +4,16 @@
  */
 
 /* Dynamic color palette from Aether */
-@define-color background #111113;
+@define-color background #191919;
 @define-color foreground #DADADA;
 
-@define-color black #111113;
-@define-color red #fa0005;
+@define-color black #191919;
+@define-color red #998e8e;
 @define-color green #a09797;
-@define-color yellow #7b2fd9;
+@define-color yellow #988d8d;
 @define-color blue #a79d9d;
 @define-color magenta #b5adad;
-@define-color cyan #c58edf;
+@define-color cyan #c4bdbd;
 @define-color white #DADADA;
 @define-color bright_black #c2bfbf;
 @define-color bright_red #c5bebe;

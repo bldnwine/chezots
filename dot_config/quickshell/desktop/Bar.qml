@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
+import "BarIcons.js" as Icons
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
@@ -8,6 +9,8 @@ import Quickshell.Io
 PanelWindow {
     id: bar
     required property var root
+
+    function iconSource(name) { return Qt.resolvedUrl("icons/bar/" + name + ".svg"); }
 
     color: "transparent"
     // Anchors track barEdge — three sides anchored, the side opposite
@@ -174,9 +177,9 @@ PanelWindow {
                 text: bar.root.dow + " " + bar.root.dd + " - " + bar.root.hh + ":" + bar.root.mm
                 color: clockMouse.containsMouse ? bar.root.seal : bar.root.ink
                 font.family: bar.root.mono
-                font.pixelSize: 11
-                font.letterSpacing: 2
-                font.weight: Font.Light
+                font.pixelSize: 14
+                font.letterSpacing: 3
+                font.weight: Font.Medium
                 Behavior on color { ColorAnimation { duration: 90 } }
             }
 
@@ -192,7 +195,7 @@ PanelWindow {
                     text: bar.root.dow
                     color: clockMouse.containsMouse ? bar.root.seal : bar.root.inkDeep
                     font.family: bar.root.mono
-                    font.pixelSize: 11
+                    font.pixelSize: 13
                     font.weight: Font.Medium
                     Behavior on color { ColorAnimation { duration: 90 } }
                 }
@@ -224,7 +227,7 @@ PanelWindow {
                     text: bar.root.hh
                     color: clockMouse.containsMouse ? bar.root.seal : bar.root.ink
                     font.family: bar.root.mono
-                    font.pixelSize: 13
+                    font.pixelSize: 15
                     font.weight: Font.Medium
                     Behavior on color { ColorAnimation { duration: 90 } }
                 }
@@ -235,8 +238,8 @@ PanelWindow {
                     text: bar.root.mm
                     color: clockMouse.containsMouse ? bar.root.seal : bar.root.ink
                     font.family: bar.root.mono
-                    font.pixelSize: 13
-                    font.weight: Font.Light
+                    font.pixelSize: 15
+                    font.weight: Font.Medium
                     Behavior on color { ColorAnimation { duration: 90 } }
                 }
             }
@@ -317,7 +320,7 @@ PanelWindow {
             Item {
                 id: musicItem
                 readonly property bool present: bar.root.musicTitle.length > 0
-                readonly property real contentW: musicRow.width + 12
+                readonly property real contentW: Math.min(140, musicTitleH.implicitWidth) + 12
                 property real openW: (present && bar.root.isHorizontal) ? contentW + 8 : 0
                 Behavior on openW { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
@@ -325,8 +328,8 @@ PanelWindow {
 
                 visible: present || openW > 0.5
                 Layout.preferredWidth: bar.root.isHorizontal ? openW : (visible ? bar.root.barHeight : 0)
-                Layout.preferredHeight: bar.root.isHorizontal ? 16 : (visible ? Math.min(140, musicTitleV.implicitWidth) + 12 : 0)
-                Layout.minimumHeight: bar.root.isHorizontal ? 16 : (visible ? 24 : 0)
+                Layout.preferredHeight: bar.root.isHorizontal ? musicTitleH.implicitHeight : (visible ? Math.min(140, musicTitleV.implicitWidth) + 12 : 0)
+                Layout.minimumHeight: bar.root.isHorizontal ? musicTitleH.implicitHeight : (visible ? 24 : 0)
                 Layout.alignment: bar.root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
 
                 readonly property string tipText: bar.root.musicArtist.length > 0
@@ -349,70 +352,22 @@ PanelWindow {
                     font.weight: Font.Medium
                 }
 
-                Rectangle {
-                    id: musicPill
+                Text {
+                    id: musicTitleH
                     visible: bar.root.isHorizontal
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(0, parent.width - 8)
-                    height: parent.height
-                    radius: height / 2
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: 0
+                    anchors.horizontalCenterOffset: 4
+                    width: Math.max(0, Math.min(140, musicItem.width - 20))
+                    text: bar.root.musicTitle
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignHCenter
                     color: bar.root.accent
+                    font.family: bar.root.mono
+                    font.pixelSize: 14
+                    font.weight: Font.Medium
                     clip: true
-                    opacity: musicMouse.containsMouse ? 1.0 : 0.9
-                    Behavior on opacity { NumberAnimation { duration: 90 } }
-
-                    Row {
-                        id: musicRow
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        Text {
-                            id: musicIcon
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: bar.root.icoMusic
-                            color: bar.root.paper
-                            font.family: bar.root.mono
-                            font.pixelSize: 9
-                        }
-
-                        Text {
-                            id: musicLabel
-                            anchors.verticalCenter: parent.verticalCenter
-                            readonly property int maxChars:
-                                Math.max(2, Math.floor(140 / chMetric.advanceWidth))
-                            readonly property bool truncated:
-                                bar.root.musicTitle.length > maxChars
-                            text: truncated
-                                  ? bar.root.musicTitle.slice(0, maxChars - 2) + ".."
-                                  : bar.root.musicTitle
-                            color: bar.root.paper
-                            font.family: bar.root.mono
-                            font.pixelSize: 10
-                            font.weight: Font.Medium
-
-                            TextMetrics {
-                                id: chMetric
-                                font: musicLabel.font
-                                text: "0"
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        height: parent.height
-                        width: 40
-                        radius: parent.radius
-                        visible: musicLabel.truncated
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: Qt.rgba(bar.root.accent.r, bar.root.accent.g, bar.root.accent.b, 0) }
-                            GradientStop { position: 0.6; color: bar.root.accent }
-                            GradientStop { position: 1.0; color: bar.root.accent }
-                        }
-                    }
                 }
 
                 Bloom { id: musicBloom; root: bar.root }
@@ -467,8 +422,7 @@ PanelWindow {
             // bar-position chevron.
             Module {
                 root: bar.root
-                glyph: "󰍛"
-                fontSize: 15
+                iconSource: bar.iconSource("memory")
                 tooltip: "CPU " + Math.round(bar.root.cpuVal) + "% · MEM " + Math.round(bar.root.memVal) + "%"
                 color: bar.root.cpuVal > 80 ? bar.root.seal : bar.root.ink
                 Component.onCompleted: bar.root.systemAnchorItem = this
@@ -503,17 +457,14 @@ PanelWindow {
 
                 Bloom { id: aiBloom; root: bar.root }
 
-                AiIcon {
+                BarStatusIcon {
                     anchors.centerIn: parent
-                    anchors.verticalCenterOffset: -1
-                    iconSize: 13
-                    fontFamily: bar.root.mono
-                    glyphYOffset: -1
-                    glyphXOffset: bar.root.isHorizontal ? 0 : -2
+                    source: bar.iconSource("smart_toy")
                     color: aiMod.ai && aiMod.ai.agentState === "working" ? bar.root.accent : bar.root.ink
-                    badgeColor: aiMod.ai && aiMod.ai.agentState === "action_needed" ? bar.root.warn : bar.root.seal
-                    successColor: bar.root.accent
-                    state: aiMod.ai ? aiMod.ai.agentState : "idle"
+                    badgeColor: aiMod.ai && aiMod.ai.agentState === "action_needed" ? bar.root.warn : bar.root.accent
+                    badgeInk: bar.root.paper
+                    badge: !aiMod.ai ? "" : aiMod.ai.agentState === "action_needed" ? "warning"
+                           : aiMod.ai.agentState === "working" || aiMod.ai.agentState === "finished" ? aiMod.ai.agentState : ""
                 }
 
                 readonly property string tipText: aiMod.ai ? aiMod.ai.tipText : "Antigravity"
@@ -557,7 +508,7 @@ PanelWindow {
             Module {
                 id: notifMod
                 root: bar.root
-                glyph: bar.root.doNotDisturb ? "󰂛" : "󰂚"
+                iconSource: bar.iconSource(Icons.notifications(bar.root.doNotDisturb))
                 color: bar.root.doNotDisturb ? bar.root.seal : bar.root.ink
                 fontSize: 13
                 tooltip: {
@@ -581,10 +532,9 @@ PanelWindow {
                         const s = bar.root.notificationCenterService;
                         return s ? (s.unread > 0) : false;
                     }
-                    anchors.right: parent.right
-                    anchors.rightMargin: 4
-                    anchors.top: parent.top
-                    anchors.topMargin: 4
+                    anchors.centerIn: parent
+                    anchors.horizontalCenterOffset: notifMod.iconSize * 0.4
+                    anchors.verticalCenterOffset: -notifMod.iconSize * 0.28
                     width: 5
                     height: 5
                     radius: 2.5
@@ -594,8 +544,7 @@ PanelWindow {
 
             Module {
                 root: bar.root
-                glyph: bar.root.btIcon
-                fontSize: 14
+                iconSource: bar.iconSource(Icons.bluetooth(bar.root.btPowered, bar.root.btCount))
                 tooltip: {
                     if (!bar.root.btPowered) return "Bluetooth off";
                     const conn = bar.root.btDevices.filter(d => d.connected);
@@ -612,8 +561,8 @@ PanelWindow {
             Module {
                 id: netMod
                 root: bar.root
-                glyph: bar.root.netIcon
-                fontSize: 12
+                // Lighter Adwaita-style filled nodes for wired links; symbolic arcs for Wi-Fi.
+                iconSource: bar.iconSource(Icons.network(bar.root.netKind, bar.root.wifiSignal, bar.root.wifiRadioOn))
                 color: bar.root.wireprotonActiveIface.length > 0 ? bar.root.accent : bar.root.ink
                 tooltip: {
                     if (bar.root.netKind === "eth") return "Ethernet";
@@ -629,18 +578,17 @@ PanelWindow {
                     else bar.root.openNetwork();
                 }
 
-                // Network-burst dot: traverses the wifi glyph's outermost
-                // arc once when a heavy rx+tx burst is detected.
-                // Geometry is eyeballed for the Nerd Font wifi icon
-                // rendered at fontSize 12 inside the 24x26 Module slot.
+                // Adwaita's 16px Wi-Fi outline is an arc about (8, 12),
+                // radius 10, swept from 45 to 135 degrees in the icon box.
                 Item {
                     id: arc
                     anchors.fill: parent
                     property real t: 0
                     property real op: 0
-                    readonly property real cx: width / 2
-                    readonly property real cy: Math.round(height / 2 + 4)
-                    readonly property real r:  6
+                    readonly property real cx: netMod.iconOriginX + netMod.iconRenderSize * 0.5
+                    visible: bar.root.netKind === "wifi"
+                    readonly property real cy: netMod.iconOriginY + netMod.iconRenderSize * 0.75
+                    readonly property real r: netMod.iconRenderSize * 0.625
 
                     Rectangle {
                         width: 3
@@ -649,8 +597,8 @@ PanelWindow {
                         color: Qt.lighter(bar.root.seal, 1.7)
                         antialiasing: true
                         opacity: arc.op
-                        x: arc.cx - arc.r * Math.cos(Math.PI * arc.t) - width / 2
-                        y: arc.cy - arc.r * Math.sin(Math.PI * arc.t) - height / 2
+                        x: arc.cx - arc.r * Math.cos(Math.PI * (0.25 + arc.t * 0.5)) - width / 2
+                        y: arc.cy - arc.r * Math.sin(Math.PI * (0.25 + arc.t * 0.5)) - height / 2
                     }
 
                     ParallelAnimation {
@@ -668,9 +616,14 @@ PanelWindow {
                         }
                     }
 
+                    onVisibleChanged: if (!visible) { arcAnim.stop(); arc.op = 0; }
+                    Connections {
+                        target: bar
+                        function onVisibleChanged() { if (!bar.visible) { arcAnim.stop(); arc.op = 0; } }
+                    }
                     Connections {
                         target: bar.root
-                        function onNetBurst() { arc.t = 0; arcAnim.restart(); }
+                        function onNetBurst() { if (bar.visible && arc.visible) { arc.t = 0; arcAnim.restart(); } }
                     }
                 }
             }
@@ -695,13 +648,13 @@ PanelWindow {
 
                 Bloom { id: warpBloom; root: bar.root }
 
-                WarpIcon {
+                BarStatusIcon {
                     anchors.centerIn: parent
-                    iconSize: 13
+                    source: bar.iconSource(Icons.warp(warpMod.warp && warpMod.warp.active))
                     color: warpMod.warp && warpMod.warp.active ? bar.root.accent : (warpMod.warp && warpMod.warp.daemonDown ? bar.root.sumi : bar.root.ink)
                     badgeColor: bar.root.warn
-                    crossed: warpMod.warp && warpMod.warp.probed && !warpMod.warp.active && !warpMod.warp.daemonDown
-                    warning: warpMod.warp && warpMod.warp.probed && (warpMod.warp.daemonDown || warpMod.warp.needsRegistration)
+                    badgeInk: bar.root.paper
+                    badge: warpMod.warp && warpMod.warp.probed && (warpMod.warp.daemonDown || warpMod.warp.needsRegistration) ? "warning" : ""
                 }
 
                 readonly property string tipText: {
@@ -763,7 +716,7 @@ PanelWindow {
 
             Module {
                 root: bar.root
-                glyph: bar.root.audioIcon
+                iconSource: bar.iconSource(Icons.audio(bar.root.audioMuted, bar.root.audioDevType, bar.root.audioVol))
                 tooltip: (bar.root.audioSinkDesc ? bar.root.audioSinkDesc + " " : "") + (bar.root.audioDevType !== "bt" && bar.root.audioPort ? "(" + bar.root.audioPort + ") " : "") + bar.root.audioVol + "%" + (bar.root.audioMuted ? " (muted)" : "")
                 Component.onCompleted: bar.root.audioAnchorItem = this
                 onActivated: {
@@ -778,7 +731,7 @@ PanelWindow {
             Module {
                 root: bar.root
                 visible: bar.root.batPresent
-                glyph: bar.root.batteryIcon()
+                iconSource: bar.iconSource(Icons.battery(bar.root.batState, bar.root.batVal))
                 // Hide power below 0.05 W: idle Full / Not charging
                 // states often report a sub-noise trickle that just
                 // adds chatter to the tooltip.
@@ -798,7 +751,7 @@ PanelWindow {
 
             Module {
                 root: bar.root
-                glyph: "󰻂"
+                iconSource: bar.iconSource("media-record-symbolic")
                 visible: bar.root.recordingActive
                 color: bar.root.seal
                 tooltip: "RECORDING"

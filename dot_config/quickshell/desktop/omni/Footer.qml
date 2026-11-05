@@ -7,7 +7,7 @@ Item {
     required property var omni
 
     width: parent ? parent.width : 0
-    height: 22
+    height: 22 * omni.rowScale
 
     Text {
         anchors.left: parent.left

@@ -15,7 +15,7 @@ CardWindow {
                 + "  ·  " + videosPopup.root.videoFiles.length + " TOTAL"
 
     headerRight: Row {
-        spacing: 12
+        spacing: 12 * videosPopup.panelScale
         CalendarChevron {
             root: videosPopup.root
             text: "‹"
@@ -31,7 +31,7 @@ CardWindow {
             root: videosPopup.root
             text: videosPopup.root.icoRefresh
             restColor: videosPopup.root.inkDeep
-            font.pixelSize: 24
+            font.pixelSize: 24 * videosPopup.fontScale
             onTriggered: videosPopup.root.refreshVideos()
         }
         CalendarChevron {
@@ -86,26 +86,26 @@ CardWindow {
     Column {
         id: vidCol
         width: parent.width
-        spacing: 12
+        spacing: 12 * videosPopup.panelScale
 
         Text {
             width: parent.width
-            height: 248
+            height: 248 * videosPopup.rowScale
             visible: videosPopup.root.videoFiles.length === 0
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: "~/Videos/*.mp4 · mkv · webm · mov · avi · m4v"
             color: videosPopup.root.inkDeep
             font.family: videosPopup.root.mono
-            font.pixelSize: 11
-            font.letterSpacing: 2
+            font.pixelSize: 11 * videosPopup.fontScale
+            font.letterSpacing: 2 * videosPopup.fontScale
             opacity: 0.6
         }
 
         Grid {
             columns: 4
-            rowSpacing: 6
-            columnSpacing: 6
+            rowSpacing: 6 * videosPopup.panelScale
+            columnSpacing: 6 * videosPopup.panelScale
             width: parent.width
             visible: videosPopup.root.videoFiles.length > 0
 
@@ -136,7 +136,7 @@ CardWindow {
                     Image {
                         id: vidThumb
                         anchors.fill: parent
-                        anchors.margins: 1
+                        anchors.margins: 1 * videosPopup.panelScale
                         visible: vidCell.filled && status === Image.Ready
                         // cache: false because the cached thumb on disk is
                         // overwritten when the source video changes; the
@@ -160,14 +160,14 @@ CardWindow {
                         text: String.fromCodePoint(0xf040a)
                         color: videosPopup.root.inkDeep
                         font.family: videosPopup.root.mono
-                        font.pixelSize: 28
+                        font.pixelSize: 28 * videosPopup.fontScale
                         opacity: 0.55
                     }
 
                     Rectangle {
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
-                        anchors.margins: 4
+                        anchors.margins: 4 * videosPopup.panelScale
                         width: durLabel.implicitWidth + 8
                         height: durLabel.implicitHeight + 4
                         color: Qt.rgba(videosPopup.root.paper.r, videosPopup.root.paper.g, videosPopup.root.paper.b, 0.72)
@@ -180,15 +180,15 @@ CardWindow {
                             text: vidCell.filled ? videosPopup.root.formatVideoDuration(vidCell.entry.duration) : ""
                             color: videosPopup.root.ink
                             font.family: videosPopup.root.mono
-                            font.pixelSize: 9
-                            font.letterSpacing: 1
+                            font.pixelSize: 9 * videosPopup.fontScale
+                            font.letterSpacing: 1 * videosPopup.fontScale
                             font.weight: Font.Medium
                         }
                     }
 
                     Rectangle {
                         anchors.fill: parent
-                        anchors.margins: 1
+                        anchors.margins: 1 * videosPopup.panelScale
                         color: "transparent"
                         border.color: videosPopup.root.seal
                         border.width: vidMouse.containsMouse && !vidCell.isSelected ? 1 : 0
@@ -199,7 +199,7 @@ CardWindow {
 
                     Rectangle {
                         anchors.fill: parent
-                        anchors.margins: 1
+                        anchors.margins: 1 * videosPopup.panelScale
                         color: Qt.rgba(videosPopup.root.seal.r, videosPopup.root.seal.g, videosPopup.root.seal.b, 0.28)
                         border.color: videosPopup.root.seal
                         border.width: 2
@@ -218,8 +218,8 @@ CardWindow {
                             text: videosPopup.root.copiedVideoMode === "bytes" ? "BYTES COPIED" : "FILE COPIED"
                             color: videosPopup.root.seal.hsvValue < 0.5 ? videosPopup.root.ink : videosPopup.root.paper
                             font.family: videosPopup.root.mono
-                            font.pixelSize: 11
-                            font.letterSpacing: 3
+                            font.pixelSize: 11 * videosPopup.fontScale
+                            font.letterSpacing: 3 * videosPopup.fontScale
                             font.weight: Font.Medium
                         }
                     }
@@ -280,14 +280,14 @@ CardWindow {
 
         Rectangle {
             width: parent.width
-            height: 1
+            height: 1 * videosPopup.rowScale
             color: videosPopup.root.sep
             visible: videosPopup.root.selectedVideoEntry !== null
         }
 
         Item {
             width: parent.width
-            height: 22
+            height: 22 * videosPopup.rowScale
             visible: videosPopup.root.selectedVideoEntry !== null
 
             Text {
@@ -298,8 +298,8 @@ CardWindow {
                 text: videosPopup.root.selectedVideoEntry ? videosPopup.root.selectedVideoEntry.label : ""
                 color: videosPopup.root.ink
                 font.family: videosPopup.root.mono
-                font.pixelSize: 11
-                font.letterSpacing: 2
+                font.pixelSize: 11 * videosPopup.fontScale
+                font.letterSpacing: 2 * videosPopup.fontScale
             }
 
             Text {
@@ -322,8 +322,8 @@ CardWindow {
                 }
                 color: copied ? videosPopup.root.seal : videosPopup.root.inkDeep
                 font.family: videosPopup.root.mono
-                font.pixelSize: 11
-                font.letterSpacing: 2
+                font.pixelSize: 11 * videosPopup.fontScale
+                font.letterSpacing: 2 * videosPopup.fontScale
                 opacity: copied ? 1.0 : 0.7
                 Behavior on color { ColorAnimation { duration: 180 } }
                 Behavior on opacity { NumberAnimation { duration: 180 } }

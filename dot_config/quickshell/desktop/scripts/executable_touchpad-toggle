@@ -1,11 +1,17 @@
 #!/bin/bash
-device=$(hyprctl devices -j | jq -r '.touch[0].name // empty')
-[ -n "$device" ] || exit 1
-enabled=$(hyprctl devices -j | jq -r '.touch[0].enabled // false')
-if [ "$enabled" = "true" ]; then
-  hyprctl eval "hl.device({ name = \"$device\", enabled = false })" >/dev/null
-  qs -c desktop ipc call -- osd show '{"icon":"touchpad","message":"Touchpad disabled"}'
-else
-  hyprctl eval "hl.device({ name = \"$device\", enabled = true })" >/dev/null
+device=$(hyprctl devices -j 2>/dev/null | jq -r '([.mice[]?, .touch[]?] | map(select(.name | test("touchpad"; "i"))) | .[0].name) // empty')
+[ -n "$device" ] || device="dell0810:00-044e:120a-touchpad"
+
+new_state=$(hyprctl repl "(function()
+  local dev = '$device'
+  local new_state = not _G.__touchpad_enabled
+  _G.__touchpad_enabled = new_state
+  hl.device({ name = dev, enabled = new_state })
+  return tostring(new_state)
+end)()" 2>/dev/null)
+
+if [ "$new_state" = "true" ]; then
   qs -c desktop ipc call -- osd show '{"icon":"touchpad","message":"Touchpad enabled"}'
+else
+  qs -c desktop ipc call -- osd show '{"icon":"touchpad","message":"Touchpad disabled"}'
 fi

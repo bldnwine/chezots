@@ -19,7 +19,7 @@ hl.monitor({
 	output = "eDP-1",
 	mode = "preferred",
 	position = "auto",
-	scale = "1.5",
+	scale = "1",
 })
 
 hl.monitor({
@@ -175,7 +175,7 @@ hl.config({
 
 	decoration = {
 		rounding = look.rounding,
-		rounding_power = 12,
+		rounding_power = 10,
 		active_opacity = 0.85,
 		inactive_opacity = 0.70,
 		fullscreen_opacity = 1.0,
@@ -280,6 +280,7 @@ hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + CONTROL + M", hl.dsp.global("quickshell:audio-toggle"))
 hl.bind(mainMod .. " + ALT + M", hl.dsp.exec_cmd("~/.config/waybar/scripts/pulse_switch.sh"))
+hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("kitten quick-access-terminal"))
 hl.bind(mainMod .. " + SHIFT + Y", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + Y", hl.dsp.exec_cmd(terminal .. " -e yazi"))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
@@ -339,7 +340,7 @@ hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(launch("zen -P default")))
 hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(launch('brave-origin-beta --profile-directory="Default"')))
 hl.bind(mainMod .. " + ALT + SHIFT + B", hl.dsp.exec_cmd(launch("brave-origin-beta --incognito")))
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(launch("zen --private-window")))
-hl.bind(mainMod .. " + ALT", hl.dsp.exec_cmd("sh -c 'killall -SIGUSR1 waybar'"))
+-- hl.bind(mainMod .. " + ALT", hl.dsp.exec_cmd("sh -c 'killall -SIGUSR1 waybar'"))
 hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("omasnap smart"))
 hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("capture-screenshot smart slurp"))
 hl.bind(mainMod .. " + SHIFT + Z", hl.dsp.exec_cmd("capture-screenshot smart copy"))

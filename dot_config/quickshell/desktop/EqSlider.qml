@@ -4,6 +4,10 @@ import QtQuick
 Item {
     id: eqSlider
     required property var root
+    property real panelScale: 1
+    property real panelTextScale: 1
+    readonly property real fontScale: panelScale * panelTextScale
+    readonly property real rowScale: panelScale * Math.max(1, panelTextScale)
 
     property real freq: 1000
     property real gain: 0.0
@@ -52,12 +56,12 @@ Item {
         return (1.0 - Math.max(0, Math.min(1, norm))) * track.height;
     }
 
-    implicitWidth: 32
-    implicitHeight: 160
+    implicitWidth: 32 * eqSlider.panelScale
+    implicitHeight: 160 * eqSlider.rowScale
 
     Column {
         anchors.fill: parent
-        spacing: 4
+        spacing: 4 * eqSlider.panelScale
 
         // Gain readout (top)
         Text {
@@ -67,7 +71,7 @@ Item {
                    ? (eqSlider.selected ? eqSlider.root.ink : eqSlider.root.seal)
                    : eqSlider.root.inkDeep
             font.family: eqSlider.root.mono
-            font.pixelSize: 9
+            font.pixelSize: 9 * eqSlider.fontScale
             font.weight: Font.Medium
         }
 
@@ -75,14 +79,14 @@ Item {
         Item {
             id: trackContainer
             width: parent.width
-            height: 122
+            height: 122 * eqSlider.rowScale
 
             Rectangle {
                 id: track
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: 3
+                width: 3 * eqSlider.panelScale
                 radius: 1
                 color: Qt.rgba(eqSlider.root.ink.r, eqSlider.root.ink.g, eqSlider.root.ink.b, 0.14)
 
@@ -90,8 +94,8 @@ Item {
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 9
-                    height: 1
+                    width: 9 * eqSlider.panelScale
+                    height: 1 * eqSlider.rowScale
                     color: eqSlider.root.sep
                 }
 
@@ -103,7 +107,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: Math.min(curY, centerY)
                     height: Math.max(1, Math.abs(curY - centerY))
-                    width: 3
+                    width: 3 * eqSlider.panelScale
                     color: eqSlider.root.seal
                     opacity: eqSlider.selected ? 1.0 : 0.8
                 }
@@ -113,8 +117,8 @@ Item {
                     readonly property real curY: eqSlider.yFromGain(eqSlider.dragging ? eqSlider.pendingGain : eqSlider.gain)
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: Math.max(0, Math.min(track.height - height, curY - height / 2))
-                    width: 12
-                    height: 4
+                    width: 12 * eqSlider.panelScale
+                    height: 4 * eqSlider.rowScale
                     radius: 1
                     color: sliderMouse.containsMouse || eqSlider.dragging ? eqSlider.root.ink : eqSlider.root.seal
                     border.color: eqSlider.root.bg
@@ -161,8 +165,8 @@ Item {
             text: eqSlider.formatFreq(eqSlider.freq)
             color: eqSlider.selected ? eqSlider.root.ink : eqSlider.root.inkDeep
             font.family: eqSlider.root.mono
-            font.pixelSize: 9
-            font.letterSpacing: 0.5
+            font.pixelSize: 9 * eqSlider.fontScale
+            font.letterSpacing: 0.5 * eqSlider.fontScale
         }
     }
 }

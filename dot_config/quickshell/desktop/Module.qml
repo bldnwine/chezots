@@ -6,6 +6,11 @@ Item {
     required property var root
 
     property string glyph: ""
+    property url iconSource: ""
+    property real iconSize: 14
+    readonly property real iconRenderSize: svgIcon.renderSize
+    readonly property real iconOriginX: svgIcon.x + svgIcon.artworkX
+    readonly property real iconOriginY: svgIcon.y + svgIcon.artworkY
     property string tooltip: ""
     property color color: root.ink
     property string fontFamily: root.mono
@@ -49,12 +54,22 @@ Item {
     Bloom { id: bloom; root: modItem.root }
 
     Text {
+        visible: modItem.iconSource.toString().length === 0
         anchors.centerIn: parent
         anchors.verticalCenterOffset: modItem.glyphYOffset
         text: modItem.glyph
         color: modItem.color
         font.family: modItem.fontFamily
         font.pixelSize: modItem.fontSize
+    }
+
+    BarIcon {
+        id: svgIcon
+        anchors.centerIn: parent
+        visible: modItem.iconSource.toString().length > 0
+        source: modItem.iconSource
+        size: modItem.iconSize
+        color: modItem.color
     }
 
     MouseArea {

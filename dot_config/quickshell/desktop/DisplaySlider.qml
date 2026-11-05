@@ -6,6 +6,10 @@ import QtQuick
 Item {
     id: slider
     required property var root
+    property real panelScale: 1
+    property real panelTextScale: 1
+    readonly property real fontScale: panelScale * panelTextScale
+    readonly property real rowScale: panelScale * Math.max(1, panelTextScale)
 
     property string label: ""
     property real value: 0
@@ -28,7 +32,7 @@ Item {
         return slider.minV + ratio * (slider.maxV - slider.minV);
     }
 
-    implicitHeight: 30
+    implicitHeight: 30 * slider.rowScale
 
     Timer {
         id: commitTimer
@@ -43,8 +47,8 @@ Item {
         text: slider.label
         color: slider.selected ? slider.root.seal : slider.root.inkDeep
         font.family: slider.root.mono
-        font.pixelSize: 10
-        font.letterSpacing: 2
+        font.pixelSize: 10 * slider.fontScale
+        font.letterSpacing: 2 * slider.fontScale
         Behavior on color { ColorAnimation { duration: 140 } }
     }
     Text {
@@ -53,8 +57,8 @@ Item {
         text: Math.round(slider.dragging ? slider.pendingValue : slider.value) + slider.unit
         color: slider.selected ? slider.root.ink : slider.root.inkDeep
         font.family: slider.root.mono
-        font.pixelSize: 10
-        font.letterSpacing: 2
+        font.pixelSize: 10 * slider.fontScale
+        font.letterSpacing: 2 * slider.fontScale
         font.weight: Font.Medium
     }
 
@@ -63,8 +67,8 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 2
-        height: 3
+        anchors.bottomMargin: 2 * slider.panelScale
+        height: 3 * slider.rowScale
         color: Qt.rgba(slider.root.ink.r, slider.root.ink.g, slider.root.ink.b, 0.12)
         antialiasing: true
 
@@ -82,8 +86,8 @@ Item {
 
         // Thumb sits 4px above/below the track on the boundary.
         Rectangle {
-            width: 2
-            height: 11
+            width: 2 * slider.panelScale
+            height: 11 * slider.rowScale
             color: slider.root.seal
             antialiasing: true
             x: Math.max(0, Math.min(parent.width - width,

@@ -23,7 +23,7 @@ CardWindow {
         root: displayPopup.root
         text: displayPopup.root.icoRefresh
         restColor: displayPopup.root.inkDeep
-        font.pixelSize: 22
+        font.pixelSize: 22 * displayPopup.fontScale
         onTriggered: displayPopup.root.resetDisplay()
     }
 
@@ -82,7 +82,7 @@ CardWindow {
     Column {
         id: dispCol
         width: parent.width
-        spacing: 12
+        spacing: 12 * displayPopup.panelScale
 
         Repeater {
             model: [
@@ -91,6 +91,8 @@ CardWindow {
                 { label: "GAMMA",      valKey: "gammaPct",      lo: 50,   hi: 150,  unit: "",  row: 2 }
             ]
             delegate: DisplaySlider {
+                panelScale: displayPopup.panelScale
+                panelTextScale: displayPopup.panelTextScale
                 required property var modelData
                 root: displayPopup.root
                 width: dispCol.width
@@ -117,7 +119,7 @@ CardWindow {
             text: displayPopup.root.brightnessError
             color: displayPopup.root.warn
             font.family: displayPopup.root.mono
-            font.pixelSize: 11
+            font.pixelSize: 11 * displayPopup.fontScale
             wrapMode: Text.WordWrap
         }
 
@@ -125,7 +127,7 @@ CardWindow {
 
         Item {
             width: parent.width
-            height: 38
+            height: 38 * displayPopup.rowScale
 
             Text {
                 anchors.left: parent.left
@@ -133,19 +135,21 @@ CardWindow {
                 text: "PRESETS"
                 color: displayPopup.root.displayRow === 3 ? displayPopup.root.seal : displayPopup.root.inkDeep
                 font.family: displayPopup.root.mono
-                font.pixelSize: 10
-                font.letterSpacing: 2
+                font.pixelSize: 10 * displayPopup.fontScale
+                font.letterSpacing: 2 * displayPopup.fontScale
                 Behavior on color { ColorAnimation { duration: 140 } }
             }
 
             Row {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
-                spacing: 6
+                spacing: 6 * displayPopup.panelScale
 
                 Repeater {
                     model: displayPopup.root.displayPresets
                     delegate: DisplayChip {
+                        panelScale: displayPopup.panelScale
+                        panelTextScale: displayPopup.panelTextScale
                         required property var modelData
                         required property int index
                         root: displayPopup.root
@@ -175,14 +179,16 @@ CardWindow {
                   + " · ×" + displayPopup.root.monitorScale.toFixed(2)
             color: displayPopup.root.inkDeep
             font.family: displayPopup.root.mono
-            font.pixelSize: 10
-            font.letterSpacing: 2
+            font.pixelSize: 10 * displayPopup.fontScale
+            font.letterSpacing: 2 * displayPopup.fontScale
         }
 
         Item {
             width: parent.width
-            height: 26
+            height: 26 * displayPopup.rowScale
             DisplayChip {
+                panelScale: displayPopup.panelScale
+                panelTextScale: displayPopup.panelTextScale
                 root: displayPopup.root
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
@@ -195,6 +201,8 @@ CardWindow {
                 }
             }
             DisplayChip {
+                panelScale: displayPopup.panelScale
+                panelTextScale: displayPopup.panelTextScale
                 root: displayPopup.root
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
@@ -203,6 +211,8 @@ CardWindow {
                 onActivated: { displayPopup.root.displayRow = 5; displayPopup.root.blankScreen(); }
             }
             DisplayChip {
+                panelScale: displayPopup.panelScale
+                panelTextScale: displayPopup.panelTextScale
                 root: displayPopup.root
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter

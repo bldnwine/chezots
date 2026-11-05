@@ -110,17 +110,17 @@ CardWindow {
     anchorBarY: calendarPopup.root.popupAnchorY
 
     headerRight: Row {
-        spacing: 8
+        spacing: 8 * calendarPopup.panelScale
 
         Item {
-            width: 22
-            height: 22
+            width: 22 * calendarPopup.panelScale
+            height: 22 * calendarPopup.rowScale
             CalendarChevron {
                 anchors.centerIn: parent
                 root: calendarPopup.root
                 text: String.fromCodePoint(0xf104)
                 hotColor: calendarPopup.root.seal
-                font.pixelSize: 18
+                font.pixelSize: 18 * calendarPopup.fontScale
                 onTriggered: {
                     calendarPopup.root.calendarMonthOffset--;
                     calendarPopup.root.calendarTick++;
@@ -129,15 +129,15 @@ CardWindow {
         }
 
         Item {
-            width: 22
-            height: 22
+            width: 22 * calendarPopup.panelScale
+            height: 22 * calendarPopup.rowScale
             CalendarChevron {
                 anchors.centerIn: parent
                 root: calendarPopup.root
                 text: "•"
                 restColor: calendarPopup.root.inkDeep
                 hotColor: calendarPopup.root.seal
-                font.pixelSize: 16
+                font.pixelSize: 16 * calendarPopup.fontScale
                 onTriggered: {
                     calendarPopup.root.calendarMonthOffset = 0;
                     calendarPopup.root.calendarTick++;
@@ -147,14 +147,14 @@ CardWindow {
         }
 
         Item {
-            width: 22
-            height: 22
+            width: 22 * calendarPopup.panelScale
+            height: 22 * calendarPopup.rowScale
             CalendarChevron {
                 anchors.centerIn: parent
                 root: calendarPopup.root
                 text: String.fromCodePoint(0xf105)
                 hotColor: calendarPopup.root.seal
-                font.pixelSize: 18
+                font.pixelSize: 18 * calendarPopup.fontScale
                 onTriggered: {
                     calendarPopup.root.calendarMonthOffset++;
                     calendarPopup.root.calendarTick++;
@@ -163,8 +163,8 @@ CardWindow {
         }
 
         Item {
-            width: 22
-            height: 22
+            width: 22 * calendarPopup.panelScale
+            height: 22 * calendarPopup.rowScale
             CalendarChevron {
                 id: syncBtn
                 anchors.centerIn: parent
@@ -172,7 +172,7 @@ CardWindow {
                 text: calendarPopup.root.icoRefresh
                 restColor: calendarPopup.syncing ? calendarPopup.root.seal : calendarPopup.root.inkDeep
                 hotColor: calendarPopup.root.seal
-                font.pixelSize: 18
+                font.pixelSize: 18 * calendarPopup.fontScale
                 opacity: calendarPopup.syncing ? 0.7 : 1.0
                 onTriggered: calendarPopup.syncNow()
 
@@ -243,14 +243,14 @@ CardWindow {
 
     Column {
         width: parent.width
-        spacing: 12
+        spacing: 12 * calendarPopup.panelScale
         Text {
             width: parent.width
             visible: calendarPopup.service.lastError !== ""
             text: calendarPopup.service.lastError
             color: calendarPopup.root.warn
             font.family: calendarPopup.root.mono
-            font.pixelSize: 10
+            font.pixelSize: 10 * calendarPopup.fontScale
             wrapMode: Text.Wrap
         }
 
@@ -258,7 +258,7 @@ CardWindow {
         // Weekday header row
         Row {
             width: parent.width
-            spacing: 0
+            spacing: 0 * calendarPopup.panelScale
 
             Repeater {
                 model: ["MO","TU","WE","TH","FR","SA","SU"]
@@ -266,15 +266,15 @@ CardWindow {
                     required property string modelData
                     required property int index
                     width: parent.width / 7
-                    height: 20
+                    height: 20 * calendarPopup.rowScale
                     Text {
                         anchors.centerIn: parent
                         text: modelData
                         color: index >= 5 ? calendarPopup.root.seal : calendarPopup.root.inkDeep
                         opacity: index >= 5 ? 0.85 : 0.65
                         font.family: calendarPopup.root.mono
-                        font.pixelSize: 11
-                        font.letterSpacing: 1.5
+                        font.pixelSize: 11 * calendarPopup.fontScale
+                        font.letterSpacing: 1.5 * calendarPopup.fontScale
                     }
                 }
             }
@@ -283,7 +283,7 @@ CardWindow {
         // 6-Row Month Grid
         Column {
             width: parent.width
-            spacing: 2
+            spacing: 2 * calendarPopup.panelScale
 
             Repeater {
                 id: weekRepeater
@@ -292,7 +292,7 @@ CardWindow {
                 Row {
                     required property var modelData
                     width: parent.width
-                    spacing: 0
+                    spacing: 0 * calendarPopup.panelScale
 
                     Repeater {
                         model: modelData.days
@@ -301,7 +301,7 @@ CardWindow {
                             id: dayCell
                             required property var modelData
                             width: parent.width / 7
-                            height: 34
+                            height: 34 * calendarPopup.rowScale
 
                             readonly property bool isToday: modelData.today
                             readonly property bool isSelected: modelData.key === calendarPopup.selectedDateKey
@@ -312,9 +312,9 @@ CardWindow {
                             // Today background circle
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: 28
-                                height: 28
-                                radius: 14
+                                width: 28 * calendarPopup.panelScale
+                                height: 28 * calendarPopup.rowScale
+                                radius: 14 * calendarPopup.panelScale
                                 color: calendarPopup.root.seal
                                 visible: dayCell.isToday
                                 antialiasing: true
@@ -323,9 +323,9 @@ CardWindow {
                             // Selection outline
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: 28
-                                height: 28
-                                radius: 14
+                                width: 28 * calendarPopup.panelScale
+                                height: 28 * calendarPopup.rowScale
+                                radius: 14 * calendarPopup.panelScale
                                 color: dayMouse.containsMouse && !dayCell.isToday
                                     ? Qt.rgba(calendarPopup.root.ink.r, calendarPopup.root.ink.g, calendarPopup.root.ink.b, 0.08)
                                     : "transparent"
@@ -336,7 +336,7 @@ CardWindow {
 
                             Column {
                                 anchors.centerIn: parent
-                                spacing: 1
+                                spacing: 1 * calendarPopup.panelScale
 
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
@@ -348,23 +348,23 @@ CardWindow {
                                             : calendarPopup.root.sumi)
                                     opacity: dayCell.inMonth ? 1.0 : 0.3
                                     font.family: calendarPopup.root.mono
-                                    font.pixelSize: 13
+                                    font.pixelSize: 13 * calendarPopup.fontScale
                                     font.weight: dayCell.isToday || dayCell.isSelected ? Font.Medium : Font.Normal
                                 }
 
                                 // Event indicator dots
                                 Row {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    spacing: 2
+                                    spacing: 2 * calendarPopup.panelScale
                                     visible: dayCell.dots.length > 0
 
                                     Repeater {
                                         model: dayCell.dots
                                         Rectangle {
                                             required property var modelData
-                                            width: 4
-                                            height: 4
-                                            radius: 2
+                                            width: 4 * calendarPopup.panelScale
+                                            height: 4 * calendarPopup.rowScale
+                                            radius: 2 * calendarPopup.panelScale
                                             color: modelData
                                             opacity: dayCell.isToday ? 0.9 : 1.0
                                         }
@@ -391,31 +391,31 @@ CardWindow {
 
         Rectangle {
             width: parent.width
-            height: 1
+            height: 1 * calendarPopup.rowScale
             color: calendarPopup.root.sep
         }
 
         // Agenda Section for Selected Date
         Column {
             width: parent.width
-            spacing: 8
+            spacing: 8 * calendarPopup.panelScale
 
             // Section Header with Date and Add (+) Button
             Item {
                 width: parent.width
-                height: 20
+                height: 20 * calendarPopup.rowScale
 
                 Row {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
+                    spacing: 8 * calendarPopup.panelScale
 
                     Text {
                         text: Qt.formatDate(calendarPopup.selectedDateObj, "d MMMM yyyy").toUpperCase()
                         color: calendarPopup.root.ink
                         font.family: calendarPopup.root.mono
-                        font.pixelSize: 11
-                        font.letterSpacing: 2
+                        font.pixelSize: 11 * calendarPopup.fontScale
+                        font.letterSpacing: 2 * calendarPopup.fontScale
                         font.weight: Font.Medium
                     }
 
@@ -425,8 +425,8 @@ CardWindow {
                             : ""
                         color: calendarPopup.root.inkDeep
                         font.family: calendarPopup.root.mono
-                        font.pixelSize: 10
-                        font.letterSpacing: 1.5
+                        font.pixelSize: 10 * calendarPopup.fontScale
+                        font.letterSpacing: 1.5 * calendarPopup.fontScale
                         opacity: 0.8
                     }
                 }
@@ -438,8 +438,8 @@ CardWindow {
                     text: calendarPopup.creatingEvent ? "✕" : "+"
                     color: addMouse.containsMouse || calendarPopup.creatingEvent ? calendarPopup.root.seal : calendarPopup.root.ink
                     font.family: calendarPopup.root.mono
-                    font.pixelSize: 11
-                    font.letterSpacing: 2
+                    font.pixelSize: 11 * calendarPopup.fontScale
+                    font.letterSpacing: 2 * calendarPopup.fontScale
                     font.weight: Font.Medium
 
                     MouseArea {
@@ -474,13 +474,13 @@ CardWindow {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    anchors.margins: 8
-                    spacing: 8
+                    anchors.margins: 8 * calendarPopup.panelScale
+                    spacing: 8 * calendarPopup.panelScale
 
                     // Title Input
                     Rectangle {
                         width: parent.width
-                        height: 28
+                        height: 28 * calendarPopup.rowScale
                         radius: calendarPopup.root.cornerRadius
                         color: Qt.rgba(calendarPopup.root.bg.r, calendarPopup.root.bg.g, calendarPopup.root.bg.b, 0.6)
                         border.color: newTitleInput.activeFocus ? calendarPopup.root.seal : calendarPopup.root.sep
@@ -489,12 +489,12 @@ CardWindow {
                         TextInput {
                             id: newTitleInput
                             anchors.fill: parent
-                            anchors.leftMargin: 8
-                            anchors.rightMargin: 8
+                            anchors.leftMargin: 8 * calendarPopup.panelScale
+                            anchors.rightMargin: 8 * calendarPopup.panelScale
                             verticalAlignment: Text.AlignVCenter
                             color: calendarPopup.root.ink
                             font.family: calendarPopup.root.mono
-                            font.pixelSize: 11
+                            font.pixelSize: 11 * calendarPopup.fontScale
                             clip: true
                             onAccepted: calendarPopup.submitNewEvent()
 
@@ -505,7 +505,7 @@ CardWindow {
                                 text: "Event title..."
                                 color: calendarPopup.root.sumi
                                 font.family: calendarPopup.root.mono
-                                font.pixelSize: 11
+                                font.pixelSize: 11 * calendarPopup.fontScale
                                 opacity: 0.6
                             }
                         }
@@ -514,12 +514,12 @@ CardWindow {
                     // Times & All-Day Toggle
                     Row {
                         width: parent.width
-                        spacing: 8
+                        spacing: 8 * calendarPopup.panelScale
                         visible: !allDayToggle.checked
 
                         Rectangle {
-                            width: 60
-                            height: 24
+                            width: 60 * calendarPopup.panelScale
+                            height: 24 * calendarPopup.rowScale
                             radius: calendarPopup.root.cornerRadius
                             color: Qt.rgba(calendarPopup.root.bg.r, calendarPopup.root.bg.g, calendarPopup.root.bg.b, 0.6)
                             border.color: startTimeInput.activeFocus ? calendarPopup.root.seal : calendarPopup.root.sep
@@ -533,7 +533,7 @@ CardWindow {
                                 text: "09:00"
                                 color: calendarPopup.root.ink
                                 font.family: calendarPopup.root.mono
-                                font.pixelSize: 11
+                                font.pixelSize: 11 * calendarPopup.fontScale
                             }
                         }
 
@@ -542,12 +542,12 @@ CardWindow {
                             text: "to"
                             color: calendarPopup.root.inkDeep
                             font.family: calendarPopup.root.mono
-                            font.pixelSize: 10
+                            font.pixelSize: 10 * calendarPopup.fontScale
                         }
 
                         Rectangle {
-                            width: 60
-                            height: 24
+                            width: 60 * calendarPopup.panelScale
+                            height: 24 * calendarPopup.rowScale
                             radius: calendarPopup.root.cornerRadius
                             color: Qt.rgba(calendarPopup.root.bg.r, calendarPopup.root.bg.g, calendarPopup.root.bg.b, 0.6)
                             border.color: endTimeInput.activeFocus ? calendarPopup.root.seal : calendarPopup.root.sep
@@ -561,7 +561,7 @@ CardWindow {
                                 text: "10:00"
                                 color: calendarPopup.root.ink
                                 font.family: calendarPopup.root.mono
-                                font.pixelSize: 11
+                                font.pixelSize: 11 * calendarPopup.fontScale
                             }
                         }
                     }
@@ -572,18 +572,18 @@ CardWindow {
 
                         Item {
                             width: parent.width - actionBtnRow.width
-                            height: 24
+                            height: 24 * calendarPopup.rowScale
 
                             Row {
                                 anchors.verticalCenter: parent.verticalCenter
-                                spacing: 6
+                                spacing: 6 * calendarPopup.panelScale
 
                                 Rectangle {
                                     id: allDayToggle
                                     property bool checked: false
-                                    width: 14
-                                    height: 14
-                                    radius: 2
+                                    width: 14 * calendarPopup.panelScale
+                                    height: 14 * calendarPopup.rowScale
+                                    radius: 2 * calendarPopup.panelScale
                                     anchors.verticalCenter: parent.verticalCenter
                                     color: checked ? calendarPopup.root.seal : "transparent"
                                     border.color: calendarPopup.root.seal
@@ -602,19 +602,19 @@ CardWindow {
                                     text: "ALL DAY"
                                     color: calendarPopup.root.inkDeep
                                     font.family: calendarPopup.root.mono
-                                    font.pixelSize: 9
-                                    font.letterSpacing: 1
+                                    font.pixelSize: 9 * calendarPopup.fontScale
+                                    font.letterSpacing: 1 * calendarPopup.fontScale
                                 }
                             }
                         }
 
                         Row {
                             id: actionBtnRow
-                            spacing: 6
+                            spacing: 6 * calendarPopup.panelScale
 
                             Rectangle {
-                                width: 56
-                                height: 24
+                                width: 56 * calendarPopup.panelScale
+                                height: 24 * calendarPopup.rowScale
                                 radius: calendarPopup.root.cornerRadius
                                 color: cancelBtnMouse.containsMouse
                                     ? Qt.rgba(calendarPopup.root.ink.r, calendarPopup.root.ink.g, calendarPopup.root.ink.b, 0.1)
@@ -627,8 +627,8 @@ CardWindow {
                                     text: "CANCEL"
                                     color: calendarPopup.root.inkDeep
                                     font.family: calendarPopup.root.mono
-                                    font.pixelSize: 9
-                                    font.letterSpacing: 1
+                                    font.pixelSize: 9 * calendarPopup.fontScale
+                                    font.letterSpacing: 1 * calendarPopup.fontScale
                                 }
 
                                 MouseArea {
@@ -644,8 +644,8 @@ CardWindow {
                             }
 
                             Rectangle {
-                                width: 48
-                                height: 24
+                                width: 48 * calendarPopup.panelScale
+                                height: 24 * calendarPopup.rowScale
                                 radius: calendarPopup.root.cornerRadius
                                 color: saveBtnMouse.containsMouse ? calendarPopup.root.seal : calendarPopup.root.indigo
 
@@ -654,9 +654,9 @@ CardWindow {
                                     text: "SAVE"
                                     color: calendarPopup.root.paper
                                     font.family: calendarPopup.root.mono
-                                    font.pixelSize: 9
+                                    font.pixelSize: 9 * calendarPopup.fontScale
                                     font.weight: Font.Bold
-                                    font.letterSpacing: 1
+                                    font.letterSpacing: 1 * calendarPopup.fontScale
                                 }
 
                                 MouseArea {
@@ -679,11 +679,11 @@ CardWindow {
                 text: "No events scheduled"
                 color: calendarPopup.root.sumi
                 font.family: calendarPopup.root.mono
-                font.pixelSize: 11
-                font.letterSpacing: 1
+                font.pixelSize: 11 * calendarPopup.fontScale
+                font.letterSpacing: 1 * calendarPopup.fontScale
                 opacity: 0.6
-                topPadding: 4
-                bottomPadding: 4
+                topPadding: 4 * calendarPopup.panelScale
+                bottomPadding: 4 * calendarPopup.panelScale
             }
 
             // Event Rows
@@ -695,7 +695,7 @@ CardWindow {
                     readonly property string eventKey: modelData.calendarId + ":" + modelData.id
                     required property var modelData
                     width: parent.width
-                    height: calendarPopup.editingEventId === eventRow.eventKey ? editFormCol.implicitHeight + 16 : 44
+                    height: calendarPopup.editingEventId === eventRow.eventKey ? editFormCol.implicitHeight + 16 * calendarPopup.panelScale : 44 * calendarPopup.rowScale
                     radius: calendarPopup.root.cornerRadius
                     color: eventRow.isHovered || calendarPopup.editingEventId === eventRow.eventKey
                         ? Qt.rgba(calendarPopup.root.ink.r, calendarPopup.root.ink.g, calendarPopup.root.ink.b, 0.05)
@@ -722,10 +722,10 @@ CardWindow {
                         anchors.left: parent.left
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
-                        anchors.topMargin: 4
-                        anchors.bottomMargin: 4
-                        width: 3
-                        radius: 1.5
+                        anchors.topMargin: 4 * calendarPopup.panelScale
+                        anchors.bottomMargin: 4 * calendarPopup.panelScale
+                        width: 3 * calendarPopup.panelScale
+                        radius: 1.5 * calendarPopup.panelScale
                         color: eventRow.modelData.color || calendarPopup.root.indigo
                     }
 
@@ -737,18 +737,18 @@ CardWindow {
                         // Text column with fixed right margin so geometry is rock-solid
                         Column {
                             anchors.left: parent.left
-                            anchors.leftMargin: 10
+                            anchors.leftMargin: 10 * calendarPopup.panelScale
                             anchors.right: parent.right
                             anchors.rightMargin: (eventRow.modelData.meetingUrl ? 116 : 64)
                             anchors.verticalCenter: parent.verticalCenter
-                            spacing: 2
+                            spacing: 2 * calendarPopup.panelScale
 
                             Text {
                                 width: parent.width
                                 text: eventRow.modelData.title || "(No title)"
                                 color: calendarPopup.root.ink
                                 font.family: calendarPopup.root.mono
-                                font.pixelSize: 12
+                                font.pixelSize: 12 * calendarPopup.fontScale
                                 font.weight: Font.Medium
                                 elide: Text.ElideRight
                             }
@@ -759,7 +759,7 @@ CardWindow {
                                       + (eventRow.modelData.location ? "  ·  " + eventRow.modelData.location : "")
                                 color: calendarPopup.root.inkDeep
                                 font.family: calendarPopup.root.mono
-                                font.pixelSize: 10
+                                font.pixelSize: 10 * calendarPopup.fontScale
                                 elide: Text.ElideRight
                                 opacity: 0.8
                             }
@@ -768,15 +768,15 @@ CardWindow {
                         // Action Buttons: Edit, Delete, Join (layered on top with z: 2)
                         Row {
                             anchors.right: parent.right
-                            anchors.rightMargin: 4
+                            anchors.rightMargin: 4 * calendarPopup.panelScale
                             anchors.verticalCenter: parent.verticalCenter
-                            spacing: 4
+                            spacing: 4 * calendarPopup.panelScale
                             z: 2
 
                             // Edit Icon Button with smooth fade
                             Rectangle {
-                                width: 22
-                                height: 22
+                                width: 22 * calendarPopup.panelScale
+                                height: 22 * calendarPopup.rowScale
                                 radius: calendarPopup.root.cornerRadius
                                 opacity: eventRow.isHovered ? 1.0 : 0.0
                                 enabled: eventRow.isHovered
@@ -793,7 +793,7 @@ CardWindow {
                                     text: String.fromCodePoint(0xf044)
                                     color: editBtnMouse.containsMouse ? calendarPopup.root.seal : calendarPopup.root.inkDeep
                                     font.family: calendarPopup.root.mono
-                                    font.pixelSize: 11
+                                    font.pixelSize: 11 * calendarPopup.fontScale
                                 }
 
                                 MouseArea {
@@ -810,8 +810,8 @@ CardWindow {
 
                             // Delete Icon Button with smooth fade
                             Rectangle {
-                                width: 22
-                                height: 22
+                                width: 22 * calendarPopup.panelScale
+                                height: 22 * calendarPopup.rowScale
                                 radius: calendarPopup.root.cornerRadius
                                 opacity: eventRow.isHovered ? 1.0 : 0.0
                                 enabled: eventRow.isHovered
@@ -828,7 +828,7 @@ CardWindow {
                                     text: String.fromCodePoint(0xf1f8)
                                     color: deleteBtnMouse.containsMouse ? calendarPopup.root.seal : calendarPopup.root.inkDeep
                                     font.family: calendarPopup.root.mono
-                                    font.pixelSize: 11
+                                    font.pixelSize: 11 * calendarPopup.fontScale
                                 }
 
                                 MouseArea {
@@ -844,8 +844,8 @@ CardWindow {
                             Rectangle {
                                 id: joinBtn
                                 visible: !!eventRow.modelData.meetingUrl
-                                width: 48
-                                height: 22
+                                width: 48 * calendarPopup.panelScale
+                                height: 22 * calendarPopup.rowScale
                                 radius: calendarPopup.root.cornerRadius
                                 color: joinMouse.containsMouse
                                     ? calendarPopup.root.indigo
@@ -858,9 +858,9 @@ CardWindow {
                                     text: "JOIN"
                                     color: joinMouse.containsMouse ? calendarPopup.root.paper : calendarPopup.root.indigo
                                     font.family: calendarPopup.root.mono
-                                    font.pixelSize: 9
+                                    font.pixelSize: 9 * calendarPopup.fontScale
                                     font.weight: Font.Bold
-                                    font.letterSpacing: 1
+                                    font.letterSpacing: 1 * calendarPopup.fontScale
                                 }
 
                                 MouseArea {
@@ -881,14 +881,14 @@ CardWindow {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
-                        anchors.margins: 8
-                        anchors.leftMargin: 12
-                        spacing: 6
+                        anchors.margins: 8 * calendarPopup.panelScale
+                        anchors.leftMargin: 12 * calendarPopup.panelScale
+                        spacing: 6 * calendarPopup.panelScale
                         z: 3
 
                         Rectangle {
                             width: parent.width
-                            height: 26
+                            height: 26 * calendarPopup.rowScale
                             radius: calendarPopup.root.cornerRadius
                             color: Qt.rgba(calendarPopup.root.bg.r, calendarPopup.root.bg.g, calendarPopup.root.bg.b, 0.6)
                             border.color: editTitleInput.activeFocus ? calendarPopup.root.seal : calendarPopup.root.sep
@@ -897,23 +897,23 @@ CardWindow {
                             TextInput {
                                 id: editTitleInput
                                 anchors.fill: parent
-                                anchors.leftMargin: 6
-                                anchors.rightMargin: 6
+                                anchors.leftMargin: 6 * calendarPopup.panelScale
+                                anchors.rightMargin: 6 * calendarPopup.panelScale
                                 verticalAlignment: Text.AlignVCenter
                                 color: calendarPopup.root.ink
                                 font.family: calendarPopup.root.mono
-                                font.pixelSize: 11
+                                font.pixelSize: 11 * calendarPopup.fontScale
                                 text: eventRow.modelData.title || ""
                             }
                         }
 
                         Row {
-                            spacing: 6
+                            spacing: 6 * calendarPopup.panelScale
                             anchors.right: parent.right
 
                             Rectangle {
-                                width: 50
-                                height: 22
+                                width: 50 * calendarPopup.panelScale
+                                height: 22 * calendarPopup.rowScale
                                 radius: calendarPopup.root.cornerRadius
                                 color: "transparent"
                                 border.color: calendarPopup.root.sep
@@ -924,7 +924,7 @@ CardWindow {
                                     text: "CANCEL"
                                     color: calendarPopup.root.inkDeep
                                     font.family: calendarPopup.root.mono
-                                    font.pixelSize: 9
+                                    font.pixelSize: 9 * calendarPopup.fontScale
                                 }
 
                                 MouseArea {
@@ -935,8 +935,8 @@ CardWindow {
                             }
 
                             Rectangle {
-                                width: 44
-                                height: 22
+                                width: 44 * calendarPopup.panelScale
+                                height: 22 * calendarPopup.rowScale
                                 radius: calendarPopup.root.cornerRadius
                                 color: calendarPopup.root.seal
 
@@ -945,7 +945,7 @@ CardWindow {
                                     text: "SAVE"
                                     color: calendarPopup.root.paper
                                     font.family: calendarPopup.root.mono
-                                    font.pixelSize: 9
+                                    font.pixelSize: 9 * calendarPopup.fontScale
                                     font.weight: Font.Bold
                                 }
 

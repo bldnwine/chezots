@@ -1,4 +1,5 @@
-[manager]
+[mgr]
 prepend_keymap = [
     { on = [ "<S-Enter>" ], run = "open --interactive", desc = "Open with..." },
+    { on = "M", run = "plugin mount", desc = "Mount, unmount, or eject drives" },
 ]

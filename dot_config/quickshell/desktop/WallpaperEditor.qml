@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 
@@ -8,9 +9,14 @@ Item {
     visible: active
 
     required property var root
+
+    readonly property real panelScale: root.panelScale !== undefined ? root.panelScale : 1
+    readonly property real fontScale: panelScale * (root.panelTextScale !== undefined ? root.panelTextScale : 1)
+    readonly property real rowScale: panelScale * Math.max(1, root.panelTextScale !== undefined ? root.panelTextScale : 1)
     required property var wallpaperWindow
 
     property bool active: false
+    readonly property Item effectSurface: editorCard
     property var target: null
 
     // Transformation state
@@ -183,10 +189,10 @@ Item {
     Rectangle {
         id: editorCard
         anchors.centerIn: parent
-        width: Math.min(parent.width - 60, 1160)
-        height: Math.min(parent.height - 60, 700)
+        width: Math.max(1, Math.min(parent.width - 60, 1160 * editor.panelScale))
+        height: Math.max(1, Math.min(parent.height - 60, 700 * editor.rowScale))
         radius: root.cornerRadius
-        color: root.bg
+        color: wallpaperWindow.panelBackground !== undefined ? wallpaperWindow.panelBackground : root.bg
         border.color: root.sep
         border.width: 1
         clip: true
@@ -219,27 +225,29 @@ Item {
 
         Column {
             anchors.fill: parent
-            spacing: 0
+            spacing: 0 * editor.panelScale
 
             // 1. Header Bar
             Rectangle {
                 width: parent.width
-                height: 48
+                height: 48 * editor.rowScale
                 color: Qt.rgba(root.paper.r, root.paper.g, root.paper.b, 0.35)
                 border.color: root.sep
                 border.width: 1
 
                 Row {
                     anchors.left: parent.left
-                    anchors.leftMargin: 16
+                    anchors.right: closeButton.left
+                    anchors.leftMargin: 16 * editor.panelScale
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 10
+                    spacing: 10 * editor.panelScale
+                    clip: true
 
                     Text {
                         text: "󰆐"
                         color: root.seal
                         font.family: root.mono
-                        font.pixelSize: 16
+                        font.pixelSize: 16 * editor.fontScale
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
@@ -247,15 +255,15 @@ Item {
                         text: "CROP & ROTATE WALLPAPER"
                         color: root.ink
                         font.family: root.mono
-                        font.pixelSize: 13
+                        font.pixelSize: 13 * editor.fontScale
                         font.weight: Font.Bold
-                        font.letterSpacing: 1.5
+                        font.letterSpacing: 1.5 * editor.fontScale
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
                     Rectangle {
-                        width: 1
-                        height: 14
+                        width: 1 * editor.panelScale
+                        height: 14 * editor.rowScale
                         color: root.sep
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -264,18 +272,19 @@ Item {
                         text: (editor.target ? editor.target.name : "") + "  (" + Math.round(editor.srcW) + "×" + Math.round(editor.srcH) + ")"
                         color: root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * editor.fontScale
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
 
                 // Close Button (✕)
                 Rectangle {
+                    id: closeButton
                     anchors.right: parent.right
-                    anchors.rightMargin: 12
+                    anchors.rightMargin: 12 * editor.panelScale
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 28
-                    height: 28
+                    width: 28 * editor.panelScale
+                    height: 28 * editor.rowScale
                     radius: root.cornerRadius > 0 ? 14 : 0
                     color: closeMouse.containsMouse ? Qt.rgba(root.seal.r, root.seal.g, root.seal.b, 0.15) : "transparent"
                     border.color: closeMouse.containsMouse ? root.seal : "transparent"
@@ -286,7 +295,7 @@ Item {
                         text: "✕"
                         color: closeMouse.containsMouse ? root.seal : root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 13
+                        font.pixelSize: 13 * editor.fontScale
                     }
 
                     MouseArea {
@@ -302,16 +311,16 @@ Item {
             // 2. Middle Area (Canvas + Controls Panel)
             Item {
                 width: parent.width
-                height: parent.height - 48 - 56
+                height: parent.height - (48 + 56) * editor.rowScale
 
                 Row {
                     anchors.fill: parent
-                    spacing: 0
+                    spacing: 0 * editor.panelScale
 
                     // Left: Interactive Preview & Crop Canvas
                     Item {
                         id: canvasArea
-                        width: parent.width - 270
+                        width: Math.max(1, parent.width - sidebar.width - separator.width)
                         height: parent.height
                         clip: true
 
@@ -321,8 +330,8 @@ Item {
                             color: Qt.rgba(0, 0, 0, 0.28)
                         }
 
-                        readonly property real availW: Math.max(100, width - 40)
-                        readonly property real availH: Math.max(100, height - 40)
+                        readonly property real availW: Math.max(1, width - 40 * editor.panelScale)
+                        readonly property real availH: Math.max(1, height - 40 * editor.panelScale)
                         readonly property real frameW: (availW / availH > editor.orientedAspect) ? (availH * editor.orientedAspect) : availW
                         readonly property real frameH: (availW / availH > editor.orientedAspect) ? availH : (availW / editor.orientedAspect)
 
@@ -451,7 +460,7 @@ Item {
                                 Rectangle {
                                     x: -6; y: -6; width: 12; height: 12
                                     color: root.seal; border.color: root.paper; border.width: 1
-                                    radius: 2
+                                    radius: 2 * editor.panelScale
                                     MouseArea {
                                         anchors.fill: parent
                                         cursorShape: Qt.SizeFDiagCursor
@@ -507,7 +516,7 @@ Item {
                                 Rectangle {
                                     x: parent.width - 6; y: -6; width: 12; height: 12
                                     color: root.seal; border.color: root.paper; border.width: 1
-                                    radius: 2
+                                    radius: 2 * editor.panelScale
                                     MouseArea {
                                         anchors.fill: parent
                                         cursorShape: Qt.SizeBDiagCursor
@@ -558,7 +567,7 @@ Item {
                                 Rectangle {
                                     x: -6; y: parent.height - 6; width: 12; height: 12
                                     color: root.seal; border.color: root.paper; border.width: 1
-                                    radius: 2
+                                    radius: 2 * editor.panelScale
                                     MouseArea {
                                         anchors.fill: parent
                                         cursorShape: Qt.SizeBDiagCursor
@@ -608,7 +617,7 @@ Item {
                                 Rectangle {
                                     x: parent.width - 6; y: parent.height - 6; width: 12; height: 12
                                     color: root.seal; border.color: root.paper; border.width: 1
-                                    radius: 2
+                                    radius: 2 * editor.panelScale
                                     MouseArea {
                                         anchors.fill: parent
                                         cursorShape: Qt.SizeFDiagCursor
@@ -654,44 +663,58 @@ Item {
 
                     // Vertical Separator
                     Rectangle {
-                        width: 1
+                        id: separator
+                        width: 1 * editor.panelScale
                         height: parent.height
                         color: root.sep
                     }
 
                     // Right: Tooling & Controls Sidebar
                     Rectangle {
-                        width: 269
+                        id: sidebar
+                        width: Math.max(1, Math.min(parent.width * 0.6, 269 * editor.fontScale))
                         height: parent.height
                         color: Qt.rgba(root.paper.r, root.paper.g, root.paper.b, 0.20)
 
-                        Column {
+                        Flickable {
+                            id: sidebarViewport
                             anchors.fill: parent
-                            anchors.margins: 16
-                            spacing: 16
+                            anchors.margins: 16 * editor.panelScale
+                            contentWidth: width
+                            contentHeight: sidebarColumn.implicitHeight
+                            flickableDirection: Flickable.VerticalFlick
+                            boundsBehavior: Flickable.StopAtBounds
+                            clip: true
+                            interactive: contentHeight > height
+                            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+                        Column {
+                            id: sidebarColumn
+                            width: sidebarViewport.width
+                            spacing: 16 * editor.panelScale
 
                             // Section: Rotation & Orientation
                             Column {
                                 width: parent.width
-                                spacing: 8
+                                spacing: 8 * editor.panelScale
 
                                 Text {
                                     text: "ORIENTATION"
                                     color: root.inkDeep
                                     font.family: root.mono
-                                    font.pixelSize: 10
-                                    font.letterSpacing: 1.5
+                                    font.pixelSize: 10 * editor.fontScale
+                                    font.letterSpacing: 1.5 * editor.fontScale
                                     font.weight: Font.Bold
                                 }
 
                                 Row {
                                     width: parent.width
-                                    spacing: 8
+                                    spacing: 8 * editor.panelScale
 
                                     // Rotate -90° (CCW)
                                     Rectangle {
-                                        width: (parent.width - 8) / 2
-                                        height: 32
+                                        width: Math.max(1, (parent.width - 8 * editor.panelScale) / 2)
+                                        height: 32 * editor.rowScale
                                         radius: root.cornerRadius
                                         color: rotCcwMouse.containsMouse ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.10) : Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.04)
                                         border.color: root.sep
@@ -699,9 +722,9 @@ Item {
 
                                         Row {
                                             anchors.centerIn: parent
-                                            spacing: 6
-                                            Text { text: "󰑋"; color: root.ink; font.family: root.mono; font.pixelSize: 13 }
-                                            Text { text: "-90°"; color: root.ink; font.family: root.mono; font.pixelSize: 11 }
+                                            spacing: 6 * editor.panelScale
+                                            Text { text: "󰑋"; color: root.ink; font.family: root.mono; font.pixelSize: 13 * editor.fontScale }
+                                            Text { text: "-90°"; color: root.ink; font.family: root.mono; font.pixelSize: 11 * editor.fontScale }
                                         }
                                         MouseArea {
                                             id: rotCcwMouse
@@ -714,8 +737,8 @@ Item {
 
                                     // Rotate +90° (CW)
                                     Rectangle {
-                                        width: (parent.width - 8) / 2
-                                        height: 32
+                                        width: Math.max(1, (parent.width - 8 * editor.panelScale) / 2)
+                                        height: 32 * editor.rowScale
                                         radius: root.cornerRadius
                                         color: rotCwMouse.containsMouse ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.10) : Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.04)
                                         border.color: root.sep
@@ -723,9 +746,9 @@ Item {
 
                                         Row {
                                             anchors.centerIn: parent
-                                            spacing: 6
-                                            Text { text: "󰑊"; color: root.ink; font.family: root.mono; font.pixelSize: 13 }
-                                            Text { text: "+90°"; color: root.ink; font.family: root.mono; font.pixelSize: 11 }
+                                            spacing: 6 * editor.panelScale
+                                            Text { text: "󰑊"; color: root.ink; font.family: root.mono; font.pixelSize: 13 * editor.fontScale }
+                                            Text { text: "+90°"; color: root.ink; font.family: root.mono; font.pixelSize: 11 * editor.fontScale }
                                         }
                                         MouseArea {
                                             id: rotCwMouse
@@ -739,12 +762,12 @@ Item {
 
                                 Row {
                                     width: parent.width
-                                    spacing: 8
+                                    spacing: 8 * editor.panelScale
 
                                     // Flip Horizontal
                                     Rectangle {
-                                        width: (parent.width - 8) / 2
-                                        height: 30
+                                        width: Math.max(1, (parent.width - 8 * editor.panelScale) / 2)
+                                        height: 30 * editor.rowScale
                                         radius: root.cornerRadius
                                         color: editor.flipH ? Qt.rgba(root.seal.r, root.seal.g, root.seal.b, 0.15) : (flipHMouse.containsMouse ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.08) : Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.04))
                                         border.color: editor.flipH ? root.seal : root.sep
@@ -752,9 +775,9 @@ Item {
 
                                         Row {
                                             anchors.centerIn: parent
-                                            spacing: 6
-                                            Text { text: "󰹑"; color: editor.flipH ? root.seal : root.ink; font.family: root.mono; font.pixelSize: 12 }
-                                            Text { text: "Flip H"; color: editor.flipH ? root.seal : root.ink; font.family: root.mono; font.pixelSize: 10 }
+                                            spacing: 6 * editor.panelScale
+                                            Text { text: "󰹑"; color: editor.flipH ? root.seal : root.ink; font.family: root.mono; font.pixelSize: 12 * editor.fontScale }
+                                            Text { text: "Flip H"; color: editor.flipH ? root.seal : root.ink; font.family: root.mono; font.pixelSize: 10 * editor.fontScale }
                                         }
                                         MouseArea {
                                             id: flipHMouse
@@ -767,8 +790,8 @@ Item {
 
                                     // Flip Vertical
                                     Rectangle {
-                                        width: (parent.width - 8) / 2
-                                        height: 30
+                                        width: Math.max(1, (parent.width - 8 * editor.panelScale) / 2)
+                                        height: 30 * editor.rowScale
                                         radius: root.cornerRadius
                                         color: editor.flipV ? Qt.rgba(root.seal.r, root.seal.g, root.seal.b, 0.15) : (flipVMouse.containsMouse ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.08) : Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.04))
                                         border.color: editor.flipV ? root.seal : root.sep
@@ -776,9 +799,9 @@ Item {
 
                                         Row {
                                             anchors.centerIn: parent
-                                            spacing: 6
-                                            Text { text: "󰹒"; color: editor.flipV ? root.seal : root.ink; font.family: root.mono; font.pixelSize: 12 }
-                                            Text { text: "Flip V"; color: editor.flipV ? root.seal : root.ink; font.family: root.mono; font.pixelSize: 10 }
+                                            spacing: 6 * editor.panelScale
+                                            Text { text: "󰹒"; color: editor.flipV ? root.seal : root.ink; font.family: root.mono; font.pixelSize: 12 * editor.fontScale }
+                                            Text { text: "Flip V"; color: editor.flipV ? root.seal : root.ink; font.family: root.mono; font.pixelSize: 10 * editor.fontScale }
                                         }
                                         MouseArea {
                                             id: flipVMouse
@@ -796,21 +819,21 @@ Item {
                             // Section: Aspect Ratio Presets
                             Column {
                                 width: parent.width
-                                spacing: 8
+                                spacing: 8 * editor.panelScale
 
                                 Text {
                                     text: "ASPECT RATIO"
                                     color: root.inkDeep
                                     font.family: root.mono
-                                    font.pixelSize: 10
-                                    font.letterSpacing: 1.5
+                                    font.pixelSize: 10 * editor.fontScale
+                                    font.letterSpacing: 1.5 * editor.fontScale
                                     font.weight: Font.Bold
                                 }
 
                                 Grid {
                                     width: parent.width
                                     columns: 2
-                                    spacing: 6
+                                    spacing: 6 * editor.panelScale
 
                                     Repeater {
                                         model: [
@@ -824,8 +847,8 @@ Item {
                                         ]
 
                                         delegate: Rectangle {
-                                            width: (index === 6) ? (editorCard.width > 0 ? (269 - 32) : 100) : ((269 - 32 - 6) / 2)
-                                            height: 28
+                                            width: (index === 6) ? parent.width : Math.max(1, (parent.width - 6 * editor.panelScale) / 2)
+                                            height: 28 * editor.rowScale
                                             radius: root.cornerRadius
                                             readonly property bool isSelected: editor.aspectPreset === modelData.key
                                             color: isSelected ? Qt.rgba(root.seal.r, root.seal.g, root.seal.b, 0.15) : (btnMouse.containsMouse ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.08) : Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.03))
@@ -837,7 +860,7 @@ Item {
                                                 text: modelData.label
                                                 color: isSelected ? root.seal : root.ink
                                                 font.family: root.mono
-                                                font.pixelSize: 10
+                                                font.pixelSize: 10 * editor.fontScale
                                                 font.weight: isSelected ? Font.Bold : Font.Normal
                                             }
 
@@ -858,14 +881,14 @@ Item {
                             // Crop Selection Live Metrics
                             Column {
                                 width: parent.width
-                                spacing: 4
+                                spacing: 4 * editor.panelScale
 
                                 Text {
                                     text: "CROP RESOLUTION"
                                     color: root.inkDeep
                                     font.family: root.mono
-                                    font.pixelSize: 9
-                                    font.letterSpacing: 1.5
+                                    font.pixelSize: 9 * editor.fontScale
+                                    font.letterSpacing: 1.5 * editor.fontScale
                                     font.weight: Font.Bold
                                 }
 
@@ -873,7 +896,7 @@ Item {
                                     text: Math.round(editor.cropNormW * editor.orientedW) + " × " + Math.round(editor.cropNormH * editor.orientedH) + " px"
                                     color: root.ink
                                     font.family: root.mono
-                                    font.pixelSize: 12
+                                    font.pixelSize: 12 * editor.fontScale
                                     font.weight: Font.Medium
                                 }
 
@@ -881,9 +904,10 @@ Item {
                                     text: "Rotation: " + editor.currentRotation + "°" + (editor.flipH ? " · FlipH" : "") + (editor.flipV ? " · FlipV" : "")
                                     color: root.inkDeep
                                     font.family: root.mono
-                                    font.pixelSize: 9
+                                    font.pixelSize: 9 * editor.fontScale
                                 }
                             }
+                        }
                         }
                     }
                 }
@@ -892,21 +916,37 @@ Item {
             // 3. Footer Action Bar
             Rectangle {
                 width: parent.width
-                height: 56
+                height: 56 * editor.rowScale
                 color: Qt.rgba(root.paper.r, root.paper.g, root.paper.b, 0.35)
                 border.color: root.sep
                 border.width: 1
 
+                Flickable {
+                    id: footerViewport
+                    anchors.fill: parent
+                    contentWidth: footerContent.width
+                    contentHeight: height
+                    flickableDirection: Flickable.HorizontalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    clip: true
+                    interactive: contentWidth > width
+                    ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded }
+
+                Item {
+                    id: footerContent
+                    width: Math.max(footerViewport.width, (90 + 84 + 140) * editor.fontScale + 64 * editor.panelScale)
+                    height: parent.height
+
                 Row {
                     anchors.left: parent.left
-                    anchors.leftMargin: 16
+                    anchors.leftMargin: 16 * editor.panelScale
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 12
+                    spacing: 12 * editor.panelScale
 
                     // Reset Button
                     Rectangle {
-                        width: 90
-                        height: 32
+                        width: 90 * editor.fontScale
+                        height: 32 * editor.rowScale
                         radius: root.cornerRadius
                         color: resetMouse.containsMouse ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.08) : "transparent"
                         border.color: root.sep
@@ -914,9 +954,9 @@ Item {
 
                         Row {
                             anchors.centerIn: parent
-                            spacing: 6
-                            Text { text: "󰑐"; color: root.inkDeep; font.family: root.mono; font.pixelSize: 12 }
-                            Text { text: "Reset"; color: root.inkDeep; font.family: root.mono; font.pixelSize: 11 }
+                            spacing: 6 * editor.panelScale
+                            Text { text: "󰑐"; color: root.inkDeep; font.family: root.mono; font.pixelSize: 12 * editor.fontScale }
+                            Text { text: "Reset"; color: root.inkDeep; font.family: root.mono; font.pixelSize: 11 * editor.fontScale }
                         }
 
                         MouseArea {
@@ -930,24 +970,25 @@ Item {
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
+                        visible: editorCard.width >= 720 * editor.fontScale
                         text: "Drag box to move · Drag corners to resize"
                         color: root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 10
+                        font.pixelSize: 10 * editor.fontScale
                         opacity: 0.75
                     }
                 }
 
                 Row {
                     anchors.right: parent.right
-                    anchors.rightMargin: 16
+                    anchors.rightMargin: 16 * editor.panelScale
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 10
+                    spacing: 10 * editor.panelScale
 
                     // Cancel Button
                     Rectangle {
-                        width: 84
-                        height: 32
+                        width: 84 * editor.fontScale
+                        height: 32 * editor.rowScale
                         radius: root.cornerRadius
                         color: cancelMouse.containsMouse ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.08) : "transparent"
                         border.color: root.sep
@@ -958,7 +999,7 @@ Item {
                             text: "Cancel"
                             color: root.ink
                             font.family: root.mono
-                            font.pixelSize: 11
+                            font.pixelSize: 11 * editor.fontScale
                         }
 
                         MouseArea {
@@ -972,20 +1013,20 @@ Item {
 
                     // Apply Button
                     Rectangle {
-                        width: 140
-                        height: 32
+                        width: 140 * editor.fontScale
+                        height: 32 * editor.rowScale
                         radius: root.cornerRadius
                         color: editor.isApplying ? Qt.rgba(root.seal.r, root.seal.g, root.seal.b, 0.5) : (applyMouse.containsMouse ? Qt.lighter(root.seal, 1.1) : root.seal)
 
                         Row {
                             anchors.centerIn: parent
-                            spacing: 6
+                            spacing: 6 * editor.panelScale
 
                             Text {
                                 text: editor.isApplying ? "󰑐" : "󰄬"
                                 color: root.paper
                                 font.family: root.mono
-                                font.pixelSize: 12
+                                font.pixelSize: 12 * editor.fontScale
                                 font.weight: Font.Bold
                             }
 
@@ -993,7 +1034,7 @@ Item {
                                 text: editor.isApplying ? "Applying..." : "Apply Wallpaper"
                                 color: root.paper
                                 font.family: root.mono
-                                font.pixelSize: 11
+                                font.pixelSize: 11 * editor.fontScale
                                 font.weight: Font.Bold
                             }
                         }
@@ -1006,6 +1047,8 @@ Item {
                             onClicked: editor.applyWallpaper()
                         }
                     }
+                }
+                }
                 }
             }
         }

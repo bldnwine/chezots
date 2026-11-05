@@ -17,6 +17,10 @@ Item {
     id: root
 
     required property var theme
+    readonly property real panelScale: theme.settings ? theme.settings.panelScale : 1
+    readonly property real panelTextScale: theme.settings ? theme.settings.panelTextScale : 1
+    readonly property var panelOpacity: theme.settings ? theme.settings.panelOpacity : null
+    readonly property bool panelBlur: theme.settings ? theme.settings.panelBlur : false
 
     readonly property color paper:   theme.paper
     readonly property color ink:     theme.ink
@@ -336,14 +340,20 @@ Item {
     property int lastDirection: 0
 
     // ---------- Workspace state (reactive via Hyprland IPC) ----------
+    function syncFocusedWorkspace(initial) {
+        if (!Hyprland.focusedWorkspace) return;
+        const next = Hyprland.focusedWorkspace.id;
+        if (!initial) {
+            if (next > root.activeWs) root.lastDirection = 1;
+            else if (next < root.activeWs) root.lastDirection = -1;
+        }
+        root.activeWs = next;
+    }
+
     Connections {
         target: Hyprland
         function onFocusedWorkspaceChanged() {
-            if (!Hyprland.focusedWorkspace) return;
-            const next = Hyprland.focusedWorkspace.id;
-            if (next > root.activeWs) root.lastDirection = 1;
-            else if (next < root.activeWs) root.lastDirection = -1;
-            root.activeWs = next;
+            root.syncFocusedWorkspace(false);
         }
     }
 
@@ -777,33 +787,13 @@ Item {
     }
 
     // ---------- Proton VPN popup state ----------
-    Timer {
-        id: wireprotonStatusTimer
-        interval: 5000
-        running: true
-        repeat: true
-        onTriggered: {
-            wireprotonStatusProbe.running = false;
-            wireprotonStatusProbe.running = true;
-        }
-    }
     property bool wireprotonVisible: false
     property string wireprotonActiveIface: ""
     property var wireprotonConfigs: []
     function openWireproton() {
-        wireprotonStatusProbe.running = false;
-        wireprotonStatusProbe.running = true;
         wireprotonConfigProbe.running = false;
         wireprotonConfigProbe.running = true;
         root.wireprotonVisible = true;
-    }
-    Process {
-        id: wireprotonStatusProbe
-        running: false
-        command: ["sh", "-c", "ls /sys/class/net/ 2>/dev/null | grep '^proton' | head -1"]
-        stdout: StdioCollector {
-            onStreamFinished: root.wireprotonActiveIface = text.trim();
-        }
     }
     Process {
         id: wireprotonConfigProbe
@@ -1928,7 +1918,7 @@ Item {
     }
 
     // Wi-Fi signal-bars glyph from a 0-100% strength reading. Same ramp
-    // the netProbe uses to drive the bar icon — shared so the Quick
+    // network status uses to drive the bar icon — shared so the Quick
     // panel rows render identical iconography.
     readonly property var _wifiBarsRamp: ["󰤯","󰤟","󰤢","󰤥","󰤨"]
     function wifiBarsGlyph(pct) {
@@ -2127,70 +2117,22 @@ Item {
     readonly property bool batReady: batteryService.ready
 
     // ---------- Network status ----------
-    Process {
-        id: netProbe
-        running: false
-        command: ["bash", "-c",
-            "eth=off; "
-            + "if ip -o addr show | grep -qE '^[0-9]+: (en|eth)[^ ]*.*inet '; then eth=on; fi; "
-            + "echo \"ETH|$eth\"; "
-            + "found=\"\"; "
-            + "for w in $(iw dev 2>/dev/null | awk '/Interface/{print $2}'); do "
-            + "  link=$(iw dev \"$w\" link 2>/dev/null); "
-            + "  dbm=$(printf '%s\\n' \"$link\" | awk '/signal:/{print $2}'); "
-            + "  if [ -n \"$dbm\" ]; then "
-            + "    pct=$((2 * (dbm + 100))); "
-            + "    [ $pct -lt 0 ] && pct=0; "
-            + "    [ $pct -gt 100 ] && pct=100; "
-            + "    ssid=$(printf '%s\\n' \"$link\" | sed -n 's/^[[:space:]]*SSID: //p'); "
-            + "    echo \"WIFI|$pct|$ssid\"; found=1; break; "
-            + "  fi; "
-            + "done; "
-            + "[ -z \"$found\" ] && echo 'WIFI|off'"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                // Two independent signals: ETH|on|off + WIFI|off|pct|ssid.
-                // Ethernet keeps icon/kind priority, but wifi state is
-                // preserved so the scan list keeps its inUse highlight
-                // when both links are up. Only split on the first "|"
-                // after WIFI| so SSIDs containing "|" or ":" survive.
-                const lines = this.text.split("\n").map(s => s.trim()).filter(s => s.length > 0);
-                let ethOn = false;
-                let wifiOn = false;
-                let wifiSig = 0;
-                let wifiSsid = "";
-                for (const line of lines) {
-                    if (line === "ETH|on") {
-                        ethOn = true;
-                    } else if (line.startsWith("WIFI|")) {
-                        const rest = line.slice(5);
-                        if (rest !== "off") {
-                            wifiOn = true;
-                            const c = rest.indexOf("|");
-                            if (c < 0) {
-                                wifiSig = parseInt(rest) || 0;
-                            } else {
-                                wifiSig = parseInt(rest.slice(0, c)) || 0;
-                                wifiSsid = rest.slice(c + 1);
-                            }
-                        }
-                    }
-                }
-                if (ethOn) {
-                    root.netIcon = "󰈀"; root.netKind = "eth";
-                } else if (wifiOn) {
-                    root.netIcon = root.wifiBarsGlyph(wifiSig); root.netKind = "wifi";
-                } else {
-                    root.netIcon = "󰤮"; root.netKind = "none";
-                }
-                root.wifiSignal = wifiOn ? wifiSig : 0;
-                root.wifiSsid = wifiOn ? wifiSsid : "";
-                root.syncWifiActiveState(wifiOn ? wifiSsid : "");
-            }
+    NetworkStatusService {
+        monitoringEnabled: !root.barHidden || root.wireprotonVisible
+        wifiEnabled: !root.barHidden
+        onStatusChanged: function(status) {
+            root.wireprotonActiveIface = status.vpn || "";
+            if (!wifiEnabled) return;
+            const wifiOn = !!status.wifi;
+            const signal = wifiOn ? status.signal : 0;
+            const ssid = wifiOn ? status.ssid : "";
+            root.netKind = status.eth ? "eth" : (wifiOn ? "wifi" : "none");
+            root.netIcon = status.eth ? "󰈀" : (wifiOn ? root.wifiBarsGlyph(signal) : "󰤮");
+            root.wifiSignal = signal;
+            root.wifiSsid = ssid;
+            root.syncWifiActiveState(ssid);
         }
     }
-    Timer { interval: 3000; running: !root.barHidden; repeat: true; triggeredOnStart: true
-        onTriggered: { netProbe.running = false; netProbe.running = true; } }
 
     // Kept as forwards for bar consumers; sampling and cooldowns live in
     // TelemetryService so hiding the bar cancels and reseeds them together.
@@ -2437,6 +2379,8 @@ Item {
         }
     }
     Component.onCompleted: {
+        // Native state can already be populated before our Connections exists.
+        syncFocusedWorkspace(true);
         updateClock();
         refreshAudio();
         refreshPowerProfile();
@@ -2830,6 +2774,8 @@ Item {
     }
 
     Loader { id: wallpapersLoader }
+    WallpaperService { id: wallpaperIndex }
+    readonly property var wallpaperService: wallpaperIndex
     onWallpapersVisibleChanged: {
         if (root.wallpapersVisible) {
             keepWallpapers.stop();

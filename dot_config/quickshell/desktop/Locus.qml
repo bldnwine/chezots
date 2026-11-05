@@ -19,6 +19,13 @@ Item {
     id: root
 
     required property var theme
+    property var settings: theme.settings || null
+    signal settingsRequested()
+    readonly property real layoutScale: settings ? settings.locusScale : 1
+    readonly property real textScale: settings ? settings.locusTextScale : 1
+    readonly property real fontScale: layoutScale * textScale
+    readonly property real rowScale: layoutScale * Math.max(1, textScale)
+    property bool resizing: false
     // Navbar instance handed in from shell.qml. Used by Quick mode to
     // bind live telemetry (battery, audio, network, bluetooth, weather,
     // …) into the tile grid. Optional so OmniMenu can still load without
@@ -125,12 +132,11 @@ Item {
     // file multiplies its base by this value. Ctrl++ / Ctrl+- nudge
     // it in 0.1 steps; Ctrl+= resets to 1.0. Clamped to keep the
     // panel usable at extremes.
-    property real fontScale: 1.0
     function bumpFontScale(delta) {
-        const next = Math.max(0.7, Math.min(2.0, root.fontScale + delta));
+        const next = Math.max(0.7, Math.min(2.0, root.textScale + delta));
         // Snap to one decimal so successive bumps don't drift on
         // floating-point round-off.
-        root.fontScale = Math.round(next * 10) / 10;
+        if (root.settings) root.settings.setSetting("locusTextScale", Math.round(next * 10) / 10);
     }
     // null = no expansion; otherwise the tile object whose detail panel
     // is currently revealed under the grid.
@@ -460,7 +466,11 @@ Item {
             const parts = item.exec.split(" ");
             const target = parts[5];
             const verb = parts[6] || "toggle";
-            if (target === "warp") {
+            if (target === "settings") {
+                root.close();
+                root.settingsRequested();
+                return;
+            } else if (target === "warp") {
                 if (root.navbar.warpVisible) root.navbar.warpVisible = false;
                 else root.navbar.openWarp();
                 root.close();
@@ -890,6 +900,11 @@ Item {
         function open() { root.open() }
         function close() { root.close() }
         function refresh() { if (appScan) appScan.refresh(); }
+        function geometry(): string {
+            return JSON.stringify({width: card.width, height: card.height, x: card.x, y: card.y,
+                screenWidth: panel.width, screenHeight: panel.height, listHeight: listArea.height,
+                quickHeight: quickContainer.height, layoutScale: root.layoutScale, textScale: root.textScale});
+        }
         // Open OmniMenu pre-pivoted to a drill-down category (e.g. "Quick").
         // Lets Hyprland bind a shortcut straight into a category without
         // exposing the visual grid as a separate surface.
@@ -940,6 +955,17 @@ Item {
         // Track application focus across workspaces without leaking panel keys.
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         PopupFocusGrab { window: panel }
+        BackgroundEffect.blurRegion: locusEffects.blurRegion
+
+        SurfaceEffects {
+            id: locusEffects
+            targetSurface: card
+            background: root.bg
+            opacityOverride: root.settings ? root.settings.locusOpacity : null
+            blurEnabled: root.settings ? root.settings.locusBlur : false
+            shown: panel.visible
+            cornerRadius: card.radius
+        }
 
         property real reveal: root.visible_ ? 1 : 0
         // Open and close are both instant: SUPER+SPACE paints the palette on
@@ -964,9 +990,11 @@ Item {
         Rectangle {
             id: card
             anchors.horizontalCenter: parent.horizontalCenter
-            // Card sits slightly above visual centre so the result list grows
-            // downward without dragging the search field out of the eyeline.
-            y: parent.height * 0.18
+            readonly property real screenMargin: Math.min(16, parent.width / 20, parent.height / 20)
+            readonly property real maxWidth: Math.max(1, parent.width - 2 * screenMargin)
+            readonly property real maxHeight: Math.max(1, parent.height - 2 * screenMargin)
+            y: Math.max(screenMargin, Math.min(parent.height - height - screenMargin,
+                (parent.height - height) / 2))
             // Wide in any preview-bearing mode (file, github, processes,
             // themes) so a ~520px preview pane fits next to the result
             // list; narrow 640 elsewhere — including Quick mode whether
@@ -974,11 +1002,14 @@ Item {
             // horizontal jump. The tile column compresses to 64px on the
             // left of the same 640 card, leaving ~509px for the detail
             // panel.
-            width: root.previewActive ? 1000 : 640
+            width: Math.min(maxWidth, Math.max(Math.min(maxWidth, root.previewActive ? 800 : 480),
+                root.settings ? (root.previewActive ? root.settings.previewWidth : root.settings.normalWidth) : (root.previewActive ? 1000 : 640)))
             Behavior on width {
+                enabled: !root.resizing
                 NumberAnimation { duration: 60; easing.type: Easing.OutCubic }
             }
             Behavior on height {
+                enabled: !root.resizing
                 NumberAnimation { duration: 60; easing.type: Easing.OutCubic }
             }
             // Cap the card so it never exceeds the screen even on small
@@ -986,13 +1017,17 @@ Item {
             // footer block.
             // Quick mode sizes to the tile grid (+ expanded detail panel)
             // instead of the static list-mode height.
-            height: root.quickMode
-                ? Math.min(parent.height * 0.72, 34 + quickContainer.height)
-                : parent.height * 0.72
-            color: root.bg
+            height: {
+                const requested = root.settings ? root.settings.locusHeight : 0;
+                const autoHeight = root.quickMode ? Math.min(parent.height * .72,
+                    34 * root.layoutScale + quickContainer.implicitHeight) : parent.height * .72;
+                return Math.min(maxHeight, requested > 0 ? Math.max(360, requested) : autoHeight);
+            }
+            color: locusEffects.fill
             border.color: root.sep
             border.width: 1
             radius: root.cornerRadius
+            clip: true
             transformOrigin: Item.Center
             scale: panel.reveal
 
@@ -1192,7 +1227,7 @@ Item {
                     // and via a dedicated key on numpads / EU layouts.
                     if (e2.key === Qt.Key_Plus) root.bumpFontScale(+0.1);
                     else if (e2.key === Qt.Key_Minus) root.bumpFontScale(-0.1);
-                    else /* Key_Equal without Shift */ root.fontScale = 1.0;
+                    else if (root.settings) root.settings.setSetting("locusTextScale", 1.0);
                     event.accepted = true;
                 } else if (e2.key === Qt.Key_C && (e2.modifiers & Qt.ControlModifier)
                            && root.llmMode && root.chatPreview !== "") {
@@ -1240,16 +1275,17 @@ Item {
             Column {
                 id: cardCol
                 anchors.fill: parent
-                anchors.margins: 17
-                spacing: 12
+                anchors.margins: 17 * root.layoutScale
+                spacing: 12 * root.layoutScale
 
                 Omni.QuickContainer {
                     id: quickContainer
                     omni: root
                     panel: panel
+                    availableHeight: Math.max(0, card.height - 34 * root.layoutScale)
                 }
 
-                Omni.SearchInput { omni: root }
+                Omni.SearchInput { id: searchInput; omni: root }
 
                 Rectangle {
                     visible: !root.quickMode
@@ -1267,7 +1303,7 @@ Item {
                     visible: !root.quickMode
                     width: parent.width
                     height: visible
-                        ? Math.max(60, card.height - 34 - 34 - 12 * 4)
+                        ? Math.max(0, cardCol.height - searchInput.height - cardCol.spacing * 2 - 1)
                         : 0
                     clip: true
 
@@ -1309,13 +1345,59 @@ Item {
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
                         anchors.left: resultListInstance.right
-                        anchors.leftMargin: 13
+                        anchors.leftMargin: 13 * root.layoutScale
                         anchors.right: parent.right
                         omni: root
                         ollamaChat: ollamaChat
                     }
                 }
 
+            }
+
+            // Edge and corner grips resize the content card within its layer
+            // window. Logical dimensions are shared with the Settings controls.
+            Repeater {
+                model: [{h:-1,v:0},{h:1,v:0},{h:0,v:-1},{h:0,v:1},
+                        {h:-1,v:-1},{h:1,v:-1},{h:-1,v:1},{h:1,v:1}]
+                delegate: MouseArea {
+                    id: grip
+                    required property var modelData
+                    objectName: "locus-resize-grip-" + modelData.h + "-" + modelData.v
+                    readonly property bool corner: modelData.h !== 0 && modelData.v !== 0
+                    width: modelData.h === 0 ? parent.width - 24 : (corner ? 12 : 7)
+                    height: modelData.v === 0 ? parent.height - 24 : (corner ? 12 : 7)
+                    x: modelData.h < 0 ? 0 : modelData.h > 0 ? parent.width - width : 12
+                    y: modelData.v < 0 ? 0 : modelData.v > 0 ? parent.height - height : 12
+                    cursorShape: corner ? (modelData.h === modelData.v ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor)
+                        : modelData.h === 0 ? Qt.SizeVerCursor : Qt.SizeHorCursor
+                    enabled: root.settings !== null
+                    property real startX: 0
+                    property real startY: 0
+                    property real startWidth: 0
+                    property real startHeight: 0
+                    onPressed: function(mouse) {
+                        const point = mapToItem(card.parent, mouse.x, mouse.y);
+                        startX = point.x; startY = point.y; startWidth = card.width; startHeight = card.height;
+                        root.resizing = true;
+                    }
+                    onPositionChanged: function(mouse) {
+                        if (!pressed) return;
+                        const point = mapToItem(card.parent, mouse.x, mouse.y);
+                        if (modelData.h !== 0) {
+                            const minWidth = Math.min(card.maxWidth, root.previewActive ? 800 : 480);
+                            const nextWidth = Math.max(minWidth, Math.min(card.maxWidth, startWidth + 2 * modelData.h * (point.x - startX)));
+                            root.settings.setSetting(root.previewActive ? "previewWidth" : "normalWidth", nextWidth);
+                        }
+                        if (modelData.v !== 0) {
+                            const minHeight = Math.min(360, card.maxHeight);
+                            const nextHeight = Math.max(minHeight, Math.min(card.maxHeight,
+                                startHeight + 2 * modelData.v * (point.y - startY)));
+                            root.settings.setSetting("locusHeight", nextHeight);
+                        }
+                    }
+                    onReleased: root.resizing = false
+                    onCanceled: root.resizing = false
+                }
             }
         }
     }

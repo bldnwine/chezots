@@ -33,7 +33,7 @@ CardWindow {
 
     Column {
         width: parent.width
-        spacing: 8
+        spacing: 8 * managePopup.panelScale
 
         Text {
             visible: !root.trayAllItems || root.trayAllItems.length === 0
@@ -41,12 +41,12 @@ CardWindow {
             text: "No system tray applications reporting."
             color: root.inkDeep
             font.family: root.mono
-            font.pixelSize: 11
-            font.letterSpacing: 1
+            font.pixelSize: 11 * managePopup.fontScale
+            font.letterSpacing: 1 * managePopup.fontScale
             font.italic: true
             horizontalAlignment: Text.AlignHCenter
-            topPadding: 12
-            bottomPadding: 12
+            topPadding: 12 * managePopup.panelScale
+            bottomPadding: 12 * managePopup.panelScale
         }
 
         Repeater {
@@ -58,7 +58,7 @@ CardWindow {
                 required property int index
 
                 width: parent.width
-                height: 36
+                height: 36 * managePopup.rowScale
                 radius: root.cornerRadius
                 color: rowMouse.containsMouse ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.05) : "transparent"
 
@@ -83,17 +83,17 @@ CardWindow {
 
                 Row {
                     anchors.fill: parent
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 8
-                    spacing: 8
+                    anchors.leftMargin: 8 * managePopup.panelScale
+                    anchors.rightMargin: 8 * managePopup.panelScale
+                    spacing: 8 * managePopup.panelScale
                     Layout.alignment: Qt.AlignVCenter
 
                     IconImage {
                         id: rowIcon
                         anchors.verticalCenter: parent.verticalCenter
                         implicitSize: 18
-                        width: 18
-                        height: 18
+                        width: 18 * managePopup.panelScale
+                        height: 18 * managePopup.rowScale
                         source: root.trayIconSource(rowRoot.modelData ? (rowRoot.modelData.icon || rowRoot.modelData.iconName) : "")
                     }
 
@@ -103,7 +103,7 @@ CardWindow {
                         text: rowRoot.displayName
                         color: root.ink
                         font.family: root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * managePopup.fontScale
                         font.weight: Font.Medium
                         elide: Text.ElideRight
                     }
@@ -112,7 +112,7 @@ CardWindow {
 
                     Row {
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: 6
+                        spacing: 6 * managePopup.panelScale
 
                         QuickButton {
                             root: managePopup.root

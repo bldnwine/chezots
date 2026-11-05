@@ -1,0 +1,6 @@
+1- [done] have Aether generate a dedicated Quickshell palette file, then make QS’s loading and theme-push paths use it(could then customize QS colors through that template without
+  changing Aether’s global colors or other apps’ palettes)
+2- add ability to expand notification to fixed size while allowing scroll within, in the notification panel, so user can view full content.
+3- [done] settings menu/window for qs:
+	- customize qs colors(should save itself to the qs template in aether current blueprint), panel scaling, locusmenu scaling, font sizes etc
+... so far

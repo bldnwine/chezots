@@ -23,7 +23,9 @@ class WatchBatchTest(unittest.TestCase):
         self.fifo = self.root / "events"
         os.mkfifo(self.fifo)
         (self.bin / "inotifywait").write_text('#!/bin/sh\nexec cat "$FAKE_EVENTS"\n')
-        (self.bin / "jq").write_text('#!/bin/sh\ncase "$*" in *"select(.timestamp >= \\$cutoff)"*) echo prune >> "$PRUNE_LOG";; esac\nexec /usr/bin/jq "$@"\n')
+        # The retention helper receives its program on stdin and six arguments;
+        # cleanup and the other Python helpers use different argument shapes.
+        (self.bin / "python3").write_text('#!/bin/sh\nif [ "$#" -eq 6 ] && [ "$1" = - ]; then echo prune >> "$PRUNE_LOG"; fi\nexec /usr/bin/python3 "$@"\n')
         for path in self.bin.iterdir():
             path.chmod(0o755)
         self.log = self.root / "prunes"

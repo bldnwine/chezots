@@ -253,7 +253,7 @@ CardWindow {
     Column {
         id: col
         width: parent.width
-        spacing: 12
+        spacing: 12 * mediaPopup.panelScale
 
         // Player source switcher chips row
         Item {
@@ -264,7 +264,7 @@ CardWindow {
             Flickable {
                 id: playerScroll
                 width: parent.width
-                height: 28
+                height: 28 * mediaPopup.rowScale
                 contentWidth: playerRow.implicitWidth
                 contentHeight: height
                 clip: true
@@ -275,7 +275,7 @@ CardWindow {
 
                 Row {
                     id: playerRow
-                    spacing: 6
+                    spacing: 6 * mediaPopup.panelScale
                     Repeater {
                         id: playerRepeater
                         model: mediaPopup.playerList
@@ -305,12 +305,12 @@ CardWindow {
                     anchors.left: playerScroll.left
                     anchors.right: playerScroll.right
                     anchors.top: playerScroll.bottom
-                    anchors.topMargin: 3
+                    anchors.topMargin: 3 * mediaPopup.panelScale
                     policy: ScrollBar.AsNeeded
                     visible: playerScroll.contentWidth > playerScroll.width
-                    implicitHeight: 5
+                    implicitHeight: 5 * mediaPopup.rowScale
                     minimumSize: 0.08
-                    padding: 0
+                    padding: 0 * mediaPopup.panelScale
                     contentItem: Rectangle { implicitHeight: 5; radius: 2; color: mediaPopup.root.seal }
                     background: Rectangle { radius: 2; color: mediaPopup.root.sep }
                 }
@@ -319,7 +319,7 @@ CardWindow {
 
         Rectangle {
             width: parent.width
-            height: 1
+            height: 1 * mediaPopup.rowScale
             color: root.sep
             visible: mediaPopup.playerList.length > 0
         }
@@ -327,14 +327,14 @@ CardWindow {
         // Track metadata
         Column {
             width: parent.width
-            spacing: 4
+            spacing: 4 * mediaPopup.panelScale
 
             Text {
                 width: parent.width
                 text: mediaPopup.root.musicTitle ? mediaPopup.root.musicTitle : "No Active Media"
                 color: root.fg
                 font.family: root.mono
-                font.pixelSize: 13
+                font.pixelSize: 13 * mediaPopup.fontScale
                 font.weight: Font.Bold
                 elide: Text.ElideRight
             }
@@ -344,7 +344,7 @@ CardWindow {
                 text: mediaPopup.root.musicArtist ? mediaPopup.root.musicArtist : (mediaPopup.activePlayer ? (mediaPopup.activePlayer.identity || "Unknown Artist") : "Select a player")
                 color: root.ink
                 font.family: root.mono
-                font.pixelSize: 11
+                font.pixelSize: 11 * mediaPopup.fontScale
                 elide: Text.ElideRight
             }
 
@@ -353,7 +353,7 @@ CardWindow {
                 text: mediaPopup.activePlayer && mediaPopup.activePlayer.trackAlbum ? mediaPopup.activePlayer.trackAlbum : ""
                 color: root.inkDeep
                 font.family: root.mono
-                font.pixelSize: 10
+                font.pixelSize: 10 * mediaPopup.fontScale
                 elide: Text.ElideRight
                 visible: text.length > 0
             }
@@ -362,14 +362,14 @@ CardWindow {
         // Progress & Time bar
         Column {
             width: parent.width
-            spacing: 4
+            spacing: 4 * mediaPopup.panelScale
             visible: mediaPopup.activePlayer !== null
 
             Row {
                 width: parent.width
                 Item {
                     width: parent.width / 2
-                    height: 14
+                    height: 14 * mediaPopup.rowScale
                     Text {
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
@@ -378,19 +378,19 @@ CardWindow {
                             : mediaPopup.formatTime(mediaPopup.posn)
                         color: root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 10
+                        font.pixelSize: 10 * mediaPopup.fontScale
                     }
                 }
                 Item {
                     width: parent.width / 2
-                    height: 14
+                    height: 14 * mediaPopup.rowScale
                     Text {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         text: mediaPopup.len > 0 ? mediaPopup.formatTime(mediaPopup.len) : (mediaPopup.root.musicTitle ? "--:--" : "LIVE")
                         color: root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 10
+                        font.pixelSize: 10 * mediaPopup.fontScale
                     }
                 }
             }
@@ -398,15 +398,15 @@ CardWindow {
             // Seek slider bar container with a 24px touch target
             Item {
                 width: parent.width
-                height: 24
+                height: 24 * mediaPopup.rowScale
                 visible: mediaPopup.activePlayer !== null
 
                 Rectangle {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    height: 6
-                    radius: 3
+                    height: 6 * mediaPopup.rowScale
+                    radius: 3 * mediaPopup.panelScale
                     color: Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.12)
 
                     Rectangle {
@@ -435,7 +435,7 @@ CardWindow {
         // Playback transport buttons row
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 12
+            spacing: 12 * mediaPopup.panelScale
 
             QuickButton {
                 root: mediaPopup.root

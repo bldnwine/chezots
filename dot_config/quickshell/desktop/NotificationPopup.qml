@@ -23,10 +23,13 @@ CardWindow {
         if (popup.filterText.length > 0) s += " · “" + popup.filterText + "”";
         return s;
     }
-    footer: "↵ OPEN · / SEARCH · DEL REMOVE · SHIFT+DEL CLEAR"
+    // Leave room for searchable content when large text meets a short screen.
+    // The header buttons retain the same actions as this keyboard hint.
+    footer: popup.height >= 260 * popup.fontScale
+        ? "↵ OPEN · / SEARCH · DEL REMOVE · SHIFT+DEL CLEAR" : ""
     escDismiss: false
 
-    Component.onCompleted: popup.rebuild()
+    Component.onCompleted: { if (popup.revealed) popup.rebuild(); }
 
     anchorEdge: popup.root.barEdge
     anchorBarX: popup.root.popupAnchorX
@@ -64,6 +67,7 @@ CardWindow {
     }
 
     function rebuild() {
+        if (!popup.revealed) return;
         rows.clear();
         if (!service) return;
         var list = service.entries;
@@ -206,12 +210,12 @@ CardWindow {
 
     headerRight: Component {
         Row {
-            spacing: 6
+            spacing: 6 * popup.panelScale
 
             // Search Toggle Button
             Rectangle {
-                width: 26
-                height: 26
+                width: 26 * popup.panelScale
+                height: 26 * popup.rowScale
                 radius: popup.root.cornerRadius
                 color: popup.searching || searchBtnMouse.containsMouse ? popup.root.rowHi : "transparent"
                 border.color: popup.searching ? popup.root.seal : "transparent"
@@ -221,7 +225,7 @@ CardWindow {
                     anchors.centerIn: parent
                     text: "󰍉"
                     font.family: popup.root.mono
-                    font.pixelSize: 13
+                    font.pixelSize: 13 * popup.fontScale
                     color: popup.searching ? popup.root.seal : popup.root.ink
                 }
 
@@ -236,8 +240,8 @@ CardWindow {
 
             // DND Toggle Button
             Rectangle {
-                width: 26
-                height: 26
+                width: 26 * popup.panelScale
+                height: 26 * popup.rowScale
                 radius: popup.root.cornerRadius
                 color: popup.root.doNotDisturb || dndBtnMouse.containsMouse ? popup.root.rowHi : "transparent"
                 border.color: popup.root.doNotDisturb ? popup.root.seal : "transparent"
@@ -247,7 +251,7 @@ CardWindow {
                     anchors.centerIn: parent
                     text: popup.root.doNotDisturb ? "󰂛" : "󰂚"
                     font.family: popup.root.mono
-                    font.pixelSize: 13
+                    font.pixelSize: 13 * popup.fontScale
                     color: popup.root.doNotDisturb ? popup.root.seal : popup.root.ink
                 }
 
@@ -263,7 +267,7 @@ CardWindow {
             // Clear Button (with 2-step confirmation)
             Rectangle {
                 width: clearBtnText.implicitWidth + 12
-                height: 26
+                height: 26 * popup.rowScale
                 radius: popup.root.cornerRadius
                 color: popup.clearArmed || clearBtnMouse.containsMouse ? popup.root.rowHi : "transparent"
                 border.color: popup.clearArmed ? popup.root.seal : popup.root.sep
@@ -274,9 +278,9 @@ CardWindow {
                     anchors.centerIn: parent
                     text: popup.clearArmed ? "SURE?" : "CLEAR"
                     font.family: popup.root.mono
-                    font.pixelSize: 10
+                    font.pixelSize: 10 * popup.fontScale
                     font.weight: Font.Medium
-                    font.letterSpacing: 1
+                    font.letterSpacing: 1 * popup.fontScale
                     color: popup.clearArmed ? popup.root.seal : popup.root.inkDeep
                 }
 
@@ -407,18 +411,19 @@ CardWindow {
 
     Item {
         width: parent.width
-        implicitHeight: 440
-        height: 440
+        implicitHeight: Math.max(popup.bodyAvailableHeight,
+            (popup.searching ? 40 * popup.rowScale : 0) + 80 * popup.rowScale)
+        height: implicitHeight
 
         Column {
             anchors.fill: parent
-            spacing: 8
+            spacing: 8 * popup.panelScale
 
             // Search Bar Input
             Rectangle {
                 visible: popup.searching
                 width: parent.width
-                height: 32
+                height: 32 * popup.rowScale
                 radius: popup.root.cornerRadius
                 color: popup.root.rowHi
                 border.color: popup.root.seal
@@ -426,14 +431,14 @@ CardWindow {
 
                 Row {
                     anchors.fill: parent
-                    anchors.margins: 6
-                    spacing: 6
+                    anchors.margins: 6 * popup.panelScale
+                    spacing: 6 * popup.panelScale
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "󰍉"
                         font.family: popup.root.mono
-                        font.pixelSize: 12
+                        font.pixelSize: 12 * popup.fontScale
                         color: popup.root.seal
                     }
 
@@ -444,7 +449,7 @@ CardWindow {
                         text: popup.filterText
                         color: popup.root.ink
                         font.family: popup.root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * popup.fontScale
                         selectByMouse: true
                         onTextChanged: {
                             popup.filterText = text;
@@ -458,10 +463,10 @@ CardWindow {
             ListView {
                 id: notifListView
                 width: parent.width
-                height: parent.height - (popup.searching ? 40 : 0)
+                height: Math.max(0, parent.height - (popup.searching ? 40 * popup.rowScale : 0))
                 model: rows
                 clip: true
-                spacing: 6
+                spacing: 6 * popup.panelScale
                 boundsBehavior: Flickable.StopAtBounds
                 visible: rows.count > 0
 
@@ -471,17 +476,17 @@ CardWindow {
                     id: sectionHeader
                     required property string section
                     width: notifListView.width
-                    height: 22
+                    height: 22 * popup.rowScale
 
                     Text {
                         anchors.left: parent.left
-                        anchors.leftMargin: 2
+                        anchors.leftMargin: 2 * popup.panelScale
                         anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 2
+                        anchors.bottomMargin: 2 * popup.panelScale
                         text: sectionHeader.section
                         font.family: popup.root.mono
-                        font.pixelSize: 9
-                        font.letterSpacing: 2
+                        font.pixelSize: 9 * popup.fontScale
+                        font.letterSpacing: 2 * popup.fontScale
                         font.weight: Font.Medium
                         color: popup.root.inkDeep
                     }
@@ -489,6 +494,9 @@ CardWindow {
 
                 delegate: NotificationCard {
                     root: popup.root
+                    width: notifListView.width
+                    panelScale: popup.panelScale
+                    panelTextScale: popup.panelTextScale
                     now: popup.now
                     selected: index === popup.selectedIndex
 
@@ -508,12 +516,12 @@ CardWindow {
 
                 Column {
                     anchors.centerIn: parent
-                    spacing: 8
+                    spacing: 8 * popup.panelScale
 
                     Text {
                         text: "󰂚"
                         font.family: popup.root.mono
-                        font.pixelSize: 42
+                        font.pixelSize: 42 * popup.fontScale
                         color: popup.root.rowSel
                         horizontalAlignment: Text.AlignHCenter
                         width: parent.width
@@ -524,7 +532,7 @@ CardWindow {
                             ? "No notifications match “" + popup.filterText + "”"
                             : "No notifications kept yet"
                         font.family: popup.root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * popup.fontScale
                         color: popup.root.inkDeep
                         horizontalAlignment: Text.AlignHCenter
                         width: parent.width

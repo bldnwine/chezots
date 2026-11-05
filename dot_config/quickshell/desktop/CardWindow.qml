@@ -24,6 +24,11 @@ PanelWindow {
 
     required property var theme
 
+    readonly property real panelScale: theme && theme.panelScale !== undefined ? theme.panelScale : (theme && theme.settings ? theme.settings.panelScale : 1)
+    readonly property real panelTextScale: theme && theme.panelTextScale !== undefined ? theme.panelTextScale : (theme && theme.settings ? theme.settings.panelTextScale : 1)
+    readonly property real fontScale: panelScale * panelTextScale
+    readonly property real rowScale: panelScale * Math.max(1, panelTextScale)
+
     property bool revealed: false
     property real cardWidth: 460
     // -1 -> auto-size from content implicit height; otherwise fixed.
@@ -47,8 +52,8 @@ PanelWindow {
     readonly property bool _hasHeaderRule: title.length > 0 || subtitle.length > 0
     readonly property bool _hasFooter: footer.length > 0
     readonly property real bodyAvailableHeight: Math.max(0, surface.height
-        - 2 * (plain ? 14 : 17)
-        - (_hasHeader ? 43 : 0) - (_hasHeaderRule ? 1 : 0)
+        - 2 * (plain ? 14 : 17) * panelScale
+        - (_hasHeader ? header.height : 0) - (_hasHeaderRule ? 1 : 0)
         - (_hasFooter ? 1 + footerLabel.implicitHeight : 0)
         - bodyCol.spacing * (Number(_hasHeader) + Number(_hasHeaderRule) + 2 * Number(_hasFooter)))
 
@@ -83,6 +88,21 @@ PanelWindow {
     // keyboard input in the panel. Release focus by unmapping, not with None.
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     PopupFocusGrab { window: card }
+    BackgroundEffect.blurRegion: surfaceEffects.blurRegion
+
+    SurfaceEffects {
+        id: surfaceEffects
+        targetSurface: surface
+        background: card.theme.bg
+        opacityOverride: card.theme.panelOpacity !== undefined ? card.theme.panelOpacity
+            : card.theme.settings ? card.theme.settings.panelOpacity : null
+        blurEnabled: card.theme.panelBlur !== undefined ? card.theme.panelBlur
+            : card.theme.settings ? card.theme.settings.panelBlur : false
+        shown: card.visible
+        cornerRadius: surface.radius
+        scaleFactor: surfaceRevealScale.xScale
+        scaleOrigin: Qt.point(surfaceRevealScale.origin.x, surfaceRevealScale.origin.y)
+    }
 
     property real _reveal: revealed ? 1 : 0
     Behavior on _reveal {
@@ -99,9 +119,10 @@ PanelWindow {
 
     Rectangle {
         id: surface
-        width: card.cardWidth
-        height: card.cardHeight > 0 ? card.cardHeight : (bodyCol.implicitHeight + 34)
-        color: card.theme.bg
+        width: Math.max(1, Math.min(card.cardWidth * card.panelScale, card.width - 2 * card.anchorGap - ((card.anchorEdge === "left" || card.anchorEdge === "right") ? card.theme.barOffset : 0)))
+        height: Math.max(1, Math.min(card.cardHeight > 0 ? card.cardHeight * card.panelScale : (bodyContainer.childrenRect.height + 34 * card.panelScale + (card._hasHeader ? header.height : 0) + (card._hasHeaderRule ? 1 : 0) + (card._hasFooter ? 1 + footerLabel.implicitHeight : 0) + bodyCol.spacing * (Number(card._hasHeader) + Number(card._hasHeaderRule) + 2 * Number(card._hasFooter))), card.height - 2 * card.anchorGap - ((card.anchorEdge === "top" || card.anchorEdge === "bottom") ? card.theme.barOffset : 0)))
+        clip: true
+        color: surfaceEffects.fill
         border.color: card.theme.sep
         border.width: 1
         radius: card.theme.cornerRadius
@@ -109,22 +130,23 @@ PanelWindow {
 
         x: {
             if (!card._anchored) return (parent.width - width) / 2;
-            if (card.anchorEdge === "left")  return card.theme.barOffset + card.anchorGap;
-            if (card.anchorEdge === "right") return parent.width - card.theme.barOffset - width - card.anchorGap;
+            if (card.anchorEdge === "left")  return Math.max(card.anchorGap, Math.min(parent.width - width - card.anchorGap, card.theme.barOffset + card.anchorGap));
+            if (card.anchorEdge === "right") return Math.max(card.anchorGap, Math.min(parent.width - width - card.anchorGap, parent.width - card.theme.barOffset - width - card.anchorGap));
             return Math.max(card.anchorGap,
                             Math.min(parent.width - width - card.anchorGap,
                                      card.anchorBarX - width / 2));
         }
         y: {
             if (!card._anchored) return (parent.height - height) / 2;
-            if (card.anchorEdge === "top")    return card.theme.barOffset + card.anchorGap;
-            if (card.anchorEdge === "bottom") return parent.height - card.theme.barOffset - height - card.anchorGap;
+            if (card.anchorEdge === "top")    return Math.max(card.anchorGap, Math.min(parent.height - height - card.anchorGap, card.theme.barOffset + card.anchorGap));
+            if (card.anchorEdge === "bottom") return Math.max(card.anchorGap, Math.min(parent.height - height - card.anchorGap, parent.height - card.theme.barOffset - height - card.anchorGap));
             return Math.max(card.anchorGap,
                             Math.min(parent.height - height - card.anchorGap,
                                      card.anchorBarY - height / 2));
         }
 
         transform: Scale {
+            id: surfaceRevealScale
             origin.x: {
                 if (!card._anchored) return surface.width / 2;
                 if (card.anchorEdge === "left")  return 0;
@@ -157,26 +179,28 @@ PanelWindow {
         Column {
             id: bodyCol
             anchors.fill: parent
-            anchors.margins: card.plain ? 14 : 17
-            spacing: card.plain ? 10 : 12
+            anchors.margins: (card.plain ? 14 : 17) * card.panelScale
+            spacing: (card.plain ? 10 : 12) * card.panelScale
 
             Item {
+                id: header
                 width: parent.width
-                height: 43
+                height: Math.max(43 * card.panelScale, headerText.implicitHeight, headerRightLoader.implicitHeight)
                 visible: card.title.length > 0 || card.subtitle.length > 0 || card.headerRight !== null
 
                 Column {
+                    id: headerText
                     anchors.left: parent.left
                     anchors.right: headerRightLoader.left
                     anchors.rightMargin: card.headerRight ? 12 : 0
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
+                    spacing: 2 * card.panelScale
                     Text {
                         visible: card.title.length > 0
                         text: card.title
                         color: card.theme.ink
                         font.family: card.theme.mono
-                        font.pixelSize: card.plain ? 15 : 19
+                        font.pixelSize: (card.plain ? 15 : 19) * card.fontScale
                         font.letterSpacing: card.plain ? 3 : 4
                         font.weight: Font.Medium
                     }
@@ -187,7 +211,7 @@ PanelWindow {
                         text: card.subtitle
                         color: card.theme.inkDeep
                         font.family: card.theme.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * card.fontScale
                         font.letterSpacing: 2
                     }
                 }
@@ -207,10 +231,22 @@ PanelWindow {
                 color: card.theme.sep
             }
 
-            Item {
-                id: bodyContainer
+            Flickable {
+                id: bodyViewport
                 width: parent.width
-                height: childrenRect.height
+                height: Math.min(bodyContainer.childrenRect.height, card.bodyAvailableHeight)
+                contentWidth: width
+                contentHeight: bodyContainer.childrenRect.height
+                flickableDirection: Flickable.VerticalFlick
+                boundsBehavior: Flickable.StopAtBounds
+                clip: true
+                interactive: contentHeight > height
+
+                Item {
+                    id: bodyContainer
+                    width: bodyViewport.width
+                    height: childrenRect.height
+                }
             }
 
             Rectangle {
@@ -228,7 +264,7 @@ PanelWindow {
                 text: card.footer
                 color: card.theme.inkDeep
                 font.family: card.theme.mono
-                font.pixelSize: 10
+                font.pixelSize: 10 * card.fontScale
                 font.letterSpacing: 2
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap

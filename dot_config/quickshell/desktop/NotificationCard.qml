@@ -26,6 +26,10 @@ Item {
     property bool showBody: true
     property bool showPreview: true
     property bool selected: false
+    property real panelScale: 1
+    property real panelTextScale: 1
+    readonly property real fontScale: panelScale * panelTextScale
+    readonly property real rowScale: panelScale * Math.max(1, panelTextScale)
 
     signal clicked()
     signal removeRequested()
@@ -75,7 +79,7 @@ Item {
         id: bgRect
         anchors.left: parent.left
         anchors.right: parent.right
-        implicitHeight: contentCol.implicitHeight + 20
+        implicitHeight: contentCol.implicitHeight + 20 * cardRoot.panelScale
         radius: cardRoot.root.cornerRadius
         color: cardRoot.selected || cardRoot.hovered ? cardRoot.root.rowSel : cardRoot.root.rowHi
         border.color: cardRoot.selected ? cardRoot.root.seal : cardRoot.root.sep
@@ -90,7 +94,7 @@ Item {
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            anchors.margins: 4
+            anchors.margins: 4 * cardRoot.panelScale
             width: 3
             radius: 1.5
             color: cardRoot.root.seal
@@ -100,7 +104,7 @@ Item {
         Rectangle {
             visible: cardRoot.unread && cardRoot.urgency !== 2
             anchors.left: parent.left
-            anchors.leftMargin: 4
+            anchors.leftMargin: 4 * cardRoot.panelScale
             anchors.verticalCenter: parent.verticalCenter
             width: 5
             height: 5
@@ -124,11 +128,11 @@ Item {
         Item {
             id: avatar
             anchors.left: parent.left
-            anchors.leftMargin: 12
+            anchors.leftMargin: 12 * cardRoot.panelScale
             anchors.top: parent.top
-            anchors.topMargin: 10
-            width: 32
-            height: 32
+            anchors.topMargin: 10 * cardRoot.panelScale
+            width: 32 * cardRoot.panelScale
+            height: 32 * cardRoot.panelScale
 
             Rectangle {
                 anchors.fill: parent
@@ -144,7 +148,7 @@ Item {
                 anchors.centerIn: parent
                 text: cardRoot.initial
                 font.family: cardRoot.root.mono
-                font.pixelSize: 13
+                font.pixelSize: 13 * cardRoot.fontScale
                 font.bold: true
                 color: cardRoot.root.ink
             }
@@ -154,7 +158,7 @@ Item {
                 anchors.centerIn: parent
                 text: cardRoot.glyph
                 font.family: cardRoot.root.mono
-                font.pixelSize: 15
+                font.pixelSize: 15 * cardRoot.fontScale
                 color: cardRoot.root.seal
             }
 
@@ -175,27 +179,27 @@ Item {
         Column {
             id: contentCol
             anchors.left: avatar.right
-            anchors.leftMargin: 10
+            anchors.leftMargin: 10 * cardRoot.panelScale
             anchors.right: parent.right
-            anchors.rightMargin: 12
+            anchors.rightMargin: 12 * cardRoot.panelScale
             anchors.top: parent.top
-            anchors.topMargin: 10
-            spacing: 2
+            anchors.topMargin: 10 * cardRoot.panelScale
+            spacing: 2 * cardRoot.panelScale
 
             // Top row: App Name + Relative Time / Dismiss Button
             Item {
                 width: parent.width
-                height: 18
+                height: 18 * cardRoot.rowScale
 
                 Text {
                     anchors.left: parent.left
                     anchors.right: timeSlot.left
-                    anchors.rightMargin: 6
+                    anchors.rightMargin: 6 * cardRoot.panelScale
                     anchors.verticalCenter: parent.verticalCenter
                     text: cardRoot.app.length > 0 ? cardRoot.app.toUpperCase() : "NOTIFICATION"
                     font.family: cardRoot.root.mono
-                    font.pixelSize: 9
-                    font.letterSpacing: 1.5
+                    font.pixelSize: 9 * cardRoot.fontScale
+                    font.letterSpacing: 1.5 * cardRoot.fontScale
                     color: cardRoot.root.inkDeep
                     elide: Text.ElideRight
                 }
@@ -214,7 +218,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: cardRoot.when
                         font.family: cardRoot.root.mono
-                        font.pixelSize: 9
+                        font.pixelSize: 9 * cardRoot.fontScale
                         color: cardRoot.root.inkDeep
                     }
 
@@ -223,16 +227,16 @@ Item {
                         visible: cardRoot.hovered
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 18
-                        height: 18
-                        radius: 9
+                        width: 18 * cardRoot.rowScale
+                        height: 18 * cardRoot.rowScale
+                        radius: 9 * cardRoot.rowScale
                         color: dismissMouse.containsMouse ? cardRoot.root.rowHi : "transparent"
 
                         Text {
                             anchors.centerIn: parent
                             text: "✕"
                             font.family: cardRoot.root.mono
-                            font.pixelSize: 10
+                            font.pixelSize: 10 * cardRoot.fontScale
                             color: dismissMouse.containsMouse ? cardRoot.root.seal : cardRoot.root.inkDeep
                         }
 
@@ -253,7 +257,7 @@ Item {
                 visible: cardRoot.cleanSummary.length > 0
                 text: cardRoot.cleanSummary
                 font.family: cardRoot.root.mono
-                font.pixelSize: 12
+                font.pixelSize: 12 * cardRoot.fontScale
                 font.weight: Font.Medium
                 color: cardRoot.root.ink
                 elide: Text.ElideRight
@@ -266,7 +270,7 @@ Item {
                 visible: cardRoot.showBody && cardRoot.cleanBody.length > 0
                 text: cardRoot.cleanBody
                 font.family: cardRoot.root.mono
-                font.pixelSize: 11
+                font.pixelSize: 11 * cardRoot.fontScale
                 color: cardRoot.root.inkDeep
                 wrapMode: Text.Wrap
                 elide: Text.ElideRight
@@ -276,13 +280,13 @@ Item {
             // Preview Image
             Item {
                 width: parent.width
-                height: cardRoot.hasPreview ? Math.min(width * 9 / 16, 96) + 4 : 0
+                height: cardRoot.hasPreview ? Math.min(width * 9 / 16, 96 * cardRoot.panelScale) + 4 * cardRoot.panelScale : 0
                 visible: cardRoot.hasPreview
 
                 Image {
                     id: previewImage
                     anchors.fill: parent
-                    anchors.topMargin: 4
+                    anchors.topMargin: 4 * cardRoot.panelScale
                     source: cardRoot.showPreview ? cardRoot.preview : ""
                     sourceSize.width: Math.round(width * 2)
                     fillMode: Image.PreserveAspectCrop

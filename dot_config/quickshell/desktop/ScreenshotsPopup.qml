@@ -15,7 +15,7 @@ CardWindow {
                 + "  ·  " + screenshotsPopup.root.screenshotFiles.length + " TOTAL"
 
     headerRight: Row {
-        spacing: 12
+        spacing: 12 * screenshotsPopup.panelScale
         CalendarChevron {
             root: screenshotsPopup.root
             text: "‹"
@@ -31,7 +31,7 @@ CardWindow {
             root: screenshotsPopup.root
             text: screenshotsPopup.root.icoRefresh
             restColor: screenshotsPopup.root.inkDeep
-            font.pixelSize: 24
+            font.pixelSize: 24 * screenshotsPopup.fontScale
             onTriggered: screenshotsPopup.root.refreshScreenshots()
         }
         CalendarChevron {
@@ -83,26 +83,26 @@ CardWindow {
     Column {
         id: shotCol
         width: parent.width
-        spacing: 12
+        spacing: 12 * screenshotsPopup.panelScale
 
         Text {
             width: parent.width
-            height: 248
+            height: 248 * screenshotsPopup.rowScale
             visible: screenshotsPopup.root.screenshotFiles.length === 0
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: "~/Pictures/ss/*.png"
             color: screenshotsPopup.root.inkDeep
             font.family: screenshotsPopup.root.mono
-            font.pixelSize: 11
-            font.letterSpacing: 2
+            font.pixelSize: 11 * screenshotsPopup.fontScale
+            font.letterSpacing: 2 * screenshotsPopup.fontScale
             opacity: 0.6
         }
 
         Grid {
             columns: 4
-            rowSpacing: 6
-            columnSpacing: 6
+            rowSpacing: 6 * screenshotsPopup.panelScale
+            columnSpacing: 6 * screenshotsPopup.panelScale
             width: parent.width
             visible: screenshotsPopup.root.screenshotFiles.length > 0
 
@@ -131,7 +131,7 @@ CardWindow {
 
                     Image {
                         anchors.fill: parent
-                        anchors.margins: 1
+                        anchors.margins: 1 * screenshotsPopup.panelScale
                         visible: shotCell.filled
                         // Source gated on popup visibility so the QQuickPixmapCache
                         // drops decoded bitmaps when the widget is hidden.
@@ -149,7 +149,7 @@ CardWindow {
 
                     Rectangle {
                         anchors.fill: parent
-                        anchors.margins: 1
+                        anchors.margins: 1 * screenshotsPopup.panelScale
                         color: "transparent"
                         border.color: screenshotsPopup.root.seal
                         border.width: shotMouse.containsMouse && !shotCell.isSelected ? 1 : 0
@@ -162,7 +162,7 @@ CardWindow {
                     // vision; copiedReset clears root.copiedPath after 1.4s.
                     Rectangle {
                         anchors.fill: parent
-                        anchors.margins: 1
+                        anchors.margins: 1 * screenshotsPopup.panelScale
                         color: Qt.rgba(screenshotsPopup.root.seal.r, screenshotsPopup.root.seal.g, screenshotsPopup.root.seal.b, 0.28)
                         border.color: screenshotsPopup.root.seal
                         border.width: 2
@@ -181,8 +181,8 @@ CardWindow {
                             text: "COPIED"
                             color: screenshotsPopup.root.seal.hsvValue < 0.5 ? screenshotsPopup.root.ink : screenshotsPopup.root.paper
                             font.family: screenshotsPopup.root.mono
-                            font.pixelSize: 11
-                            font.letterSpacing: 3
+                            font.pixelSize: 11 * screenshotsPopup.fontScale
+                            font.letterSpacing: 3 * screenshotsPopup.fontScale
                             font.weight: Font.Medium
                         }
                     }
@@ -211,14 +211,14 @@ CardWindow {
 
         Rectangle {
             width: parent.width
-            height: 1
+            height: 1 * screenshotsPopup.rowScale
             color: screenshotsPopup.root.sep
             visible: screenshotsPopup.root.selectedScreenshotEntry !== null
         }
 
         Item {
             width: parent.width
-            height: 22
+            height: 22 * screenshotsPopup.rowScale
             visible: screenshotsPopup.root.selectedScreenshotEntry !== null
 
             Text {
@@ -227,8 +227,8 @@ CardWindow {
                 text: screenshotsPopup.root.selectedScreenshotEntry ? screenshotsPopup.root.selectedScreenshotEntry.label : ""
                 color: screenshotsPopup.root.ink
                 font.family: screenshotsPopup.root.mono
-                font.pixelSize: 11
-                font.letterSpacing: 2
+                font.pixelSize: 11 * screenshotsPopup.fontScale
+                font.letterSpacing: 2 * screenshotsPopup.fontScale
             }
 
             Text {
@@ -238,8 +238,8 @@ CardWindow {
                 text: copied ? "COPIED TO CLIPBOARD" : "RIGHT-CLICK TO COPY"
                 color: copied ? screenshotsPopup.root.seal : screenshotsPopup.root.inkDeep
                 font.family: screenshotsPopup.root.mono
-                font.pixelSize: 11
-                font.letterSpacing: 2
+                font.pixelSize: 11 * screenshotsPopup.fontScale
+                font.letterSpacing: 2 * screenshotsPopup.fontScale
                 opacity: copied ? 1.0 : 0.7
                 Behavior on color { ColorAnimation { duration: 180 } }
                 Behavior on opacity { NumberAnimation { duration: 180 } }

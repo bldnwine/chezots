@@ -35,7 +35,7 @@ CardWindow {
 
     Column {
         width: parent.width
-        spacing: 10
+        spacing: 10 * systemPopup.panelScale
 
         Repeater {
             model: [
@@ -46,7 +46,7 @@ CardWindow {
             delegate: Item {
                 required property var modelData
                 width: parent.width
-                height: 32
+                height: 32 * systemPopup.rowScale
 
                 Text {
                     id: lineLabel
@@ -55,8 +55,8 @@ CardWindow {
                     text: modelData.label
                     color: systemPopup.root.inkDeep
                     font.family: systemPopup.root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 2
+                    font.pixelSize: 10 * systemPopup.fontScale
+                    font.letterSpacing: 2 * systemPopup.fontScale
                 }
 
                 Text {
@@ -65,8 +65,8 @@ CardWindow {
                     text: modelData.value + "%"
                     color: systemPopup.root.ink
                     font.family: systemPopup.root.mono
-                    font.pixelSize: 11
-                    font.letterSpacing: 1
+                    font.pixelSize: 11 * systemPopup.fontScale
+                    font.letterSpacing: 1 * systemPopup.fontScale
                     font.weight: Font.Medium
                 }
 
@@ -74,8 +74,8 @@ CardWindow {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    anchors.topMargin: 22
-                    height: 3
+                    anchors.topMargin: 22 * systemPopup.panelScale
+                    height: 3 * systemPopup.rowScale
                     color: Qt.rgba(systemPopup.root.ink.r, systemPopup.root.ink.g, systemPopup.root.ink.b, 0.14)
 
                     Rectangle {
@@ -94,7 +94,7 @@ CardWindow {
 
         Item {
             width: parent.width
-            height: 30
+            height: 30 * systemPopup.rowScale
 
             Rectangle {
                 anchors.fill: parent
@@ -107,25 +107,25 @@ CardWindow {
 
             Text {
                 anchors.left: parent.left
-                anchors.leftMargin: 9
+                anchors.leftMargin: 9 * systemPopup.panelScale
                 anchors.verticalCenter: parent.verticalCenter
                 text: "OPEN BTOP"
                 color: systemPopup.root.ink
                 font.family: systemPopup.root.mono
-                font.pixelSize: 10
-                font.letterSpacing: 2
+                font.pixelSize: 10 * systemPopup.fontScale
+                font.letterSpacing: 2 * systemPopup.fontScale
                 font.weight: Font.Medium
             }
 
             Text {
                 anchors.right: parent.right
-                anchors.rightMargin: 9
+                anchors.rightMargin: 9 * systemPopup.panelScale
                 anchors.verticalCenter: parent.verticalCenter
                 text: "DETAIL PROCESS VIEW"
                 color: systemPopup.root.inkDeep
                 font.family: systemPopup.root.mono
-                font.pixelSize: 10
-                font.letterSpacing: 1.2
+                font.pixelSize: 10 * systemPopup.fontScale
+                font.letterSpacing: 1.2 * systemPopup.fontScale
             }
 
             MouseArea {

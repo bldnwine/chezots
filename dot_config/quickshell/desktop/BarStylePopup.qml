@@ -130,7 +130,7 @@ CardWindow {
         signal stepped(int dir)
         signal removed()
 
-        implicitHeight: 30
+        implicitHeight: 30 * barStylePopup.rowScale
         width: parent ? parent.width : 0
 
         Text {
@@ -139,8 +139,8 @@ CardWindow {
             text: label
             color: selected ? sty.seal : sty.inkDeep
             font.family: sty.mono
-            font.pixelSize: 10
-            font.letterSpacing: 2
+            font.pixelSize: 10 * barStylePopup.fontScale
+            font.letterSpacing: 2 * barStylePopup.fontScale
             Behavior on color { ColorAnimation { duration: 140 } }
         }
         Text {
@@ -149,8 +149,8 @@ CardWindow {
             text: value.length > 0 ? "‹ " + value + " ›" : ""
             color: selected ? sty.ink : sty.inkDeep
             font.family: sty.mono
-            font.pixelSize: 10
-            font.letterSpacing: 2
+            font.pixelSize: 10 * barStylePopup.fontScale
+            font.letterSpacing: 2 * barStylePopup.fontScale
             font.weight: Font.Medium
         }
         MouseArea {
@@ -177,18 +177,18 @@ CardWindow {
         signal chosen()
         signal removed()
 
-        implicitHeight: 28
+        implicitHeight: 28 * barStylePopup.rowScale
         width: parent ? parent.width : 0
 
         Text {
             anchors.left: parent.left
-            anchors.leftMargin: 12
+            anchors.leftMargin: 12 * barStylePopup.panelScale
             anchors.verticalCenter: parent.verticalCenter
             text: (selected ? "● " : "○ ") + name.toUpperCase()
             color: selected ? sty.seal : sty.ink
             font.family: sty.mono
-            font.pixelSize: 10
-            font.letterSpacing: 2
+            font.pixelSize: 10 * barStylePopup.fontScale
+            font.letterSpacing: 2 * barStylePopup.fontScale
             font.weight: selected ? Font.Medium : Font.Normal
         }
         Text {
@@ -197,8 +197,8 @@ CardWindow {
             text: armed ? "TAP AGAIN" : ""
             color: sty.seal
             font.family: sty.mono
-            font.pixelSize: 10
-            font.letterSpacing: 2
+            font.pixelSize: 10 * barStylePopup.fontScale
+            font.letterSpacing: 2 * barStylePopup.fontScale
             font.weight: Font.Medium
         }
         MouseArea {
@@ -215,7 +215,7 @@ CardWindow {
 
     Column {
         width: parent.width
-        spacing: 6
+        spacing: 6 * barStylePopup.panelScale
 
         Text {
             width: parent.width
@@ -224,7 +224,7 @@ CardWindow {
             wrapMode: Text.Wrap
             color: barStylePopup.root.seal
             font.family: barStylePopup.root.mono
-            font.pixelSize: 10
+            font.pixelSize: 10 * barStylePopup.fontScale
         }
 
         SelRow {
@@ -244,7 +244,7 @@ CardWindow {
         Column {
             visible: barStylePopup.expanded
             width: parent.width
-            spacing: 2
+            spacing: 2 * barStylePopup.panelScale
 
             Repeater {
                 model: barStylePopup.templateNames()
@@ -273,11 +273,11 @@ CardWindow {
             Column {
                 visible: barStylePopup.saving
                 width: parent.width
-                spacing: 4
+                spacing: 4 * barStylePopup.panelScale
 
                 Rectangle {
                     width: parent.width
-                    height: 30
+                    height: 30 * barStylePopup.rowScale
                     color: "transparent"
                     border.color: barStylePopup.root.sep
                     border.width: 1
@@ -285,14 +285,14 @@ CardWindow {
                     TextInput {
                         id: nameField
                         anchors.fill: parent
-                        anchors.leftMargin: 12
-                        anchors.rightMargin: 12
+                        anchors.leftMargin: 12 * barStylePopup.panelScale
+                        anchors.rightMargin: 12 * barStylePopup.panelScale
                         verticalAlignment: TextInput.AlignVCenter
                         color: barStylePopup.root.ink
                         selectionColor: barStylePopup.root.seal
                         font.family: barStylePopup.root.mono
-                        font.pixelSize: 11
-                        font.letterSpacing: 1
+                        font.pixelSize: 11 * barStylePopup.fontScale
+                        font.letterSpacing: 1 * barStylePopup.fontScale
                         maximumLength: 24
                         onAccepted: barStylePopup.saveCurrent()
                     }
@@ -302,8 +302,8 @@ CardWindow {
                     text: "A-Z 0-9 SPACE - _ · MAX 24 · ⏎ SAVE · EXISTING NAME OVERWRITES"
                     color: barStylePopup.root.inkDeep
                     font.family: barStylePopup.root.mono
-                    font.pixelSize: 9
-                    font.letterSpacing: 1
+                    font.pixelSize: 9 * barStylePopup.fontScale
+                    font.letterSpacing: 1 * barStylePopup.fontScale
                 }
             }
         }
@@ -324,7 +324,7 @@ CardWindow {
         Column {
             visible: barStylePopup.posExpanded
             width: parent.width
-            spacing: 2
+            spacing: 2 * barStylePopup.panelScale
 
             Repeater {
                 model: ["top", "bottom", "left", "right"]

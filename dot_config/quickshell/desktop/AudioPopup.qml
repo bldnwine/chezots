@@ -11,10 +11,8 @@ CardWindow {
 
     theme: root
     revealed: root.audioVisible
-    cardWidth: Math.max(1, Math.min(eqExpanded ? 890 : 390, width - 2 * anchorGap
-        - ((anchorEdge === "left" || anchorEdge === "right") ? root.barOffset : 0)))
-    cardHeight: Math.max(1, Math.min(760, height - 2 * anchorGap
-        - ((anchorEdge === "top" || anchorEdge === "bottom") ? root.barOffset : 0)))
+    cardWidth: eqExpanded ? 890 : 390
+    cardHeight: 760
     layerNamespace: "omarchy-audio"
     title: eqExpanded ? "AUDIO & EQUALIZER" : "AUDIO"
     subtitle: root.audioMuted
@@ -52,23 +50,23 @@ CardWindow {
             && !props["event.id"] && !n.name.startsWith("effect_");
     }).sort((a, b) => a.id - b.id)
     // Reserve the hero, divider and two gaps above the fixed scrolling deck.
-    readonly property real maxDeckHeight: Math.max(0, bodyAvailableHeight - 30 - 1 - 2 * 8)
+    readonly property real maxDeckHeight: Math.max(0, bodyAvailableHeight - 30 * rowScale - panelScale - 2 * 8 * panelScale)
 
     component AudioScrollBar: ScrollBar {
         id: audioScrollBar
         policy: ScrollBar.AsNeeded
         minimumSize: 0.08
-        implicitWidth: 5
-        padding: 0
+        implicitWidth: 5 * audioPopup.panelScale
+        padding: 0 * audioPopup.panelScale
         contentItem: Rectangle {
-            implicitWidth: 5
-            implicitHeight: 20
-            radius: 2
+            implicitWidth: 5 * audioPopup.panelScale
+            implicitHeight: 20 * audioPopup.rowScale
+            radius: 2 * audioPopup.panelScale
             color: audioPopup.root.seal
             opacity: audioScrollBar.active ? 1 : 0.6
         }
         background: Rectangle {
-            radius: 2
+            radius: 2 * audioPopup.panelScale
             color: audioPopup.root.sep
             opacity: 0.4
         }
@@ -288,14 +286,14 @@ CardWindow {
                 // Reserve the gutter even before overflow so rows don't resize
                 // when an application starts or stops playback.
                 width: controlsScroll.width - 12
-                spacing: 8
+                spacing: 8 * audioPopup.panelScale
                 Text {
                     width: parent.width
                     visible: audioPopup.root.audioDeviceError.length > 0
                     text: audioPopup.root.audioDeviceError
                     color: audioPopup.root.warn
                     font.family: audioPopup.root.mono
-                    font.pixelSize: 11
+                    font.pixelSize: 11 * audioPopup.fontScale
                     wrapMode: Text.WordWrap
                 }
 
@@ -303,22 +301,24 @@ CardWindow {
                 // ---------- OUTPUT ----------
                 Column {
                     width: parent.width
-                    spacing: 6
+                    spacing: 6 * audioPopup.panelScale
 
                     Item {
                         width: parent.width
-                        height: 18
+                        height: 18 * audioPopup.rowScale
                         Text {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             text: "OUTPUT"
                             color: audioPopup.root.inkDeep
                             font.family: audioPopup.root.mono
-                            font.pixelSize: 10
-                            font.letterSpacing: 2
+                            font.pixelSize: 10 * audioPopup.fontScale
+                            font.letterSpacing: 2 * audioPopup.fontScale
                         }
                     }
                     DisplaySlider {
+                        panelScale: audioPopup.panelScale
+                        panelTextScale: audioPopup.panelTextScale
                         id: outputSlider
                         root: audioPopup.root
                         width: parent.width
@@ -341,7 +341,7 @@ CardWindow {
                             readonly property bool focused: audioPopup.sinkFocused(index)
 
                             width: parent.width
-                            height: 32
+                            height: 32 * audioPopup.rowScale
                             radius: audioPopup.root.cornerRadius
                             color: active || focused
                                    ? audioPopup.root.rowSel
@@ -356,16 +356,16 @@ CardWindow {
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                anchors.leftMargin: 10
-                                anchors.rightMargin: 10
-                                spacing: 8
+                                anchors.leftMargin: 10 * audioPopup.panelScale
+                                anchors.rightMargin: 10 * audioPopup.panelScale
+                                spacing: 8 * audioPopup.panelScale
 
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: audioPopup.deviceGlyph(modelData.name + " " + modelData.portLabel, "sink")
                                     color: active ? audioPopup.root.seal : audioPopup.root.ink
                                     font.family: audioPopup.root.mono
-                                    font.pixelSize: 13
+                                    font.pixelSize: 13 * audioPopup.fontScale
                                 }
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
@@ -374,7 +374,7 @@ CardWindow {
                                     width: parent.width - 21 - 8
                                     color: active ? audioPopup.root.ink : audioPopup.root.fg
                                     font.family: audioPopup.root.mono
-                                    font.pixelSize: 11
+                                    font.pixelSize: 11 * audioPopup.fontScale
                                     font.weight: active ? Font.Medium : Font.Normal
                                 }
                             }
@@ -395,14 +395,14 @@ CardWindow {
                 // ---------- APPLICATION PLAYBACK ----------
                 Column {
                     width: parent.width
-                    spacing: 6
+                    spacing: 6 * audioPopup.panelScale
                     Rectangle { width: parent.width; height: 1; color: audioPopup.root.sep }
                     Text {
                         text: "PLAYBACK"
                         color: audioPopup.root.inkDeep
                         font.family: audioPopup.root.mono
-                        font.pixelSize: 10
-                        font.letterSpacing: 2
+                        font.pixelSize: 10 * audioPopup.fontScale
+                        font.letterSpacing: 2 * audioPopup.fontScale
                     }
                     Text {
                         width: parent.width
@@ -410,7 +410,7 @@ CardWindow {
                         text: Pipewire.ready ? "No application playback" : "Playback unavailable"
                         color: audioPopup.root.inkDeep
                         font.family: audioPopup.root.mono
-                        font.pixelSize: 11
+                        font.pixelSize: 11 * audioPopup.fontScale
                     }
                     Repeater {
                         id: playbackRows
@@ -440,8 +440,8 @@ CardWindow {
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.top: parent.top
-                                anchors.margins: 8
-                                spacing: 6
+                                anchors.margins: 8 * audioPopup.panelScale
+                                spacing: 6 * audioPopup.panelScale
                                 Item {
                                     width: parent.width
                                     height: Math.max(28, streamLabels.implicitHeight)
@@ -449,16 +449,16 @@ CardWindow {
                                         id: streamLabels
                                         anchors.left: parent.left
                                         anchors.right: streamMute.left
-                                        anchors.rightMargin: 8
+                                        anchors.rightMargin: 8 * audioPopup.panelScale
                                         anchors.verticalCenter: parent.verticalCenter
-                                        spacing: 2
+                                        spacing: 2 * audioPopup.panelScale
                                         Text {
                                             width: parent.width
                                             text: playbackRow.node ? audioPopup.playbackName(playbackRow.node) : ""
                                             elide: Text.ElideRight
                                             color: audioPopup.root.fg
                                             font.family: audioPopup.root.mono
-                                            font.pixelSize: 11
+                                            font.pixelSize: 11 * audioPopup.fontScale
                                         }
                                         Text {
                                             width: parent.width
@@ -467,7 +467,7 @@ CardWindow {
                                             elide: Text.ElideRight
                                             color: audioPopup.root.inkDeep
                                             font.family: audioPopup.root.mono
-                                            font.pixelSize: 10
+                                            font.pixelSize: 10 * audioPopup.fontScale
                                         }
                                     }
                                     QuickButton {
@@ -485,6 +485,8 @@ CardWindow {
                                     }
                                 }
                                 DisplaySlider {
+                                    panelScale: audioPopup.panelScale
+                                    panelTextScale: audioPopup.panelTextScale
                                     root: audioPopup.root
                                     width: parent.width
                                     minV: 0
@@ -503,28 +505,30 @@ CardWindow {
                 // ---------- INPUT ----------
                 Column {
                     width: parent.width
-                    spacing: 6
+                    spacing: 6 * audioPopup.panelScale
                     visible: audioPopup.inputVisible
 
                     Rectangle {
                         width: parent.width
-                        height: 1
+                        height: 1 * audioPopup.rowScale
                         color: audioPopup.root.sep
                     }
                     Item {
                         width: parent.width
-                        height: 18
+                        height: 18 * audioPopup.rowScale
                         Text {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             text: "INPUT"
                             color: audioPopup.root.inkDeep
                             font.family: audioPopup.root.mono
-                            font.pixelSize: 10
-                            font.letterSpacing: 2
+                            font.pixelSize: 10 * audioPopup.fontScale
+                            font.letterSpacing: 2 * audioPopup.fontScale
                         }
                     }
                     DisplaySlider {
+                        panelScale: audioPopup.panelScale
+                        panelTextScale: audioPopup.panelTextScale
                         id: inputSlider
                         root: audioPopup.root
                         width: parent.width
@@ -538,8 +542,8 @@ CardWindow {
                     }
                     Rectangle {
                         width: parent.width
-                        height: 4
-                        radius: 1
+                        height: 4 * audioPopup.rowScale
+                        radius: 1 * audioPopup.panelScale
                         color: Qt.rgba(audioPopup.root.ink.r, audioPopup.root.ink.g, audioPopup.root.ink.b, 0.12)
                         Rectangle {
                             anchors.left: parent.left
@@ -561,7 +565,7 @@ CardWindow {
                             readonly property bool focused: audioPopup.sourceFocused(index)
 
                             width: parent.width
-                            height: 32
+                            height: 32 * audioPopup.rowScale
                             radius: audioPopup.root.cornerRadius
                             color: active || focused
                                    ? audioPopup.root.rowSel
@@ -576,16 +580,16 @@ CardWindow {
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                anchors.leftMargin: 10
-                                anchors.rightMargin: 10
-                                spacing: 8
+                                anchors.leftMargin: 10 * audioPopup.panelScale
+                                anchors.rightMargin: 10 * audioPopup.panelScale
+                                spacing: 8 * audioPopup.panelScale
 
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: audioPopup.deviceGlyph(modelData.name + " " + modelData.portLabel, "source")
                                     color: active ? audioPopup.root.seal : audioPopup.root.ink
                                     font.family: audioPopup.root.mono
-                                    font.pixelSize: 13
+                                    font.pixelSize: 13 * audioPopup.fontScale
                                 }
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
@@ -594,7 +598,7 @@ CardWindow {
                                     width: parent.width - 21 - 8
                                     color: active ? audioPopup.root.ink : audioPopup.root.fg
                                     font.family: audioPopup.root.mono
-                                    font.pixelSize: 11
+                                    font.pixelSize: 11 * audioPopup.fontScale
                                     font.weight: active ? Font.Medium : Font.Normal
                                 }
                             }
@@ -616,7 +620,7 @@ CardWindow {
 
                 Item {
                     width: parent.width
-                    height: 30
+                    height: 30 * audioPopup.rowScale
 
                     Rectangle {
                         anchors.fill: parent
@@ -629,25 +633,25 @@ CardWindow {
 
                     Text {
                         anchors.left: parent.left
-                        anchors.leftMargin: 9
+                        anchors.leftMargin: 9 * audioPopup.panelScale
                         anchors.verticalCenter: parent.verticalCenter
                         text: "OPEN PAVUCONTROL"
                         color: audioPopup.root.ink
                         font.family: audioPopup.root.mono
-                        font.pixelSize: 10
-                        font.letterSpacing: 2
+                        font.pixelSize: 10 * audioPopup.fontScale
+                        font.letterSpacing: 2 * audioPopup.fontScale
                         font.weight: Font.Medium
                     }
 
                     Text {
                         anchors.right: parent.right
-                        anchors.rightMargin: 9
+                        anchors.rightMargin: 9 * audioPopup.panelScale
                         anchors.verticalCenter: parent.verticalCenter
                         text: "DETAIL AUDIO MIXER"
                         color: audioPopup.root.inkDeep
                         font.family: audioPopup.root.mono
-                        font.pixelSize: 10
-                        font.letterSpacing: 1.2
+                        font.pixelSize: 10 * audioPopup.fontScale
+                        font.letterSpacing: 1.2 * audioPopup.fontScale
                     }
 
                     MouseArea {
@@ -664,12 +668,12 @@ CardWindow {
 
     Column {
         width: parent.width
-        spacing: 8
+        spacing: 8 * audioPopup.panelScale
 
         // ---------- Hero: output glyph + EQ toggle + master mute ----------
         Item {
             width: parent.width
-            height: 30
+            height: 30 * audioPopup.rowScale
 
             Text {
                 anchors.left: parent.left
@@ -677,14 +681,14 @@ CardWindow {
                 text: audioPopup.outputIcon()
                 color: audioPopup.root.ink
                 font.family: audioPopup.root.mono
-                font.pixelSize: 15
+                font.pixelSize: 15 * audioPopup.fontScale
                 opacity: audioPopup.outputMuted ? 0.5 : 1.0
             }
 
             Row {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 6
+                spacing: 6 * audioPopup.panelScale
 
                 QuickButton {
                     root: audioPopup.root
@@ -715,7 +719,7 @@ CardWindow {
                 id: splitRow
                 visible: audioPopup.eqExpanded
                 anchors.fill: parent
-                spacing: 14
+                spacing: 14 * audioPopup.panelScale
 
                 readonly property real totalDividerW: splitRow.spacing * 2 + 1
                 readonly property real availPaneW: parent.width - totalDividerW
@@ -735,6 +739,8 @@ CardWindow {
                     flickableDirection: Flickable.VerticalFlick
                     ScrollBar.vertical: AudioScrollBar {}
                     EqPanel {
+                        panelScale: audioPopup.panelScale
+                        panelTextScale: audioPopup.panelTextScale
                         id: eqDeck
                         root: audioPopup.root
                         width: eqScroll.width - 12
@@ -743,7 +749,7 @@ CardWindow {
 
                 // Center Divider
                 Rectangle {
-                    width: 1
+                    width: 1 * audioPopup.panelScale
                     height: parent.height
                     color: audioPopup.root.sep
                 }

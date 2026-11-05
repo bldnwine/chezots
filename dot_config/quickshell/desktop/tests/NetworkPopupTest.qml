@@ -40,6 +40,8 @@ ShellRoot {
         property string netKind: "wifi"
         property string wifiSsid: ""
         property int wifiSignal: 0
+        property real panelScale: 1
+        property real panelTextScale: 1
         property real barOffset: 0
         property int testPanelWidth: 720
         property int testPanelHeight: 480
@@ -96,10 +98,10 @@ ShellRoot {
                 test.check(p.testBodyBottom < p.testFooterTop, "body overlaps footer");
                 test.check(p.visibleNets.length === 14, "all networks should be retained");
                 test.check(p.testScrollY > 0, "keyboard selection did not scroll list");
-                test.check(p.cardHeight <= 550 && p.cardWidth <= 390, "popup card was not capped");
+                test.check(p.testSurfaceHeight <= 550 && p.testSurfaceWidth <= 390, "popup card was not capped");
                 fakeRoot.testPanelWidth = 300;
                 fakeRoot.testPanelHeight = 300;
-                test.check(p.cardWidth <= 284 && p.cardHeight <= 284 && p.cardHeight > 0,
+                test.check(p.testSurfaceWidth <= 284 && p.testSurfaceHeight <= 284 && p.testSurfaceHeight > 0,
                            "small-screen card exceeds available panel area");
                 test.check(p.testScrollHeight > 0, "small-screen controls are unreachable");
                 fakeRoot.testPanelWidth = 720;
@@ -203,13 +205,13 @@ ShellRoot {
                 fakeRoot.wifiRadioOn = false;
                 break;
             case 11:
-                test.check(p.cardHeight === 700 && p.testScrollHeight > 0, "preferred network height");
+                test.check(p.testSurfaceHeight === 700 && p.testScrollHeight > 0, "preferred network height");
                 fakeRoot.netInfo = {iface:"wlan0",rx_bytes:1,tx_bytes:2,ip:"192.0.2.1",gateway:"192.0.2.2"};
                 fakeRoot.wifiRadioOn = true;
                 fakeRoot.wifiError = "Error";
                 break;
             case 12:
-                test.check(p.cardHeight === 700, "connection details or error resized card");
+                test.check(p.testSurfaceHeight === 700, "connection details or error resized card");
                 test.check(p.testBodyBottom < p.testFooterTop, "details overlap footer");
                 test.check(Math.abs(p.testStatsBottom - p.bodyAvailableHeight) < 1, "stats are not pinned to bottom");
                 test.check(p.testScrollHeight <= p.testStatsTop - 10, "networks overlap stats");
@@ -235,6 +237,23 @@ ShellRoot {
                 break;
             case 16:
                 test.check(!p.testStatsVisible && p.testScrollHeight === p.bodyAvailableHeight, "hidden stats still reserve space");
+                fakeRoot.panelScale = 1.5;
+                fakeRoot.panelTextScale = 2;
+                fakeRoot.testPanelWidth = 400;
+                fakeRoot.testPanelHeight = 360;
+                fakeRoot.barEdge = "top";
+                fakeRoot.barOffset = 30;
+                break;
+            case 17:
+                test.check(p.testSurfaceWidth <= 384 && p.testSurfaceHeight <= 314,
+                           "scaled card exceeds short screen");
+                test.check(p.testSurfaceX >= 0 && p.testSurfaceY >= 0
+                           && p.testSurfaceX + p.testSurfaceWidth <= fakeRoot.testPanelWidth
+                           && p.testSurfaceY + p.testSurfaceHeight <= fakeRoot.testPanelHeight,
+                           "scaled card is off-screen");
+                test.check(p.testBodyBottom <= p.testFooterTop + 1 && p.testFooterBottom <= p.testSurfaceHeight + 1,
+                           "scaled chrome overlaps or exceeds card");
+                test.check(p.testScrollHeight > 0, "scaled list is unreachable");
                 console.log("network popup regression tests passed");
                 Qt.quit();
                 break;

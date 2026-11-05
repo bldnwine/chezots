@@ -10,8 +10,8 @@ CardWindow {
     plain: true
     revealed: root.networkVisible
     escDismiss: netpopup.passphraseSsid === ""
-    cardWidth: Math.max(1, Math.min(390, width - 2 * anchorGap))
-    cardHeight: Math.min(700, availableCardHeight)
+    cardWidth: 390
+    cardHeight: 700
     readonly property real availableCardHeight: Math.max(1,
         height - ((anchorEdge === "top" || anchorEdge === "bottom") ? root.barOffset : 0) - 2 * anchorGap)
     layerNamespace: "omarchy-network"
@@ -232,8 +232,8 @@ CardWindow {
         policy: ScrollBar.AsNeeded
         visible: size < 1
         minimumSize: 0.08
-        implicitWidth: 5
-        padding: 0
+        implicitWidth: 5 * netpopup.panelScale
+        padding: 0 * netpopup.panelScale
         contentItem: Rectangle { implicitWidth: 5; implicitHeight: 20; radius: 2; color: netpopup.root.seal }
         background: Rectangle { radius: 2; color: netpopup.root.sep }
     }
@@ -255,7 +255,7 @@ CardWindow {
                 anchors.top: bodyScroll.top
                 anchors.bottom: bodyScroll.bottom
                 anchors.left: bodyScroll.right
-                anchors.leftMargin: 4
+                anchors.leftMargin: 4 * netpopup.panelScale
             }
             function showItem(item) {
                 const top = item.mapToItem(col, 0, 0).y;
@@ -268,11 +268,11 @@ CardWindow {
             Column {
                 id: col
                 width: parent.width
-                spacing: 10
+                spacing: 10 * netpopup.panelScale
 
                 Item {
                     width: parent.width
-                    height: 28
+                    height: 28 * netpopup.rowScale
                     Text {
                         id: statusLine
                         anchors.left: parent.left
@@ -289,14 +289,14 @@ CardWindow {
                                 : "RADIO OFF"
                         color: !root.wifiBusy && (netpopup.statusText || root.wifiError) ? root.warn : root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 10
-                        font.letterSpacing: 2
+                        font.pixelSize: 10 * netpopup.fontScale
+                        font.letterSpacing: 2 * netpopup.fontScale
                     }
                     Row {
                         id: wifiActions
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: 8
+                        spacing: 8 * netpopup.panelScale
                         QuickButton {
                             root: netpopup.root
                             label: root.wifiRadioOn ? "RADIO OFF" : "RADIO ON"
@@ -318,18 +318,18 @@ CardWindow {
                 Column {
                     width: parent.width
                     visible: netpopup.passphraseSsid !== ""
-                    spacing: 6
+                    spacing: 6 * netpopup.panelScale
                     Text {
                         width: parent.width
                         text: "PASSPHRASE · " + netpopup.passphraseSsid
                         elide: Text.ElideRight
                         color: root.inkDeep
                         font.family: root.mono
-                        font.pixelSize: 10
+                        font.pixelSize: 10 * netpopup.fontScale
                     }
                     Rectangle {
                         width: parent.width
-                        height: 30
+                        height: 30 * netpopup.rowScale
                         radius: root.cornerRadius
                         color: root.rowHi
                         border.color: root.seal
@@ -337,12 +337,12 @@ CardWindow {
                         TextInput {
                             id: passInput
                             anchors.fill: parent
-                            anchors.margins: 6
+                            anchors.margins: 6 * netpopup.panelScale
                             echoMode: TextInput.Password
                             inputMethodHints: Qt.ImhHiddenText | Qt.ImhNoPredictiveText
                             color: root.fg
                             font.family: root.mono
-                            font.pixelSize: 12
+                            font.pixelSize: 12 * netpopup.fontScale
                             selectByMouse: true
                             onTextChanged: netpopup.passphraseText = text
                             Keys.onReturnPressed: (event) => { netpopup._submitPassphrase(); event.accepted = true; }
@@ -365,7 +365,7 @@ CardWindow {
                     width: col.width
                     height: contentHeight
                     clip: true
-                    spacing: 10
+                    spacing: 10 * netpopup.panelScale
                     interactive: false
                     onContentHeightChanged: Qt.callLater(netpopup.ensureSelectionVisible)
                     model: netpopup.visibleNets
@@ -375,7 +375,7 @@ CardWindow {
                         readonly property bool kbdFocused: netpopup.kbdIndex === (index + netpopup.headerCount)
                         readonly property bool dimmed: !modelData.known && !modelData.inUse
                         width: networkList.width
-                        height: 32
+                        height: 32 * netpopup.rowScale
                         radius: root.cornerRadius
                         color: modelData.inUse || kbdFocused
                                  ? root.rowSel
@@ -396,46 +396,46 @@ CardWindow {
                             Text {
                                 id: barsIcon
                                 anchors.left: parent.left
-                                anchors.leftMargin: 10
+                                anchors.leftMargin: 10 * netpopup.panelScale
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: root.wifiBarsGlyph(modelData.signal)
                                 color: modelData.inUse ? root.seal : root.ink
                                 font.family: root.mono
-                                font.pixelSize: 14
+                                font.pixelSize: 14 * netpopup.fontScale
                             }
                             Text {
                                 anchors.left: barsIcon.right
                                 anchors.right: secTag.left
-                                anchors.leftMargin: 10
-                                anchors.rightMargin: 10
+                                anchors.leftMargin: 10 * netpopup.panelScale
+                                anchors.rightMargin: 10 * netpopup.panelScale
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: modelData.ssid
                                 elide: Text.ElideRight
                                 color: modelData.inUse ? root.ink : root.fg
                                 font.family: root.mono
-                                font.pixelSize: 11
+                                font.pixelSize: 11 * netpopup.fontScale
                                 font.weight: modelData.inUse ? Font.Medium : Font.Normal
                             }
                             Text {
                                 id: secTag
                                 anchors.right: sigText.left
-                                anchors.rightMargin: 10
+                                anchors.rightMargin: 10 * netpopup.panelScale
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: netpopup._isProtected(modelData.security) ? "󰌾" : ""
                                 color: root.inkDeep
                                 font.family: root.mono
-                                font.pixelSize: 11
+                                font.pixelSize: 11 * netpopup.fontScale
                             }
                             Text {
                                 id: sigText
                                 anchors.right: parent.right
-                                anchors.rightMargin: 10
+                                anchors.rightMargin: 10 * netpopup.panelScale
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: modelData.signal + "%"
                                 color: root.inkDeep
                                 font.family: root.mono
-                                font.pixelSize: 10
-                                font.letterSpacing: 1
+                                font.pixelSize: 10 * netpopup.fontScale
+                                font.letterSpacing: 1 * netpopup.fontScale
                             }
                         }
 
@@ -465,8 +465,8 @@ CardWindow {
                     text: "SCANNING FOR NETWORKS…"
                     color: root.inkDeep
                     font.family: root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 2
+                    font.pixelSize: 10 * netpopup.fontScale
+                    font.letterSpacing: 2 * netpopup.fontScale
                     opacity: 0.6
                 }
 
@@ -477,8 +477,8 @@ CardWindow {
                     text: "NO NETWORKS FOUND"
                     color: root.inkDeep
                     font.family: root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 2
+                    font.pixelSize: 10 * netpopup.fontScale
+                    font.letterSpacing: 2 * netpopup.fontScale
                     opacity: 0.6
                 }
             }
@@ -504,12 +504,12 @@ CardWindow {
                 anchors.top: statsScroll.top
                 anchors.bottom: statsScroll.bottom
                 anchors.left: statsScroll.right
-                anchors.leftMargin: 4
+                anchors.leftMargin: 4 * netpopup.panelScale
             }
             Column {
                 id: statsColumn
                 width: parent.width
-                spacing: 10
+                spacing: 10 * netpopup.panelScale
                 Text {
                     width: parent.width
                     visible: !!root.netDetailsError
@@ -517,20 +517,20 @@ CardWindow {
                     wrapMode: Text.WordWrap
                     color: root.warn
                     font.family: root.mono
-                    font.pixelSize: 10
+                    font.pixelSize: 10 * netpopup.fontScale
                 }
 
                 // ---------- Connection details ----------
                 Rectangle {
                     width: parent.width
-                    height: 1
+                    height: 1 * netpopup.rowScale
                     color: root.sep
                     visible: !!root.netInfo.iface
                 }
                 Column {
                     visible: !!root.netInfo.iface
                     width: parent.width
-                    spacing: 4
+                    spacing: 4 * netpopup.panelScale
 
                     Repeater {
                         model: netpopup._detailRows
@@ -554,7 +554,7 @@ CardWindow {
                                                           && (root.netPacketLoss > 0 || _val === "TIMEOUT")
                             readonly property bool _copy: modelData.copy && _val !== "—"
                             width: parent.width
-                            height: 20
+                            height: 20 * netpopup.rowScale
 
                             Text {
                                 anchors.left: parent.left
@@ -562,8 +562,8 @@ CardWindow {
                                 text: modelData.l
                                 color: root.inkDeep
                                 font.family: root.mono
-                                font.pixelSize: 9
-                                font.letterSpacing: 1.5
+                                font.pixelSize: 9 * netpopup.fontScale
+                                font.letterSpacing: 1.5 * netpopup.fontScale
                                 opacity: 0.7
                             }
                             Text {
@@ -572,8 +572,8 @@ CardWindow {
                                 text: parent._val
                                 color: parent._warn ? root.warn : root.ink
                                 font.family: root.mono
-                                font.pixelSize: 10
-                                font.letterSpacing: 1
+                                font.pixelSize: 10 * netpopup.fontScale
+                                font.letterSpacing: 1 * netpopup.fontScale
                                 font.weight: Font.Medium
                             }
                             MouseArea {

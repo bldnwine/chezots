@@ -9,7 +9,38 @@ import "Palette.js" as Palette
 Item {
     id: theme
 
-    readonly property string colorsPath: Quickshell.env("HOME") + "/.config/aether/theme/colors.toml"
+    readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config"
+    readonly property string colorsPath: configHome + "/aether/theme/quickshell.json"
+    readonly property string legacyColorsPath: configHome + "/aether/theme/colors.toml"
+    property var settings: null
+    property bool dedicatedPresent: true
+    property string paletteError: ""
+    property string paletteRevision: ""
+    property string paletteSignature: ""
+    property var appliedPalette: ({paper:"#181616", ink:"#c5c9c5", inkDeep:"#c8c093", sumi:"#a6a69c",
+        indigo:"#658594", green:"#a9b665", sealRaw:"#c4746e"})
+    property var previewColors: null
+    readonly property var renderedPalette: Palette.complete(previewColors || appliedPalette)
+    signal paletteCommitted()
+
+    function previewPalette(colors) {
+        for (const key of Palette.ROLES) if (!Palette.validColor(colors[key])) return;
+        previewColors = Palette.complete(colors);
+    }
+    function cancelPreview() { previewColors = null; }
+    function acceptPalette(colors, revision) {
+        const next = Palette.complete(Object.assign({}, appliedPalette, colors));
+        const nextRevision = revision === undefined ? paletteRevision : String(revision);
+        const signature = nextRevision + JSON.stringify(next);
+        if (signature === paletteSignature) return;
+        appliedPalette = next;
+        paletteRevision = nextRevision;
+        paletteSignature = signature;
+        previewColors = null;
+        paletteError = "";
+        paletteCommitted();
+    }
+    function reloadPalette() { paletteFile.reload(); }
 
     // Our own persisted round/sharp toggle. Flipped from the omni menu
     // (or any client) via the `corners` IpcHandler below. We don't read
@@ -31,13 +62,13 @@ Item {
     }
     function toggleCorners() { theme.setCorners(theme.round ? "sharp" : "round"); }
 
-    property color paper:   "#181616"
-    property color ink:     "#c5c9c5"
-    property color inkDeep: "#c8c093"
-    property color sumi:    "#a6a69c"
-    property color indigo:  "#658594"
-    property color green:   "#a9b665"
-    property color sealRaw: "#c4746e"
+    readonly property color paper:   Palette.qmlColor(renderedPalette.paper)
+    readonly property color ink:     Palette.qmlColor(renderedPalette.ink)
+    readonly property color inkDeep: Palette.qmlColor(renderedPalette.inkDeep)
+    readonly property color sumi:    Palette.qmlColor(renderedPalette.sumi)
+    readonly property color indigo:  Palette.qmlColor(renderedPalette.indigo)
+    readonly property color green:   Palette.qmlColor(renderedPalette.green)
+    readonly property color sealRaw: Palette.qmlColor(renderedPalette.sealRaw)
     property real  driftAmount: 0
 
     readonly property color seal: Qt.hsva(
@@ -48,30 +79,51 @@ Item {
     )
 
     readonly property string serif: "serif"
-    readonly property string mono:  "JetBrainsMono Nerd Font"
+    readonly property string mono:  "Google Sans Flex"
 
-    readonly property color bg:     Qt.rgba(paper.r, paper.g, paper.b, 0.94)
+    readonly property color bg:     Palette.qmlColor(renderedPalette.bg)
     readonly property color fg:     ink
     readonly property color muted:  sumi
     readonly property color accent: seal
-    readonly property color warn:   seal
-    readonly property color sep:    Qt.rgba(ink.r, ink.g, ink.b, 0.18)
-    readonly property color rowHi:  Qt.rgba(ink.r, ink.g, ink.b, 0.06)
-    readonly property color rowSel: Qt.rgba(seal.r, seal.g, seal.b, 0.18)
+    readonly property color warn:   Palette.qmlColor(renderedPalette.warn)
+    readonly property color sep:    Palette.qmlColor(renderedPalette.sep)
+    readonly property color rowHi:  Palette.qmlColor(renderedPalette.rowHi)
+    readonly property color rowSel: Palette.qmlColor(renderedPalette.rowSel)
 
     // Name of the last theme applied via IPC. Used to suppress the drift
     // animation when the hook pushes the same theme twice or races the
     // startup FileView read.
     property string lastAppliedName: ""
 
-    // watchChanges: false — `omarchy theme set` does an atomic rm+mv on
-    // the theme dir, which would race an inotify watch. The hook tells us
-    // when to reload instead.
+    // File notifications and explicit push hooks share one validated resolver.
     FileView {
         id: paletteFile
         path: theme.colorsPath
         watchChanges: true
-        onLoaded: Palette.apply(theme, Palette.parse(paletteFile.text()))
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            theme.dedicatedPresent = true;
+            try {
+                const document = Palette.decode(text());
+                theme.acceptPalette(document.colors, document.revision);
+            } catch (error) { theme.paletteError = String(error); console.warn(theme.paletteError); }
+        }
+        onLoadFailed: function(error) {
+            theme.dedicatedPresent = error !== FileViewError.FileNotFound;
+            if (!theme.dedicatedPresent) legacyFile.reload();
+            else theme.paletteError = "Could not read the Quickshell palette; keeping the last valid colors";
+        }
+    }
+    FileView {
+        id: legacyFile
+        path: theme.legacyColorsPath
+        printErrors: false
+        onLoaded: {
+            if (theme.dedicatedPresent) return;
+            const parsed = Palette.parse(text());
+            if (Object.keys(parsed).length) theme.acceptPalette(Palette.complete(parsed), "legacy");
+        }
     }
 
     // Local persistence: one-line file containing "round" or "sharp".
@@ -133,14 +185,18 @@ Item {
             try { p = JSON.parse(payload); }
             catch (e) { console.warn("theme.apply: bad payload —", e); return; }
             if (!p || !p.colors) return;
-            Palette.apply(theme, Palette.mapKeys(p.colors));
+            if (theme.dedicatedPresent) theme.reloadPalette();
+            else if (p.version === 1) {
+                try { const document = Palette.decode(payload); theme.acceptPalette(document.colors, document.revision); }
+                catch (error) { console.warn(String(error)); return; }
+            } else theme.acceptPalette(Palette.complete(Palette.mapKeys(p.colors)), "legacy");
             if (p.name && p.name !== theme.lastAppliedName) {
                 theme.lastAppliedName = p.name;
                 driftDelay.restart();
             }
         }
         function reload() {
-            paletteFile.reload();
+            theme.reloadPalette();
             driftDelay.restart();
         }
     }

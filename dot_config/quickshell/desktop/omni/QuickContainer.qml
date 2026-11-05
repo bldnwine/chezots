@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import ".."
 
 // Quick-mode container: tile grid on the left, optional detail panel
@@ -14,15 +15,16 @@ Item {
     required property var panel
 
     property alias bodyLoaderItem: bodyLoader
+    property real availableHeight: panel.height * .72
+    implicitHeight: Math.max(quickGrid.contentHeight, detailPanel.visible ? detailPanel.height : 0)
 
     visible: omni.quickMode
     width: parent ? parent.width : 0
     height: visible
-        ? Math.max(quickGrid.height,
-                   detailPanel.visible ? detailPanel.height : 0)
+        ? Math.min(availableHeight, implicitHeight)
         : 0
 
-    Item {
+    Flickable {
         id: quickGrid
         visible: qc.omni.quickMode
         // Expanded: compress to a narrow column on the left edge so
@@ -30,18 +32,34 @@ Item {
         readonly property bool colMode: qc.omni.quickExpanded
         anchors.top: parent.top
         anchors.left: parent.left
-        width: colMode ? 64 : parent.width
-        readonly property int tileH: colMode ? 42 : 86
-        readonly property int spacing: colMode ? 4 : 10
+        width: colMode ? 64 * qc.omni.layoutScale : parent.width
+        readonly property real tileH: (colMode ? 42 : 86) * qc.omni.rowScale
+        readonly property real spacing: (colMode ? 4 : 10) * qc.omni.layoutScale
         readonly property int rows: visible
             ? Math.ceil(qc.omni.filteredQuickTiles.length / qc.omni.quickGridCols)
             : 0
-        height: visible
+        contentHeight: visible
             ? (rows * tileH + Math.max(0, rows - 1) * spacing)
             : 0
+        contentWidth: width
+        height: Math.min(qc.availableHeight, contentHeight)
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+        function ensureSelection() {
+            const row = Math.floor(qc.omni.selectedIndex / qc.omni.quickGridCols);
+            const top = row * (tileH + spacing);
+            if (top < contentY) contentY = top;
+            else if (top + tileH > contentY + height) contentY = Math.max(0, top + tileH - height);
+        }
+        Connections {
+            target: qc.omni
+            function onSelectedIndexChanged() { if (qc.visible) quickGrid.ensureSelection(); }
+            function onQuickGridColsChanged() { quickGrid.contentY = 0; }
+        }
 
         Grid {
-            anchors.fill: parent
+            width: parent.width
             columns: qc.omni.quickGridCols
             rowSpacing: quickGrid.spacing
             columnSpacing: quickGrid.spacing
@@ -147,7 +165,7 @@ Item {
         id: quickMidSep
         visible: qc.omni.quickExpanded
         anchors.left: quickGrid.right
-        anchors.leftMargin: 16
+        anchors.leftMargin: 16 * qc.omni.layoutScale
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: 1
@@ -164,14 +182,14 @@ Item {
         id: detailPanel
         visible: qc.omni.quickExpanded
         anchors.left: quickMidSep.right
-        anchors.leftMargin: 16
+        anchors.leftMargin: 16 * qc.omni.layoutScale
         anchors.right: parent.right
         anchors.top: parent.top
         // Cap the panel so the card never extends past its budget.
         // Body content beyond this height scrolls inside `bodyScroll`
         // below instead of pushing the card off-screen.
-        readonly property real _maxHeight: qc.panel.height * 0.55
-        readonly property real _wantHeight: detailHeader.implicitHeight + bodyLoader.implicitContentHeight + 18
+        readonly property real _maxHeight: qc.availableHeight
+        readonly property real _wantHeight: detailHeader.implicitHeight + bodyLoader.implicitContentHeight + 18 * qc.omni.layoutScale
         height: visible ? Math.min(_wantHeight, _maxHeight) : 0
         clip: true
         Behavior on height {
@@ -213,8 +231,8 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            anchors.topMargin: 6
-            spacing: 12
+            anchors.topMargin: 6 * qc.omni.layoutScale
+            spacing: 12 * qc.omni.layoutScale
             Text {
                 readonly property var dyn: qc.omni.tileDyn(detailPanel.t)
                 text: dyn.glyph || ""
@@ -225,9 +243,12 @@ Item {
             }
             Column {
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 Layout.alignment: Qt.AlignVCenter
-                spacing: 2
+                spacing: 2 * qc.omni.layoutScale
                 Text {
+                    width: parent.width
+                    elide: Text.ElideRight
                     text: qc.omni.tileDyn(detailPanel.t).label || ""
                     color: qc.omni.ink
                     font.family: qc.omni.mono
@@ -236,6 +257,8 @@ Item {
                     font.weight: Font.Medium
                 }
                 Text {
+                    width: parent.width
+                    elide: Text.ElideRight
                     text: qc.omni.tileDyn(detailPanel.t).sub || ""
                     color: qc.omni.inkDeep
                     font.family: qc.omni.mono
@@ -246,7 +269,9 @@ Item {
             }
             Rectangle {
                 Layout.alignment: Qt.AlignVCenter
-                width: 22; height: 22; radius: 11
+                Layout.preferredWidth: 22 * qc.omni.rowScale
+                Layout.preferredHeight: 22 * qc.omni.rowScale
+                radius: height / 2
                 color: closeMouse.containsMouse
                        ? Qt.rgba(qc.omni.ink.r, qc.omni.ink.g, qc.omni.ink.b, 0.08)
                        : "transparent"
@@ -279,7 +304,7 @@ Item {
             anchors.right: parent.right
             anchors.top: detailHeader.bottom
             anchors.bottom: parent.bottom
-            anchors.topMargin: 10
+            anchors.topMargin: 10 * qc.omni.layoutScale
             contentWidth: width
             contentHeight: bodyLoader.implicitContentHeight
             clip: true

@@ -4,13 +4,17 @@ import QtQuick
 Item {
     id: chip
     required property var root
+    property real panelScale: 1
+    property real panelTextScale: 1
+    readonly property real fontScale: panelScale * panelTextScale
+    readonly property real rowScale: panelScale * Math.max(1, panelTextScale)
 
     property string label: ""
     property bool selected: false
     signal activated()
 
-    implicitWidth: chipText.implicitWidth + 18
-    implicitHeight: 22
+    implicitWidth: chipText.implicitWidth + 18 * chip.panelScale
+    implicitHeight: 22 * chip.rowScale
 
     Rectangle {
         anchors.fill: parent
@@ -31,8 +35,8 @@ Item {
         text: chip.label
         color: chip.selected ? chip.root.ink : chip.root.inkDeep
         font.family: chip.root.mono
-        font.pixelSize: 10
-        font.letterSpacing: 2
+        font.pixelSize: 10 * chip.fontScale
+        font.letterSpacing: 2 * chip.fontScale
     }
 
     MouseArea {

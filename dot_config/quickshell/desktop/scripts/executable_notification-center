@@ -52,6 +52,12 @@ cleanup_sources() {
   python3 - "$store" "$src_dir" "$src_history" "$@" <<'PYHELPER'
 import fcntl, json, os, glob, stat, sys, time
 store, src, history, *candidates = sys.argv[1:]
+candidate_file = os.environ.get('NC_PRUNE_CANDIDATES')
+if candidate_file:
+    try:
+        with open(candidate_file, encoding='utf-8') as f: candidates.extend(json.load(f))
+    except (OSError, ValueError): pass
+candidates = set(candidates)
 sources = os.path.abspath(os.path.join(store, 'screenshot-sources'))
 refs = set()
 def read_records(path, pending=False):
@@ -288,7 +294,7 @@ sync_all() {
 # ---------------------------------------------------------------- trimming
 
 prune() {
-  local cutoff kept dropped
+  local cutoff
   cutoff=$(( $(now_ms) - keep_days * 86400000 ))
 
   if [[ -s $cleared_at_file ]]; then
@@ -305,20 +311,61 @@ prune() {
 
   if [[ ! -s $archive ]]; then cleanup_sources; return 0; fi
 
-  kept=$(jq -c --argjson cutoff "$cutoff" 'select(.timestamp >= $cutoff)' "$archive" 2>/dev/null | tail -n "$max_items")
-  dropped=$(comm -23 \
-    <(jq -r '.key' "$archive" 2>/dev/null | sort) \
-    <(printf '%s\n' "$kept" | jq -r 'select(.key) | .key' 2>/dev/null | sort))
-
-  printf '%s\n' "$kept" | grep -v '^$' > "$archive.tmp" 2>/dev/null || : > "$archive.tmp"
-  local key path candidates=()
-  while IFS= read -r key; do
-    while IFS= read -r path; do [[ -n $path ]] && candidates+=("$path"); done < <(jq -r --arg key "$key" 'select(.key == $key and .screenshotTemporary == true) | .screenshotPath // empty' "$archive" 2>/dev/null)
-    [[ -n $key ]] || continue
-    rm -f -- "$images/$key-appIcon" "$images/$key-image" "$images/$key-preview"
-  done <<< "$dropped"
-  mv -f "$archive.tmp" "$archive"
-  cleanup_sources "${candidates[@]}"
+  # Parse once under the lock. Keep original records when no eviction is needed,
+  # avoiding a file replacement and unnecessary archive change notifications.
+  local candidates_file
+  candidates_file=$(mktemp "$store/.prune-candidates.XXXXXX") || return 1
+  if ! python3 - "$archive" "$images" "$cutoff" "$max_items" "$candidates_file" <<'PYPRUNE'
+import json, os, sys, tempfile
+archive, images, cutoff, maximum, candidates_file = sys.argv[1:]
+cutoff, maximum = int(cutoff), int(maximum)
+if maximum < 0:
+    raise ValueError('NC_MAX_ITEMS must be nonnegative')
+records = []
+with open(archive, encoding='utf-8') as f:
+    for line in f:
+        if line.strip():
+            records.append((line, json.loads(line)))
+eligible = [i for i, (_, item) in enumerate(records)
+            if isinstance(item, dict) and isinstance(item.get('timestamp'), (int, float))
+            and not isinstance(item.get('timestamp'), bool) and item['timestamp'] >= cutoff]
+kept = set(eligible[-maximum:] if maximum else [])
+if len(kept) != len(records):
+    kept_keys = {records[i][1].get('key') for i in kept
+                 if isinstance(records[i][1].get('key'), str)}
+    dropped = [item for i, (_, item) in enumerate(records)
+               if i not in kept and isinstance(item, dict)
+               and (not isinstance(item.get('key'), str) or item['key'] not in kept_keys)]
+    candidates = [item['screenshotPath'] for item in dropped
+                  if item.get('screenshotTemporary') is True
+                  and isinstance(item.get('screenshotPath'), str)]
+    with open(candidates_file, 'w', encoding='utf-8') as f:
+        json.dump(candidates, f)
+    fd, tmp = tempfile.mkstemp(prefix='.archive-prune.', dir=os.path.dirname(archive))
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            for i in sorted(kept):
+                line = records[i][0]
+                f.write(line if line.endswith('\n') else line + '\n')
+        os.replace(tmp, archive)
+    finally:
+        if os.path.exists(tmp): os.unlink(tmp)
+    for item in dropped:
+        key = item.get('key')
+        if not isinstance(key, str) or not key or '/' in key or key in ('.', '..'):
+            continue
+        for suffix in ('appIcon', 'image', 'preview'):
+            try: os.unlink(os.path.join(images, key + '-' + suffix))
+            except FileNotFoundError: pass
+else:
+    with open(candidates_file, 'w', encoding='utf-8') as f: json.dump([], f)
+PYPRUNE
+  then
+    rm -f -- "$candidates_file"
+    return 1
+  fi
+  NC_PRUNE_CANDIDATES="$candidates_file" cleanup_sources
+  rm -f -- "$candidates_file"
 }
 
 # ---------------------------------------------------------------- commands

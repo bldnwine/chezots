@@ -4,7 +4,6 @@ import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import "Palette.js" as Palette
 
 Item {
     id: root
@@ -82,8 +81,9 @@ Item {
         if (pendingThemeVersion < 0) return;
         pendingThemeFallbackTimer.stop();
         if (pendingColorsRaw && root.theme) {
-            var parsed = Palette.parseAll(pendingColorsRaw);
-            Palette.apply(root.theme, Palette.mapKeys(parsed));
+            // The transition payload may contain the global Aether palette.
+            // Always resolve the dedicated QS file at the reveal boundary.
+            root.theme.reloadPalette();
         }
         pendingThemeVersion = -1;
         pendingColorsRaw = "";

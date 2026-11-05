@@ -29,23 +29,23 @@ CardWindow {
 
     Column {
         width: parent.width
-        spacing: 12
+        spacing: 12 * weatherPopup.panelScale
 
         Item {
             width: parent.width
-            height: 43
+            height: 43 * weatherPopup.rowScale
 
             Column {
                 anchors.left: parent.left
                 anchors.right: weatherRefresh.left
-                anchors.rightMargin: 12
+                anchors.rightMargin: 12 * weatherPopup.panelScale
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
+                spacing: 2 * weatherPopup.panelScale
                 Text {
                     text: "WEATHER"
                     color: weatherPopup.root.ink
                     font.family: weatherPopup.root.mono
-                    font.pixelSize: weatherPopup.isWhiterose ? 15 : 19
+                    font.pixelSize: (weatherPopup.isWhiterose ? 15 : 19) * weatherPopup.fontScale
                     font.letterSpacing: weatherPopup.isWhiterose ? 3 : 4
                     font.weight: Font.Medium
                 }
@@ -68,8 +68,8 @@ CardWindow {
                            ? (weatherPopup.isWhiterose ? weatherPopup.root.ink : weatherPopup.root.seal)
                            : weatherPopup.root.inkDeep
                     font.family: weatherPopup.root.mono
-                    font.pixelSize: 11
-                    font.letterSpacing: 2
+                    font.pixelSize: 11 * weatherPopup.fontScale
+                    font.letterSpacing: 2 * weatherPopup.fontScale
                     Behavior on color { ColorAnimation { duration: 140 } }
 
                     MouseArea {
@@ -91,7 +91,7 @@ CardWindow {
                 text: weatherPopup.root.icoRefresh
                 restColor: weatherPopup.root.inkDeep
                 hotColor: weatherPopup.isWhiterose ? weatherPopup.root.ink : weatherPopup.root.seal
-                font.pixelSize: weatherPopup.isWhiterose ? 18 : 22
+                font.pixelSize: (weatherPopup.isWhiterose ? 18 : 22) * weatherPopup.fontScale
                 onTriggered: weatherPopup.root.refreshWeather()
             }
         }
@@ -110,15 +110,15 @@ CardWindow {
                 text: weatherPopup.root.weatherIcon
                 color: weatherPopup.isWhiterose ? weatherPopup.root.ink : weatherPopup.root.seal
                 font.family: weatherPopup.root.mono
-                font.pixelSize: weatherPopup.isWhiterose ? 36 : 56
+                font.pixelSize: (weatherPopup.isWhiterose ? 36 : 56) * weatherPopup.fontScale
             }
 
             Column {
                 anchors.left: heroGlyph.right
-                anchors.leftMargin: 12
+                anchors.leftMargin: 12 * weatherPopup.panelScale
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 4
+                spacing: 4 * weatherPopup.panelScale
 
                 Text {
                     width: parent.width
@@ -127,9 +127,9 @@ CardWindow {
                     text: weatherPopup.root.fmtTemp(weatherPopup.root.weatherTempC) + "C"
                     color: weatherPopup.root.ink
                     font.family: weatherPopup.root.mono
-                    font.pixelSize: weatherPopup.isWhiterose ? 30 : 38
+                    font.pixelSize: (weatherPopup.isWhiterose ? 30 : 38) * weatherPopup.fontScale
                     font.weight: Font.Light
-                    font.letterSpacing: 2
+                    font.letterSpacing: 2 * weatherPopup.fontScale
                 }
                 Text {
                     width: parent.width
@@ -140,7 +140,7 @@ CardWindow {
                     text: weatherPopup.root.weatherDesc.toUpperCase()
                     color: weatherPopup.root.inkDeep
                     font.family: weatherPopup.root.mono
-                    font.pixelSize: 11
+                    font.pixelSize: 11 * weatherPopup.fontScale
                     font.letterSpacing: weatherPopup.isWhiterose ? 2 : 3
                 }
             }
@@ -155,16 +155,16 @@ CardWindow {
             text: weatherPopup.root.weatherUnavailable ? "WTTR.IN UNREACHABLE" : (weatherPopup.isWhiterose ? "FETCHING..." : "FETCHING…")
             color: weatherPopup.root.inkDeep
             font.family: weatherPopup.root.mono
-            font.pixelSize: 11
-            font.letterSpacing: 3
+            font.pixelSize: 11 * weatherPopup.fontScale
+            font.letterSpacing: 3 * weatherPopup.fontScale
             opacity: 0.6
         }
 
         Grid {
             width: parent.width
             columns: weatherPopup.isWhiterose ? 1 : 2
-            rowSpacing: 4
-            columnSpacing: 0
+            rowSpacing: 4 * weatherPopup.panelScale
+            columnSpacing: 0 * weatherPopup.panelScale
             visible: weatherPopup.root.weatherLoaded
 
             Repeater {
@@ -183,7 +183,7 @@ CardWindow {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
-                        height: 1
+                        height: 1 * weatherPopup.rowScale
                         color: weatherPopup.root.sep
                         opacity: 0.55
                     }
@@ -194,12 +194,12 @@ CardWindow {
                         text: modelData.label
                         color: weatherPopup.root.inkDeep
                         font.family: weatherPopup.root.mono
-                        font.pixelSize: 10
-                        font.letterSpacing: 2
+                        font.pixelSize: 10 * weatherPopup.fontScale
+                        font.letterSpacing: 2 * weatherPopup.fontScale
                     }
                     Text {
                         anchors.left: metricLabel.right
-                        anchors.leftMargin: 8
+                        anchors.leftMargin: 8 * weatherPopup.panelScale
                         anchors.right: parent.right
                         anchors.rightMargin: weatherPopup.isWhiterose ? 0 : 10
                         anchors.verticalCenter: parent.verticalCenter
@@ -208,8 +208,8 @@ CardWindow {
                         text: modelData.value
                         color: weatherPopup.root.ink
                         font.family: weatherPopup.root.mono
-                        font.pixelSize: 11
-                        font.letterSpacing: 1
+                        font.pixelSize: 11 * weatherPopup.fontScale
+                        font.letterSpacing: 1 * weatherPopup.fontScale
                         font.weight: Font.Medium
                     }
                 }
@@ -223,21 +223,21 @@ CardWindow {
 
         Item {
             width: parent.width
-            height: 36
+            height: 36 * weatherPopup.rowScale
             visible: weatherPopup.root.weatherLoaded && !weatherPopup.isWhiterose
 
             Column {
                 anchors.left: parent.left
                 anchors.right: todayHiLo.left
-                anchors.rightMargin: 12
+                anchors.rightMargin: 12 * weatherPopup.panelScale
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 3
+                spacing: 3 * weatherPopup.panelScale
                 Text {
                     text: "TODAY"
                     color: weatherPopup.root.inkDeep
                     font.family: weatherPopup.root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 2
+                    font.pixelSize: 10 * weatherPopup.fontScale
+                    font.letterSpacing: 2 * weatherPopup.fontScale
                 }
                 Text {
                     width: parent.width
@@ -246,8 +246,8 @@ CardWindow {
                           + "   " + String.fromCodePoint(0xe34d) + " " + weatherPopup.root.weatherSunset
                     color: weatherPopup.root.inkDeep
                     font.family: weatherPopup.root.mono
-                    font.pixelSize: 10
-                    font.letterSpacing: 1
+                    font.pixelSize: 10 * weatherPopup.fontScale
+                    font.letterSpacing: 1 * weatherPopup.fontScale
                 }
             }
 
@@ -255,21 +255,21 @@ CardWindow {
                 id: todayHiLo
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 10
+                spacing: 10 * weatherPopup.panelScale
                 Text {
                     text: "↑ " + weatherPopup.root.fmtTemp(weatherPopup.root.weatherHighC)
                     color: weatherPopup.isWhiterose ? weatherPopup.root.ink : weatherPopup.root.seal
                     font.family: weatherPopup.root.mono
-                    font.pixelSize: 13
-                    font.letterSpacing: 1
+                    font.pixelSize: 13 * weatherPopup.fontScale
+                    font.letterSpacing: 1 * weatherPopup.fontScale
                     font.weight: Font.Medium
                 }
                 Text {
                     text: "↓ " + weatherPopup.root.fmtTemp(weatherPopup.root.weatherLowC)
                     color: weatherPopup.isWhiterose ? weatherPopup.root.ink : weatherPopup.root.indigo
                     font.family: weatherPopup.root.mono
-                    font.pixelSize: 13
-                    font.letterSpacing: 1
+                    font.pixelSize: 13 * weatherPopup.fontScale
+                    font.letterSpacing: 1 * weatherPopup.fontScale
                     font.weight: Font.Medium
                 }
             }
@@ -285,8 +285,8 @@ CardWindow {
             text: "FORECAST"
             color: weatherPopup.root.inkDeep
             font.family: weatherPopup.root.mono
-            font.pixelSize: 10
-            font.letterSpacing: 2
+            font.pixelSize: 10 * weatherPopup.fontScale
+            font.letterSpacing: 2 * weatherPopup.fontScale
         }
 
         Repeater {
@@ -295,7 +295,7 @@ CardWindow {
                 required property var modelData
                 visible: !weatherPopup.isWhiterose
                 width: parent.width
-                height: 26
+                height: 26 * weatherPopup.rowScale
 
                 Text {
                     anchors.left: parent.left
@@ -303,36 +303,36 @@ CardWindow {
                     text: modelData.day
                     color: weatherPopup.root.ink
                     font.family: weatherPopup.root.mono
-                    font.pixelSize: 11
-                    font.letterSpacing: 3
+                    font.pixelSize: 11 * weatherPopup.fontScale
+                    font.letterSpacing: 3 * weatherPopup.fontScale
                     font.weight: Font.Medium
                 }
                 Text {
                     anchors.left: parent.left
-                    anchors.leftMargin: 60
+                    anchors.leftMargin: 60 * weatherPopup.panelScale
                     anchors.verticalCenter: parent.verticalCenter
                     text: weatherPopup.root.weatherGlyph(modelData.code, false)
                     color: weatherPopup.root.inkDeep
                     font.family: weatherPopup.root.mono
-                    font.pixelSize: 18
+                    font.pixelSize: 18 * weatherPopup.fontScale
                 }
                 Row {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 10
+                    spacing: 10 * weatherPopup.panelScale
                     Text {
                         text: "↑ " + weatherPopup.root.fmtTemp(modelData.high)
                         color: weatherPopup.isWhiterose ? weatherPopup.root.ink : weatherPopup.root.seal
                         font.family: weatherPopup.root.mono
-                        font.pixelSize: 12
-                        font.letterSpacing: 1
+                        font.pixelSize: 12 * weatherPopup.fontScale
+                        font.letterSpacing: 1 * weatherPopup.fontScale
                     }
                     Text {
                         text: "↓ " + weatherPopup.root.fmtTemp(modelData.low)
                         color: weatherPopup.isWhiterose ? weatherPopup.root.ink : weatherPopup.root.indigo
                         font.family: weatherPopup.root.mono
-                        font.pixelSize: 12
-                        font.letterSpacing: 1
+                        font.pixelSize: 12 * weatherPopup.fontScale
+                        font.letterSpacing: 1 * weatherPopup.fontScale
                     }
                 }
             }

@@ -13,7 +13,7 @@ Item {
     width: parent ? parent.width : 0
     // Track the title's actual rendered height so user-driven font
     // scaling (Ctrl++ / Ctrl+-) doesn't clip ascenders/descenders.
-    height: Math.max(30, title.implicitHeight + 4)
+    height: Math.max(30 * omni.layoutScale, title.implicitHeight + 4 * omni.layoutScale)
 
     Text {
         id: title

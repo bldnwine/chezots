@@ -321,9 +321,21 @@ def main() -> None:
     parser.add_argument("--fast", action="store_true", help="Ignored, unified scan")
     parser.add_argument("--json", action="store_true", default=True, help="Emit JSON output")
     parser.add_argument("--skip-quota", action="store_true", help="Reuse cached quotas; only scan session status")
+    parser.add_argument("--serve", action="store_true", help="Read scan requests as JSON lines on stdin")
     args = parser.parse_args()
 
     base_dir = Path(os.path.expanduser(args.path)) if args.path else default_base_dir()
+    if args.serve:
+        # QML owns the cadence. Blocking on stdin consumes no polling CPU and
+        # EOF terminates the worker when the shell releases it.
+        for line in sys.stdin:
+            try:
+                request = json.loads(line)
+                result = scan(base_dir, include_quota=request.get("quota") is True)
+                print(json.dumps(result, ensure_ascii=False), flush=True)
+            except (ValueError, AttributeError) as error:
+                print(json.dumps({"ready": False, "error": str(error)}), flush=True)
+        return
     result = scan(base_dir, include_quota=not args.skip_quota)
     print(json.dumps(result, indent=2, ensure_ascii=False))
 

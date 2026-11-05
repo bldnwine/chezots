@@ -49,7 +49,7 @@ CardWindow {
         root: aetherPopup.root
         text: aetherPopup.root.icoRefresh
         restColor: aetherPopup.root.inkDeep
-        font.pixelSize: 22
+        font.pixelSize: 22 * aetherPopup.fontScale
         onTriggered: wallhaven.refresh()
     }
 
@@ -164,24 +164,28 @@ CardWindow {
     // ---------- Body ----------
     Column {
         width: parent.width
-        spacing: 12
+        spacing: 12 * aetherPopup.panelScale
 
         // Mode switch chips. Material toggle hangs off the right edge,
         // only meaningful in wallhaven mode so we hide it elsewhere.
         Item {
             width: parent.width
-            height: 22
+            height: 22 * aetherPopup.rowScale
             Row {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 8
+                spacing: 8 * aetherPopup.panelScale
                 DisplayChip {
+                    panelScale: aetherPopup.panelScale
+                    panelTextScale: aetherPopup.panelTextScale
                     root: aetherPopup.root
                     label: "BLUEPRINTS"
                     selected: !aetherPopup.wallhavenMode
                     onActivated: aetherPopup.mode = "blueprints"
                 }
                 DisplayChip {
+                    panelScale: aetherPopup.panelScale
+                    panelTextScale: aetherPopup.panelTextScale
                     root: aetherPopup.root
                     label: "WALLHAVEN"
                     selected: aetherPopup.wallhavenMode
@@ -189,6 +193,8 @@ CardWindow {
                 }
             }
             DisplayChip {
+                panelScale: aetherPopup.panelScale
+                panelTextScale: aetherPopup.panelTextScale
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 root: aetherPopup.root
@@ -204,7 +210,7 @@ CardWindow {
         // Search row — feeds the active mode's query.
         Item {
             width: parent.width
-            height: 28
+            height: 28 * aetherPopup.rowScale
 
             Text {
                 id: aetherSearchGlyph
@@ -213,13 +219,13 @@ CardWindow {
                 text: aetherPopup.root.icoSearch
                 color: aetherPopup.root.seal
                 font.family: aetherPopup.root.mono
-                font.pixelSize: 14
+                font.pixelSize: 14 * aetherPopup.fontScale
             }
 
             Text {
                 id: aetherQueryText
                 anchors.left: aetherSearchGlyph.right
-                anchors.leftMargin: 10
+                anchors.leftMargin: 10 * aetherPopup.panelScale
                 anchors.verticalCenter: parent.verticalCenter
                 readonly property string activeQuery: aetherPopup.wallhavenMode
                     ? wallhaven.query : aetherPopup.root.aetherQuery
@@ -231,13 +237,13 @@ CardWindow {
                 color: activeQuery.length === 0 ? aetherPopup.root.inkDeep : aetherPopup.root.ink
                 opacity: activeQuery.length === 0 ? 0.5 : 1.0
                 font.family: aetherPopup.root.mono
-                font.pixelSize: 12
-                font.letterSpacing: 1
+                font.pixelSize: 12 * aetherPopup.fontScale
+                font.letterSpacing: 1 * aetherPopup.fontScale
             }
 
             Rectangle {
-                width: 2
-                height: 14
+                width: 2 * aetherPopup.panelScale
+                height: 14 * aetherPopup.rowScale
                 color: aetherPopup.root.seal
                 anchors.verticalCenter: parent.verticalCenter
                 x: aetherQueryText.activeQuery.length === 0
@@ -259,11 +265,11 @@ CardWindow {
         ListView {
             id: aetherList
             width: parent.width
-            height: 360
+            height: 360 * aetherPopup.rowScale
             visible: !aetherPopup.wallhavenMode
             clip: true
             model: aetherPopup.root.aetherFiltered
-            spacing: 0
+            spacing: 0 * aetherPopup.panelScale
             currentIndex: aetherPopup.root.selectedAether
             boundsBehavior: Flickable.StopAtBounds
 
@@ -272,7 +278,7 @@ CardWindow {
                 required property var modelData
                 required property int index
                 width: aetherList.width
-                height: 34
+                height: 34 * aetherPopup.rowScale
 
                 readonly property bool selected: aetherPopup.root.selectedAether === aeRow.index
 
@@ -288,7 +294,7 @@ CardWindow {
 
                 Rectangle {
                     visible: aeRow.selected
-                    width: 2
+                    width: 2 * aetherPopup.panelScale
                     height: parent.height - 10
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
@@ -297,40 +303,40 @@ CardWindow {
 
                 Text {
                     anchors.left: parent.left
-                    anchors.leftMargin: 10
+                    anchors.leftMargin: 10 * aetherPopup.panelScale
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 175
+                    width: 175 * aetherPopup.panelScale
                     elide: Text.ElideRight
                     text: aeRow.modelData.name
                     color: aeRow.selected ? aetherPopup.root.ink : aetherPopup.root.inkDeep
                     font.family: aetherPopup.root.mono
-                    font.pixelSize: 11
-                    font.letterSpacing: 1
+                    font.pixelSize: 11 * aetherPopup.fontScale
+                    font.letterSpacing: 1 * aetherPopup.fontScale
                 }
 
                 Text {
                     anchors.left: parent.left
-                    anchors.leftMargin: 190
+                    anchors.leftMargin: 190 * aetherPopup.panelScale
                     anchors.verticalCenter: parent.verticalCenter
                     text: aeRow.modelData.lightMode ? "L" : "D"
                     color: aetherPopup.root.inkDeep
                     font.family: aetherPopup.root.mono
-                    font.pixelSize: 9
-                    font.letterSpacing: 1
+                    font.pixelSize: 9 * aetherPopup.fontScale
+                    font.letterSpacing: 1 * aetherPopup.fontScale
                     opacity: 0.7
                 }
 
                 Row {
                     anchors.right: parent.right
-                    anchors.rightMargin: 10
+                    anchors.rightMargin: 10 * aetherPopup.panelScale
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
+                    spacing: 2 * aetherPopup.panelScale
                     Repeater {
                         model: (aeRow.modelData.colors || []).slice(0, 8)
                         delegate: Rectangle {
                             required property var modelData
-                            width: 14
-                            height: 14
+                            width: 14 * aetherPopup.panelScale
+                            height: 14 * aetherPopup.rowScale
                             color: modelData
                             border.color: Qt.rgba(0, 0, 0, 0.25)
                             border.width: 1
@@ -353,7 +359,7 @@ CardWindow {
         GridView {
             id: wallhavenGrid
             width: parent.width
-            height: 360
+            height: 360 * aetherPopup.rowScale
             visible: aetherPopup.wallhavenMode
             clip: true
             cellWidth: width / 4
@@ -426,7 +432,7 @@ CardWindow {
                     anchors.top: parent.top
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.margins: 3
+                    anchors.margins: 3 * aetherPopup.panelScale
                     height: parent.height - 12
                     color: Qt.rgba(aetherPopup.root.ink.r, aetherPopup.root.ink.g, aetherPopup.root.ink.b, 0.04)
                     border.color: whCell.isSelected ? aetherPopup.root.seal : aetherPopup.root.sep
@@ -435,7 +441,7 @@ CardWindow {
 
                     Image {
                         anchors.fill: parent
-                        anchors.margins: 1
+                        anchors.margins: 1 * aetherPopup.panelScale
                         source: aetherPopup.revealed ? whCell.modelData.thumb : ""
                         fillMode: Image.PreserveAspectCrop
                         sourceSize.width: 256
@@ -452,16 +458,16 @@ CardWindow {
                     anchors.top: whImageBox.bottom
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.leftMargin: 3
-                    anchors.rightMargin: 3
-                    anchors.topMargin: 1
-                    spacing: 0
+                    anchors.leftMargin: 3 * aetherPopup.panelScale
+                    anchors.rightMargin: 3 * aetherPopup.panelScale
+                    anchors.topMargin: 1 * aetherPopup.panelScale
+                    spacing: 0 * aetherPopup.panelScale
                     Repeater {
                         model: whCell.extractedPalette.slice(0, 8)
                         delegate: Rectangle {
                             required property var modelData
                             width: (whCell.width - 6) / 8
-                            height: 8
+                            height: 8 * aetherPopup.rowScale
                             color: modelData
                         }
                     }
@@ -488,15 +494,15 @@ CardWindow {
                                     : "NO RESULTS — TRY A DIFFERENT QUERY"
             color: aetherPopup.root.inkDeep
             font.family: aetherPopup.root.mono
-            font.pixelSize: 11
-            font.letterSpacing: 2
+            font.pixelSize: 11 * aetherPopup.fontScale
+            font.letterSpacing: 2 * aetherPopup.fontScale
             opacity: 0.6
-            padding: 60
+            padding: 60 * aetherPopup.panelScale
         }
 
         Rectangle {
             width: parent.width
-            height: 1
+            height: 1 * aetherPopup.rowScale
             color: aetherPopup.root.sep
             visible: !aetherPopup.wallhavenMode
         }
@@ -504,9 +510,11 @@ CardWindow {
         // ---------- Blueprint-only actions ----------
         Item {
             width: parent.width
-            height: 26
+            height: 26 * aetherPopup.rowScale
             visible: !aetherPopup.wallhavenMode
             DisplayChip {
+                panelScale: aetherPopup.panelScale
+                panelTextScale: aetherPopup.panelTextScale
                 root: aetherPopup.root
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
@@ -516,6 +524,8 @@ CardWindow {
                 }
             }
             DisplayChip {
+                panelScale: aetherPopup.panelScale
+                panelTextScale: aetherPopup.panelTextScale
                 root: aetherPopup.root
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter

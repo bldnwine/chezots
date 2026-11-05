@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_URL="https://github.com/hprobotic/Google-Sans-Font.git"
+TARGET_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/TTF/google-sans"
+TEMP_DIR=$(mktemp -d)
+
+trap 'rm -rf "$TEMP_DIR"' EXIT
+
+echo "[1/4] Cloning repository..."
+git clone --depth=1 "$REPO_URL" "$TEMP_DIR/repo"
+
+echo "[2/4] Installing font files to $TARGET_DIR..."
+mkdir -p "$TARGET_DIR"
+cp "$TEMP_DIR/repo/"*.ttf "$TARGET_DIR/"
+
+echo "[3/4] Updating font cache..."
+fc-cache -f "$TARGET_DIR"
+
+echo "[4/4] Verifying installation:"
+fc-list : family | grep -i "Google Sans" | sort -u

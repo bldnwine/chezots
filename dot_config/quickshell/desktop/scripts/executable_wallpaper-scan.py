@@ -4,6 +4,7 @@ import sys
 import json
 import ctypes
 import ctypes.util
+import errno
 
 DIRS = [
     os.path.expanduser("~/Wallpapers"),
@@ -68,7 +69,9 @@ def scan():
     for d in DIRS:
         if not os.path.isdir(d):
             continue
-        for root, _, fnames in os.walk(d):
+        def fail_walk(error):
+            raise error
+        for root, _, fnames in os.walk(d, onerror=fail_walk):
             for fname in fnames:
                 ext = os.path.splitext(fname)[1].lower()
                 if ext in EXTENSIONS:
@@ -105,8 +108,11 @@ def scan():
                             "btime": btime,
                             "size": int(st.st_size)
                         })
-                    except OSError:
-                        pass
+                    except OSError as error:
+                        # A file can disappear during a scan; other errors mean
+                        # the index may be incomplete and must not replace cache.
+                        if error.errno not in (errno.ENOENT, errno.ENOTDIR):
+                            raise
     return files
 
 if __name__ == "__main__":

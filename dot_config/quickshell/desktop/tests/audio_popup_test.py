@@ -38,7 +38,7 @@ with tempfile.TemporaryDirectory(prefix="qs-audio-popup-test-") as directory:
             function ensureFocusVisible() {''', 1)
     qml = qml.replace('        // ---------- Content Deck (Single Column vs 2-Column Split when EQ Expanded) ----------\n        Item {', '        // ---------- Content Deck (Single Column vs 2-Column Split when EQ Expanded) ----------\n        Item {\n            id: contentDeck', 1)
     (root / 'AudioPopup.qml').write_text(qml)
-    (root / 'EqPanel.qml').write_text('import QtQuick\nItem { required property var root; implicitHeight: 900 }\n')
+    (root / 'EqPanel.qml').write_text('import QtQuick\nItem { required property var root; property real panelScale: 1; property real panelTextScale: 1; implicitHeight: 900 }\n')
     for name in ('QuickButton.qml', 'DisplaySlider.qml'):
         shutil.copy2(source / name, root / name)
     shutil.copy2(source / 'tests/AudioPopupTest.qml', root / 'shell.qml')

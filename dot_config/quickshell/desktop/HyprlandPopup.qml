@@ -38,14 +38,14 @@ CardWindow {
 
     Column {
         width: parent.width
-        spacing: 8
-        padding: 4
+        spacing: 8 * popup.panelScale
+        padding: 4 * popup.panelScale
 
         Grid {
             width: parent.width
             columns: 1
-            rowSpacing: 6
-            columnSpacing: 6
+            rowSpacing: 6 * popup.panelScale
+            columnSpacing: 6 * popup.panelScale
 
             Repeater {
                 model: ["scrolling", "dwindle", "master", "monocle"]
